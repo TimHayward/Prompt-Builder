@@ -44,6 +44,7 @@ export type Prompt = {
   num: number;
   name: string;
   sections: Section[];
+  variables?: Record<string, string>; // Variables mapping: {variableName: value}
 };
 
 // Settings type for application configuration

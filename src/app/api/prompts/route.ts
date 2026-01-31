@@ -14,12 +14,17 @@ import { Prompt } from '@/types'; // Assuming Prompt type is defined
  */
 export async function GET() {
     try {
-        const stmt = db.prepare('SELECT id, name, sections, num, created_at, updated_at FROM prompts');
+        // Use COALESCE to handle NULL values for variables column (for backward compatibility with existing records)
+        const stmt = db.prepare(`
+            SELECT id, name, sections, COALESCE(variables, '{}') as variables, num, created_at, updated_at 
+            FROM prompts
+        `);
         const promptsRaw = stmt.all() as any[];
 
         const prompts = promptsRaw.map(prompt => ({
             ...prompt,
-            sections: prompt.sections ? JSON.parse(prompt.sections) : [], // Ensure sections are parsed or defaulted to an empty array
+            sections: prompt.sections ? JSON.parse(prompt.sections) : [],
+            variables: prompt.variables ? JSON.parse(prompt.variables) : {},
         }));
 
         return NextResponse.json(prompts);
@@ -36,7 +41,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { name, sections, num } = body as Partial<Prompt>; // Use Partial<Prompt> for incoming data
+        const { name, sections, variables, num } = body as Partial<Prompt>; // Use Partial<Prompt> for incoming data
 
         if (!name) {
             return NextResponse.json({ error: 'Prompt name is required' }, { status: 400 });
@@ -44,19 +49,27 @@ export async function POST(request: Request) {
 
         const newPromptId = uuidv4();
         const sectionsJson = JSON.stringify(sections || []); // Default to empty array if sections are not provided
+        const variablesJson = JSON.stringify(variables || {}); // Default to empty object if variables are not provided
         const currentTimestamp = new Date().toISOString();
 
         const stmt = db.prepare(
-            'INSERT INTO prompts (id, name, sections, num, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+            'INSERT INTO prompts (id, name, sections, variables, num, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
         );
-        stmt.run(newPromptId, name, sectionsJson, num ?? null, currentTimestamp, currentTimestamp);
+        stmt.run(newPromptId, name, sectionsJson, variablesJson, num ?? null, currentTimestamp, currentTimestamp);
 
         // Retrieve the newly created prompt to return it in the response
-        const newPromptStmt = db.prepare('SELECT id, name, sections, num, created_at, updated_at FROM prompts WHERE id = ?');
+        const newPromptStmt = db.prepare(`
+            SELECT id, name, sections, COALESCE(variables, '{}') as variables, num, created_at, updated_at 
+            FROM prompts WHERE id = ?
+        `);
         const newPrompt = newPromptStmt.get(newPromptId) as any;
 
         if (newPrompt) {
-            return NextResponse.json({ ...newPrompt, sections: JSON.parse(newPrompt.sections) }, { status: 201 });
+            return NextResponse.json({ 
+                ...newPrompt, 
+                sections: JSON.parse(newPrompt.sections),
+                variables: JSON.parse(newPrompt.variables),
+            }, { status: 201 });
         } else {
             // Should not happen if insert was successful
             return NextResponse.json({ error: 'Failed to create prompt or retrieve it after creation' }, { status: 500 });

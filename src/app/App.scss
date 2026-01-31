@@ -13,6 +13,14 @@ main {
   font-size: typography.$base-font-size;
 }
 
+// Content area
+#content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 // Styling for dragging preview components
 .dragging-component {
   padding: 8px 12px;

@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Prompt, Section, ComponentType, Settings } from "@/types";
 import { useAppContext } from './AppContext';
 import { debounce } from "@/utils/debounce";
+import { extractVariablesFromSections } from "@/utils/variableUtils";
 
 // Context type definition
 type PromptContextType = {
@@ -33,6 +34,9 @@ type PromptContextType = {
   newlyAddedSectionIdForFocus: string | null;
   clearNewlyAddedSectionIdForFocus: () => void;
   updatePromptName: (promptId: string, newName: string) => void;
+  updatePromptVariables: (promptId: string, variables: Record<string, string>) => void;
+  getPromptVariables: (promptId: string) => Record<string, string>;
+  getPromptVariableNames: (promptId: string) => string[];
   isPromptsLoading: boolean;
 };
 
@@ -60,6 +64,9 @@ const PromptContext = createContext<PromptContextType>({
   newlyAddedSectionIdForFocus: null,
   clearNewlyAddedSectionIdForFocus: () => {},
   updatePromptName: () => {},
+  updatePromptVariables: () => {},
+  getPromptVariables: () => ({}),
+  getPromptVariableNames: () => [],
   isPromptsLoading: true, // Default to true
 });
 
@@ -195,6 +202,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     const promptDataForApi = {
       name: newPromptName,
       sections: initialSections, // Sending full initial sections
+      variables: {}, // Initialize with empty variables
       num: promptsRef.current.length + 1, // Or other logic for 'num'
     };
 
@@ -202,6 +210,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
       id: tempClientId,
       name: newPromptName,
       sections: initialSections,
+      variables: {},
       num: promptDataForApi.num,
     };
 
@@ -275,6 +284,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     const promptDataForApi = {
       name: newPromptName,
       sections: newSections, // Send new sections
+      variables: promptToDuplicate.variables || {}, // Copy variables from original prompt
       num: promptsRef.current.length + 1, // Or determine num differently
     };
 
@@ -282,6 +292,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
       id: tempClientId,
       name: newPromptName,
       sections: newSections,
+      variables: promptToDuplicate.variables || {},
       num: promptDataForApi.num,
     };
     
@@ -559,6 +570,31 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     setNewlyAddedSectionIdForFocus(null);
   }, [setNewlyAddedSectionIdForFocus]);
 
+  const updatePromptVariables = useCallback((promptId: string, variables: Record<string, string>) => {
+    setPrompts(prevPrompts =>
+      prevPrompts.map(p =>
+        p.id === promptId
+          ? { ...p, variables: { ...p.variables, ...variables } }
+          : p
+      )
+    );
+    const promptToUpdate = promptsRef.current.find(p => p.id === promptId);
+    if (promptToUpdate) {
+      const updatedPrompt = { ...promptToUpdate, variables: { ...promptToUpdate.variables, ...variables } };
+      updatePromptInApi(updatedPrompt);
+    }
+  }, [setPrompts, promptsRef, updatePromptInApi]);
+
+  const getPromptVariables = useCallback((promptId: string): Record<string, string> => {
+    const prompt = promptsRef.current.find(p => p.id === promptId);
+    return prompt?.variables || {};
+  }, [promptsRef]);
+
+  const getPromptVariableNames = useCallback((promptId: string): string[] => {
+    const prompt = promptsRef.current.find(p => p.id === promptId);
+    if (!prompt) return [];
+    return extractVariablesFromSections(prompt.sections);
+  }, [promptsRef]);
 
   return (
     <PromptContext.Provider
@@ -585,6 +621,9 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
         newlyAddedSectionIdForFocus,
         clearNewlyAddedSectionIdForFocus,
         updatePromptName,
+        updatePromptVariables,
+        getPromptVariables,
+        getPromptVariableNames,
         isPromptsLoading,
       }}
     >

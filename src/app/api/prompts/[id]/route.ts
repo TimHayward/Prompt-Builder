@@ -20,13 +20,18 @@ interface RouteParams {
 export async function GET(request: Request, { params }: RouteParams) {
     try {
         const { id } = await params;
-        const stmt = db.prepare('SELECT id, name, sections, num, created_at, updated_at FROM prompts WHERE id = ?');
+        // Use COALESCE to handle NULL values for variables column (for backward compatibility)
+        const stmt = db.prepare(`
+            SELECT id, name, sections, COALESCE(variables, '{}') as variables, num, created_at, updated_at 
+            FROM prompts WHERE id = ?
+        `);
         const promptRaw = stmt.get(id) as any;
 
         if (promptRaw) {
             const prompt = {
                 ...promptRaw,
                 sections: promptRaw.sections ? JSON.parse(promptRaw.sections) : [],
+                variables: promptRaw.variables ? JSON.parse(promptRaw.variables) : {},
             };
             return NextResponse.json(prompt);
         } else {
@@ -47,7 +52,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
         const { id } = await params;
 
         const body = await request.json();
-        const { name, sections, num } = body as Partial<Prompt>;
+        const { name, sections, variables, num } = body as Partial<Prompt>;
 
         // Check if the prompt exists
         const checkStmt = db.prepare('SELECT id FROM prompts WHERE id = ?');
@@ -57,27 +62,33 @@ export async function PUT(request: Request, { params }: RouteParams) {
         }
 
         // At least one updatable field must be provided
-        if (typeof name === 'undefined' && typeof sections === 'undefined' && typeof num === 'undefined') {
+        if (typeof name === 'undefined' && typeof sections === 'undefined' && typeof variables === 'undefined' && typeof num === 'undefined') {
             return NextResponse.json({ error: 'No fields to update provided' }, { status: 400 });
         }
 
         const currentTimestamp = new Date().toISOString();
         
         // Fetch current prompt data to merge if only partial data is sent
-        const currentPromptStmt = db.prepare('SELECT name, sections, num FROM prompts WHERE id = ?');
-        const currentPromptData = currentPromptStmt.get(id) as { name: string; sections: string; num: number | null };
+        const currentPromptStmt = db.prepare(`
+            SELECT name, sections, COALESCE(variables, '{}') as variables, num FROM prompts WHERE id = ?
+        `);
+        const currentPromptData = currentPromptStmt.get(id) as { name: string; sections: string; variables: string; num: number | null };
 
         const updatedName = name ?? currentPromptData.name;
         const updatedSectionsJson = sections ? JSON.stringify(sections) : currentPromptData.sections;
+        const updatedVariablesJson = variables ? JSON.stringify(variables) : currentPromptData.variables;
         const updatedNum = num ?? currentPromptData.num;
 
         const stmt = db.prepare(
-            'UPDATE prompts SET name = ?, sections = ?, num = ?, updated_at = ? WHERE id = ?'
+            'UPDATE prompts SET name = ?, sections = ?, variables = ?, num = ?, updated_at = ? WHERE id = ?'
         );
-        stmt.run(updatedName, updatedSectionsJson, updatedNum, currentTimestamp, id);
+        stmt.run(updatedName, updatedSectionsJson, updatedVariablesJson, updatedNum, currentTimestamp, id);
 
         // Retrieve the updated prompt to return it
-        const updatedPromptStmt = db.prepare('SELECT id, name, sections, num, created_at, updated_at FROM prompts WHERE id = ?');
+        const updatedPromptStmt = db.prepare(`
+            SELECT id, name, sections, COALESCE(variables, '{}') as variables, num, created_at, updated_at 
+            FROM prompts WHERE id = ?
+        `);
         const updatedPromptRaw = updatedPromptStmt.get(id) as any;
         
         if (!updatedPromptRaw) {
@@ -86,7 +97,11 @@ export async function PUT(request: Request, { params }: RouteParams) {
             return NextResponse.json({ error: 'Failed to retrieve prompt after update' }, { status: 500 });
         }
         
-        return NextResponse.json({ ...updatedPromptRaw, sections: JSON.parse(updatedPromptRaw.sections) });
+        return NextResponse.json({ 
+            ...updatedPromptRaw, 
+            sections: JSON.parse(updatedPromptRaw.sections),
+            variables: JSON.parse(updatedPromptRaw.variables),
+        });
 
     } catch (error) {
         // Access params.id safely for logging, it should be available if the signature is correct

@@ -7,6 +7,7 @@
 
 import React from "react";
 import { usePromptContext } from "@/contexts/PromptContext";
+import { replaceVariables } from "@/utils/variableUtils";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import AddIcon from '@mui/icons-material/Add';
 
@@ -21,13 +22,19 @@ const ActionBar: React.FC<ActionBarProps> = ({
   systemPrompt,
   markdownEnabled 
 }) => {
-  const { getCompiledPromptText, addNewSectionForEditing } = usePromptContext();
+  const { getCompiledPromptText, addNewSectionForEditing, getPromptVariables } = usePromptContext();
 
   // Copy prompt to clipboard
   const copyPrompt = () => {
     if (!activePromptId) return;
     
     let promptText = getCompiledPromptText(activePromptId); // activePromptId is now string
+    
+    // Replace variables with their values
+    const variables = getPromptVariables(activePromptId);
+    if (Object.keys(variables).length > 0) {
+      promptText = replaceVariables(promptText, variables);
+    }
 
     if (markdownEnabled && systemPrompt) {
       // If markdown is enabled, format the prompt text accordingly

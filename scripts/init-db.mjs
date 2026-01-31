@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS prompts (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     sections TEXT,
+    variables TEXT,
     num INTEGER,
     created_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')),
     updated_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now'))

@@ -26,6 +26,9 @@ const PromptEditor: React.FC = () => {
     newlyAddedSectionIdForFocus,
     clearNewlyAddedSectionIdForFocus,
     updatePromptName, // Added from context
+    getPromptVariableNames,
+    getPromptVariables,
+    updatePromptVariables,
   } = usePromptContext();
   
   const { settings } = useAppContext();
@@ -174,6 +177,29 @@ const PromptEditor: React.FC = () => {
       clearNewlyAddedSectionIdForFocus();
     }
   }, [newlyAddedSectionIdForFocus, activePrompt?.sections, clearNewlyAddedSectionIdForFocus]);
+
+  // Effect to sync variables when sections change
+  useEffect(() => {
+    if (activePromptId && activePrompt) {
+      // Always extract variables from current sections
+      const currentVariableNames = getPromptVariableNames(activePromptId);
+      const currentVariableValues = getPromptVariables(activePromptId) || {};
+      
+      // Create variables object with all current variable names
+      const cleanedVariables: Record<string, string> = {};
+      currentVariableNames.forEach(variableName => {
+        cleanedVariables[variableName] = currentVariableValues[variableName] || '';
+      });
+      
+      // Always sync if we have variables to ensure state is current
+      if (Object.keys(cleanedVariables).length > 0) {
+        updatePromptVariables(activePromptId, cleanedVariables);
+      } else if (Object.keys(currentVariableValues).length > 0) {
+        // Clear variables if there are none in the sections
+        updatePromptVariables(activePromptId, {});
+      }
+    }
+  }, [activePromptId, activePrompt?.sections.length, activePrompt?.sections.map(s => s.content).join('|'), getPromptVariableNames, getPromptVariables, updatePromptVariables]);
   
   if (!activePrompt) {
     return (

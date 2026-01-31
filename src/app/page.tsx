@@ -11,6 +11,7 @@ import { TreeProvider, useTreeContext } from "@/contexts/TreeContext";
 import { PromptProvider } from "@/contexts/PromptContext";
 import Sidebar from "@/components/Sidebar";
 import PromptEditor from "@/components/PromptEditor";
+import VariablesPane from "@/components/VariablesPane";
 import ComponentModal from "@/components/Modal/ComponentModal";
 import SettingsModal from "@/components/Modal/SettingsModal";
 import CommunityComponentsModal from "@/components/Modal/CommunityComponentsModal";
@@ -47,6 +48,7 @@ const AppContent: React.FC = () => {
     <main>
       <Sidebar />
       <PromptEditor />
+      <VariablesPane />
       <MenuBar 
         openSettings={() => setSettingsModalOpen(true)} 
         openCommunityLibrary={() => setCommunityModalOpen(true)} // Pass openCommunityLibrary prop
