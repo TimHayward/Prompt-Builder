@@ -591,10 +591,13 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
   }, [promptsRef]);
 
   const getPromptVariableNames = useCallback((promptId: string): string[] => {
-    const prompt = promptsRef.current.find(p => p.id === promptId);
-    if (!prompt) return [];
+    // Find the prompt from the prompts array (current render state, not stale ref)
+    const prompt = prompts.find(p => p.id === promptId);
+    if (!prompt) {
+      return [];
+    }
     return extractVariablesFromSections(prompt.sections);
-  }, [promptsRef]);
+  }, [prompts]);
 
   return (
     <PromptContext.Provider

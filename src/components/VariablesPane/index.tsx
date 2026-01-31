@@ -48,7 +48,7 @@ const VariablesPane: React.FC = () => {
        });
       setHasChanges(false);
     }
-  }, [activePromptId, activePrompt?.sections.map(s => s.content).join('|')]);
+  }, [activePromptId, activePrompt?.sections]);
 
   const handleVariableChange = (variableName: string, value: string) => {
     setVariableValues(prev => ({

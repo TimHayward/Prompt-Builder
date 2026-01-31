@@ -83,7 +83,7 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
     setIsDraggingOver(false);
     
     try {
-      const data = e.dataTransfer.getData("text/plain");
+      const data = e.dataTransfer.getData("application/json");
       const component = JSON.parse(data);
       
       if (component && component.type === "component") {
