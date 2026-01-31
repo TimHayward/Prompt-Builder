@@ -23,6 +23,8 @@ const Sidebar: React.FC = () => {
     handleAddFolder,
     handleDeleteNode,
     handleToggleFolderExpand,
+    handleMoveNodeUp,
+    handleMoveNodeDown,
   } = useTreeContext();
   
   const [isAddingFolder, setIsAddingFolder] = useState<string | null>(null);
@@ -123,6 +125,8 @@ const Sidebar: React.FC = () => {
           openEditComponentModal={openEditComponentModal}
           handleDeleteNode={handleDeleteNode}
           handleToggleFolderExpand={handleToggleFolderExpand}
+          handleMoveNodeUp={handleMoveNodeUp}
+          handleMoveNodeDown={handleMoveNodeDown}
         />
       </div>
       <FileControls />

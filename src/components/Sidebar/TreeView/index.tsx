@@ -25,6 +25,8 @@ interface TreeViewProps {
   openEditComponentModal: (component: TreeNode) => void;
   handleDeleteNode: (nodeId: string) => void; // Changed from number
   handleToggleFolderExpand: (folderId: string) => void; // Added
+  handleMoveNodeUp: (nodeId: string) => void;
+  handleMoveNodeDown: (nodeId: string) => void;
 }
 
 const TreeView: React.FC<TreeViewProps> = ({
@@ -42,6 +44,8 @@ const TreeView: React.FC<TreeViewProps> = ({
   openEditComponentModal,
   handleDeleteNode,
   handleToggleFolderExpand, // Added
+  handleMoveNodeUp,
+  handleMoveNodeDown,
 }) => {
   return (
     <div className="tree-view">
@@ -63,6 +67,8 @@ const TreeView: React.FC<TreeViewProps> = ({
           openEditComponentModal={openEditComponentModal}
           handleDeleteNode={handleDeleteNode} // Propagating (nodeId: string) => void
           handleToggleFolderExpand={handleToggleFolderExpand} // Added
+          handleMoveNodeUp={handleMoveNodeUp}
+          handleMoveNodeDown={handleMoveNodeDown}
         />
       ))}
     </div>

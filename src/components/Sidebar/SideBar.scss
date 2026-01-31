@@ -115,8 +115,35 @@
           }
         }
       }
+
+      .node-move-actions {
+        display: none;
+        align-items: center;
+        
+        .action-btn {
+          @include mixins.btn();
+          padding: 0.15rem;
+          margin-left: 0.25rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+
+          &:hover {
+            background-color: colors.$hover-gray-light;
+          }
+        }
+        .move-up-btn, .move-down-btn {
+          &:hover {
+            color: colors.$info-color;
+          }
+        }
+      }
     }
     &:hover .node-actions {
+      display: flex;
+    }
+    &:hover .node-move-actions {
       display: flex;
     }
   }

@@ -16,6 +16,8 @@ import {
   removeNode, 
   isDescendant, 
   moveNodeInTree,
+  moveNodeUp,
+  moveNodeDown,
   findNodeById as findNodeByIdUtil,
   updateNodeById,
   normalizeExpansionState // Added
@@ -49,6 +51,8 @@ type TreeContextType = {
   handleUpdateComponent: (component: ComponentType) => void;
   handleDeleteNode: (nodeId: string) => void;
   handleNodeDrop: (draggedNodeId: string, targetNodeId: string) => void;
+  handleMoveNodeUp: (nodeId: string) => void;
+  handleMoveNodeDown: (nodeId: string) => void;
   isTreeLoading: boolean;
   handleToggleFolderExpand: (folderId: string) => void;
 };
@@ -68,6 +72,8 @@ const TreeContext = createContext<TreeContextType>({
   handleUpdateComponent: () => {},
   handleDeleteNode: () => {},
   handleNodeDrop: () => {},
+  handleMoveNodeUp: () => {},
+  handleMoveNodeDown: () => {},
   isTreeLoading: true,
   handleToggleFolderExpand: () => {},
 });
@@ -364,6 +370,18 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
     // saveTreeToApi will be called by the useEffect watching treeData
   };
 
+  const handleMoveNodeUp = (nodeId: string) => {
+    const newTreeData = moveNodeUp(treeDataRef.current, nodeId);
+    setTreeData(newTreeData);
+    // saveTreeToApi will be called by the useEffect watching treeData
+  };
+
+  const handleMoveNodeDown = (nodeId: string) => {
+    const newTreeData = moveNodeDown(treeDataRef.current, nodeId);
+    setTreeData(newTreeData);
+    // saveTreeToApi will be called by the useEffect watching treeData
+  };
+
   const handleNodeDrop = (draggedNodeId: string, targetNodeId: string) => {
     const currentTree = treeDataRef.current;
     const draggedNode = findNodeByIdUtil(currentTree, draggedNodeId);
@@ -421,6 +439,8 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
       handleUpdateComponent, 
       handleDeleteNode, 
       handleNodeDrop,
+      handleMoveNodeUp,
+      handleMoveNodeDown,
       isTreeLoading,
       handleToggleFolderExpand, 
     }}>

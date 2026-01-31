@@ -324,3 +324,85 @@ export const normalizeExpansionState = (nodes: (FolderType | ComponentType)[], d
         return node; // For ComponentType, just return the node
     });
 };
+
+/**
+ * Move a node up within its parent folder (swap with previous sibling).
+ * For folders, only swaps with other folders. For components, swaps with components.
+ * @param tree The tree structure
+ * @param nodeId ID of node to move up
+ * @returns Updated tree
+ */
+export const moveNodeUp = (tree: FolderType[], nodeId: string): FolderType[] => {
+  const updatedTree = JSON.parse(JSON.stringify(tree));
+  
+  const moveInParent = (nodes: (FolderType | ComponentType)[]): boolean => {
+    for (let i = 0; i < nodes.length; i++) {
+      if (nodes[i].id === nodeId) {
+        // Found the node; check if we can move it up
+        if (i === 0) return false; // Already at top
+        
+        // Find previous sibling of same type (if node is folder, only swap with folders)
+        const nodeType = nodes[i].type;
+        let prevIdx = i - 1;
+        while (prevIdx >= 0 && nodes[prevIdx].type !== nodeType) {
+          prevIdx--;
+        }
+        
+        if (prevIdx < 0) return false; // No previous sibling of same type
+        
+        // Swap
+        [nodes[i], nodes[prevIdx]] = [nodes[prevIdx], nodes[i]];
+        return true;
+      }
+      
+      if (nodes[i].type === 'folder') {
+        if (moveInParent((nodes[i] as FolderType).children)) return true;
+      }
+    }
+    return false;
+  };
+  
+  moveInParent(updatedTree);
+  return updatedTree;
+};
+
+/**
+ * Move a node down within its parent folder (swap with next sibling).
+ * For folders, only swaps with other folders. For components, swaps with components.
+ * @param tree The tree structure
+ * @param nodeId ID of node to move down
+ * @returns Updated tree
+ */
+export const moveNodeDown = (tree: FolderType[], nodeId: string): FolderType[] => {
+  const updatedTree = JSON.parse(JSON.stringify(tree));
+  
+  const moveInParent = (nodes: (FolderType | ComponentType)[]): boolean => {
+    for (let i = 0; i < nodes.length; i++) {
+      if (nodes[i].id === nodeId) {
+        // Found the node; check if we can move it down
+        if (i === nodes.length - 1) return false; // Already at bottom
+        
+        // Find next sibling of same type
+        const nodeType = nodes[i].type;
+        let nextIdx = i + 1;
+        while (nextIdx < nodes.length && nodes[nextIdx].type !== nodeType) {
+          nextIdx++;
+        }
+        
+        if (nextIdx >= nodes.length) return false; // No next sibling of same type
+        
+        // Swap
+        [nodes[i], nodes[nextIdx]] = [nodes[nextIdx], nodes[i]];
+        return true;
+      }
+      
+      if (nodes[i].type === 'folder') {
+        if (moveInParent((nodes[i] as FolderType).children)) return true;
+      }
+    }
+    return false;
+  };
+  
+  moveInParent(updatedTree);
+  return updatedTree;
+};

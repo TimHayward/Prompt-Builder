@@ -12,6 +12,8 @@ import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ComponentIcon from "./ComponentIcon"; // Assuming this path is correct
 
 // Constants
@@ -33,6 +35,8 @@ interface TreeNodeProps {
   openEditComponentModal: (component: TreeNode) => void;
   handleDeleteNode: (nodeId: string) => void; // Changed from number
   handleToggleFolderExpand: (folderId: string) => void; // Added
+  handleMoveNodeUp: (nodeId: string) => void;
+  handleMoveNodeDown: (nodeId: string) => void;
 }
 
 const TreeNodeComponent: React.FC<TreeNodeProps> = ({
@@ -51,6 +55,8 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
   openEditComponentModal,
   handleDeleteNode,
   handleToggleFolderExpand, // Added
+  handleMoveNodeUp,
+  handleMoveNodeDown,
 }) => {
   const isFolder = node.type === "folder";
   const isComponent = node.type === "component";
@@ -191,6 +197,30 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
           )}
           <span className="node-name">{node.name}</span>
           
+          {/* Move actions (up/down) */}
+          <div className="node-move-actions">
+            <button
+              className="action-btn move-up-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleMoveNodeUp(node.id);
+              }}
+              title="Move Up"
+            >
+              <ArrowUpwardIcon sx={{fontSize: 16}} />
+            </button>
+            <button
+              className="action-btn move-down-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleMoveNodeDown(node.id);
+              }}
+              title="Move Down"
+            >
+              <ArrowDownwardIcon sx={{fontSize: 16}} />
+            </button>
+          </div>
+          
           {/* Folder actions */}
           {isFolder && (
             <div className="node-actions">
@@ -276,7 +306,9 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
           openAddComponentModal={openAddComponentModal}
           openEditComponentModal={openEditComponentModal}
           handleDeleteNode={handleDeleteNode}
-          handleToggleFolderExpand={handleToggleFolderExpand} // Added
+          handleToggleFolderExpand={handleToggleFolderExpand}
+          handleMoveNodeUp={handleMoveNodeUp}
+          handleMoveNodeDown={handleMoveNodeDown}
         />
       ))}
     </div>
