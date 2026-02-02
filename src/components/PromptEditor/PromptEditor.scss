@@ -403,13 +403,69 @@
       border-radius: 4px;
       background-color: colors.$dark-gray;
       margin-right: 1rem;
-      
+      transition: background-color 0.2s ease, transform 0.1s ease;
+
       &:hover {
         background-color: colors.$hover-gray;
       }
-      
+
+      // Success state
+      &.success {
+        background-color: colors.$success-color;
+        animation: successPulse 0.3s ease;
+
+        svg {
+          color: colors.$text-color;
+        }
+      }
+
+      // Error state
+      &.error {
+        background-color: colors.$error-color;
+        animation: errorShake 0.3s ease;
+
+        svg {
+          color: colors.$text-color;
+        }
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+
+        &:hover {
+          background-color: colors.$dark-gray;
+        }
+      }
+
       svg {
         margin-right: 0.5rem;
+        transition: color 0.2s ease;
+      }
+    }
+
+    // Animations
+    @keyframes successPulse {
+      0% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @keyframes errorShake {
+      0%, 100% {
+        transform: translateX(0);
+      }
+      25% {
+        transform: translateX(-5px);
+      }
+      75% {
+        transform: translateX(5px);
       }
     }
   }

@@ -8,7 +8,10 @@
 import React from "react";
 import { usePromptContext } from "@/contexts/PromptContext";
 import { replaceVariables } from "@/utils/variableUtils";
+import { useClipboard } from "@/hooks/useClipboard";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorIcon from '@mui/icons-material/Error';
 import AddIcon from '@mui/icons-material/Add';
 
 interface ActionBarProps {
@@ -17,19 +20,20 @@ interface ActionBarProps {
   markdownEnabled: boolean;
 }
 
-const ActionBar: React.FC<ActionBarProps> = ({ 
-  activePromptId, 
+const ActionBar: React.FC<ActionBarProps> = ({
+  activePromptId,
   systemPrompt,
-  markdownEnabled 
+  markdownEnabled
 }) => {
   const { getCompiledPromptText, addNewSectionForEditing, getPromptVariables } = usePromptContext();
+  const { copyToClipboard, status, isSupported } = useClipboard();
 
   // Copy prompt to clipboard
-  const copyPrompt = () => {
+  const copyPrompt = async () => {
     if (!activePromptId) return;
-    
+
     let promptText = getCompiledPromptText(activePromptId); // activePromptId is now string
-    
+
     // Replace variables with their values
     const variables = getPromptVariables(activePromptId);
     if (Object.keys(variables).length > 0) {
@@ -41,7 +45,34 @@ const ActionBar: React.FC<ActionBarProps> = ({
       promptText = systemPrompt + "\\n\\n" + promptText;
     }
 
-    navigator.clipboard.writeText(promptText);
+    await copyToClipboard(promptText);
+  };
+
+  // Determine button content based on status
+  const getCopyButtonContent = () => {
+    switch (status) {
+      case 'success':
+        return (
+          <>
+            <CheckCircleIcon />
+            <span>Copied!</span>
+          </>
+        );
+      case 'error':
+        return (
+          <>
+            <ErrorIcon />
+            <span>Failed</span>
+          </>
+        );
+      default:
+        return (
+          <>
+            <ContentCopyIcon />
+            <span>Copy Prompt</span>
+          </>
+        );
+    }
   };
 
   // Handle adding a new section
@@ -55,12 +86,12 @@ const ActionBar: React.FC<ActionBarProps> = ({
     <div className="action-bar-container"> {/* Added a container div */}
       <div className="action-bar-buttons"> {/* Group buttons for styling if needed */}
         <button
-          className="copy-btn"
+          className={`copy-btn ${status === 'success' ? 'success' : ''} ${status === 'error' ? 'error' : ''}`}
           onClick={copyPrompt}
-          title="Copy Prompt"
+          title={!isSupported ? "Clipboard not supported" : "Copy Prompt"}
+          disabled={!isSupported || !activePromptId}
         >
-          <ContentCopyIcon />
-          <span>Copy Prompt</span>
+          {getCopyButtonContent()}
         </button>
 
         <button
