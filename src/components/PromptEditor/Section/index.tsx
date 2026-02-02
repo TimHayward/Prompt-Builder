@@ -58,7 +58,7 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
           (linkedComponent.content !== section.originalContent ||
            linkedComponent.componentType !== section.type ||
            linkedComponent.name !== section.name)) {
-        updateSectionFromLinkedComponent(section, linkedComponent);
+        updateSectionFromLinkedComponent(promptId, section.id, linkedComponent);
       }
     }
   }, [treeData, section, updateSectionFromLinkedComponent]);

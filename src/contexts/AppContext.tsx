@@ -103,13 +103,32 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
     const saveSettings = async () => {
       try {
-        await fetch('/api/settings', {
+        const resp = await fetch('/api/settings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ settings }),
         });
+
+        if (!resp.ok) {
+          // Log status and response body for debugging
+          let bodyText = '';
+          try { bodyText = await resp.text(); } catch (e) { /* ignore */ }
+          console.error(`Failed to save settings: ${resp.status} ${resp.statusText}`, bodyText);
+          // As a fallback, persist to localStorage so user changes aren't lost
+          try {
+            localStorage.setItem(LOCAL_STORAGE_SETTINGS_KEY, JSON.stringify(settings));
+          } catch (e) {
+            console.warn('Failed to persist settings to localStorage:', e);
+          }
+        }
       } catch (error) {
-        console.error('Error saving settings:', error);
+        // Network or other error (e.g. server not reachable). Persist locally and log full error.
+        console.error('Error saving settings (network or server error):', error);
+        try {
+          localStorage.setItem(LOCAL_STORAGE_SETTINGS_KEY, JSON.stringify(settings));
+        } catch (e) {
+          console.warn('Failed to persist settings to localStorage after network error:', e);
+        }
       }
     };
 
