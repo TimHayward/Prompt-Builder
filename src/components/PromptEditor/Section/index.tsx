@@ -10,7 +10,7 @@ import { Section as SectionType, ComponentType } from "@/types";
 import { usePromptContext } from "@/contexts/PromptContext";
 import { useTreeContext } from "@/contexts/TreeContext";
 import SectionHeader from "./SectionHeader";
-import useAutosizeTextArea from "@/hooks/useAutosizeTextArea";
+import HighlightedTextarea from "@/components/HighlightedTextarea";
 import { usePrompts } from "@/hooks/usePrompts"; // Added
 
 interface SectionProps {
@@ -48,8 +48,7 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
   
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  useAutosizeTextArea(textAreaRef, section.content, section.open);
-  
+
   useEffect(() => {
     if (section.linkedComponentId) {
       const linkedComponent = findComponentById(treeData, section.linkedComponentId);
@@ -140,18 +139,23 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
       />
       
       {section.open && (
-        <div 
+        <div
           className="section-content"
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
         >
-          <textarea
+          <HighlightedTextarea
             ref={textAreaRef}
-            className="section-input"
             value={section.content}
-            onChange={handleContentChange}
+            onChange={(value) => {
+              handleContentChange({ target: { value } } as React.ChangeEvent<HTMLTextAreaElement>);
+            }}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
             placeholder="Section content..."
+            className="section-input"
+            autosize={true}
+            isOpen={section.open}
           />
           
           {section.linkedComponentId && (
