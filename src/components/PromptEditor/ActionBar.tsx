@@ -25,14 +25,22 @@ const ActionBar: React.FC<ActionBarProps> = ({
   systemPrompt,
   markdownEnabled
 }) => {
-  const { getCompiledPromptText, addNewSectionForEditing, getPromptVariables } = usePromptContext();
+  const { prompts, addNewSectionForEditing, getPromptVariables } = usePromptContext();
   const { copyToClipboard, status, isSupported } = useClipboard();
 
   // Copy prompt to clipboard
   const copyPrompt = async () => {
     if (!activePromptId) return;
 
-    let promptText = getCompiledPromptText(activePromptId); // activePromptId is now string
+    // Get the active prompt
+    const activePrompt = prompts.find(p => p.id === activePromptId);
+    if (!activePrompt) return;
+
+    // Compile prompt text without section headers - just the content
+    let promptText = activePrompt.sections
+      .map(section => section.content)
+      .filter(content => content.trim()) // Remove empty sections
+      .join('\n\n');
 
     // Replace variables with their values
     const variables = getPromptVariables(activePromptId);
