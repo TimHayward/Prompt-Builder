@@ -7,6 +7,7 @@
 
 import React, { useState } from "react";
 import { FolderType, TreeNode, ComponentType } from "@/types";
+import { getAllComponentsFromFolder } from "@/utils/treeUtils";
 import FolderIcon from '@mui/icons-material/Folder';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -84,16 +85,17 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
   
   // Handle drag start
   const handleDragStart = (e: React.DragEvent) => {
-    if (isComponent) { // Only components from sidebar are draggable for prompt building
+    if (isComponent) {
+      // Single component drag - keep original format for backward compatibility
       e.stopPropagation();
-      // The node is already a ComponentType if isComponent is true
-      e.dataTransfer.setData("application/json", JSON.stringify(node as ComponentType));
+      const component = node as ComponentType;
+      e.dataTransfer.setData("application/json", JSON.stringify(component));
       e.dataTransfer.effectAllowed = "move";
-      document.body.classList.add('is-dragging-something'); // Add global cursor style
+      document.body.classList.add('is-dragging-something');
 
-      // Optional: custom drag preview (can be removed if not desired or styled differently)
+      // Custom drag preview for component
       const dragPreview = document.createElement("div");
-      dragPreview.className = `dragging-component dragging-component-${(node as ComponentType).componentType}`;
+      dragPreview.className = `dragging-component dragging-component-${component.componentType}`;
       dragPreview.textContent = node.name;
       document.body.appendChild(dragPreview);
       e.dataTransfer.setDragImage(dragPreview, 0, 0);
@@ -101,8 +103,33 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
         document.body.removeChild(dragPreview);
       }, 0);
     } else {
-      // Prevent dragging folders for this specific functionality
-      e.preventDefault();
+      // Folder drag - collect all components recursively
+      const allComponents = getAllComponentsFromFolder(node);
+
+      if (allComponents.length === 0) {
+        // No components in folder, prevent drag
+        e.preventDefault();
+        return;
+      }
+
+      e.stopPropagation();
+      e.dataTransfer.setData("application/json", JSON.stringify({
+        dragType: "folder",
+        folderName: node.name,
+        components: allComponents
+      }));
+      e.dataTransfer.effectAllowed = "move";
+      document.body.classList.add('is-dragging-something');
+
+      // Custom drag preview for folder
+      const dragPreview = document.createElement("div");
+      dragPreview.className = `dragging-component dragging-component-folder`;
+      dragPreview.textContent = `${node.name} (${allComponents.length} component${allComponents.length !== 1 ? 's' : ''})`;
+      document.body.appendChild(dragPreview);
+      e.dataTransfer.setDragImage(dragPreview, 0, 0);
+      setTimeout(() => {
+        document.body.removeChild(dragPreview);
+      }, 0);
     }
   };
 
@@ -178,12 +205,12 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
         }`}
         style={{ paddingLeft: `${level * INDENT}px` }}
         onClick={handleNodeClick}
-        onDragStart={isComponent ? handleDragStart : undefined} // Attach drag start only to components
-        onDragEnd={isComponent ? handleDragEnd : undefined} // Attach drag end only to components
+        onDragStart={handleDragStart} // Both components and folders can be dragged to sections
+        onDragEnd={handleDragEnd} // Both components and folders need drag end
         onDragOver={handleDragOver} // Keep for folder reordering if used
         onDragLeave={handleDragLeave} // Keep for folder reordering if used
         onDrop={isFolder ? handleDrop : undefined} // Keep for folder reordering if used
-        draggable={isComponent} // Only components are draggable for this feature
+        draggable={true} // Both components and folders are draggable
       >
         <div className="node-content">
           {isFolder ? (

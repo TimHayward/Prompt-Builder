@@ -185,7 +185,7 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
           </div>
         ) : (
             <div onClick={(e) => {if(section.open){startEdit(e)}}} className={`section-display ${getTypeClass()}`}>
-            {section.name} • {section.type.charAt(0).toUpperCase() + section.type.slice(1)}
+            {section.name} • {section.type ? section.type.charAt(0).toUpperCase() + section.type.slice(1) : 'Section'}
             </div>
         )}
       </div>

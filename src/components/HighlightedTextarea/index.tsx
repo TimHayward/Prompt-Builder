@@ -2,10 +2,11 @@
 
 /**
  * HighlightedTextarea component
- * Textarea with syntax highlighting for {{variables}}
+ * Editable div with syntax highlighting for {{variables}}
+ * Uses contenteditable for direct text styling without overlay issues
  */
 
-import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle, useLayoutEffect } from 'react';
+import React, { useRef, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
 import './HighlightedTextarea.scss';
 
 interface HighlightedTextareaProps {
@@ -29,90 +30,200 @@ const HighlightedTextarea = forwardRef<HTMLTextAreaElement, HighlightedTextareaP
   autosize = false,
   isOpen = true,
 }, ref) => {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const highlightRef = useRef<HTMLDivElement>(null);
-  const [isFocused, setIsFocused] = useState(false);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const isComposing = useRef(false);
 
-  // Expose the textarea ref to parent components
-  useImperativeHandle(ref, () => textareaRef.current as HTMLTextAreaElement);
+  // Create a fake textarea ref for compatibility
+  useImperativeHandle(ref, () => {
+    // Return a partial HTMLTextAreaElement interface
+    return {
+      focus: () => editorRef.current?.focus(),
+      blur: () => editorRef.current?.blur(),
+      value: value,
+      scrollHeight: editorRef.current?.scrollHeight || 0,
+      style: editorRef.current?.style || {},
+    } as HTMLTextAreaElement;
+  });
 
-  // Auto-resize textarea to fit content if autosize is enabled
-  useLayoutEffect(() => {
-    if (autosize && textareaRef.current && isOpen) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
-  }, [value, autosize, isOpen]);
-
-  // Sync scroll position between textarea and highlight layer
-  const handleScroll = () => {
-    if (textareaRef.current && highlightRef.current) {
-      highlightRef.current.scrollTop = textareaRef.current.scrollTop;
-      highlightRef.current.scrollLeft = textareaRef.current.scrollLeft;
-    }
-  };
-
-  // Parse text and highlight {{variables}}
-  const highlightVariables = (text: string): React.ReactNode[] => {
-    if (!text) {
-      return [];
-    }
-
-    const regex = /(\{\{[^}]+\}\})/g;
-    const parts = text.split(regex);
-
-    return parts.map((part, index) => {
-      if (regex.test(part)) {
-        // This is a variable
-        return (
-          <span key={index} className="highlighted-variable">
-            {part}
-          </span>
-        );
+  // Get plain text from the contenteditable
+  const getPlainText = useCallback((element: HTMLElement): string => {
+    let text = '';
+    element.childNodes.forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        text += node.textContent;
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node as HTMLElement;
+        if (el.tagName === 'BR') {
+          text += '\n';
+        } else if (el.tagName === 'DIV' || el.tagName === 'P') {
+          if (text.length > 0 && !text.endsWith('\n')) {
+            text += '\n';
+          }
+          text += getPlainText(el);
+        } else {
+          text += getPlainText(el);
+        }
       }
-      // Regular text
-      return <span key={index}>{part}</span>;
     });
-  };
+    return text;
+  }, []);
 
-  // Handle textarea changes
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onChange(e.target.value);
-  };
+  // Save and restore cursor position
+  const saveCursorPosition = useCallback((): { start: number; end: number } | null => {
+    const selection = window.getSelection();
+    if (!selection || !editorRef.current || selection.rangeCount === 0) return null;
 
-  // Update highlight layer when value changes
+    const range = selection.getRangeAt(0);
+    const preCaretRange = range.cloneRange();
+    preCaretRange.selectNodeContents(editorRef.current);
+    preCaretRange.setEnd(range.startContainer, range.startOffset);
+    const start = preCaretRange.toString().length;
+
+    preCaretRange.setEnd(range.endContainer, range.endOffset);
+    const end = preCaretRange.toString().length;
+
+    return { start, end };
+  }, []);
+
+  const restoreCursorPosition = useCallback((position: { start: number; end: number } | null) => {
+    if (!position || !editorRef.current) return;
+
+    const selection = window.getSelection();
+    if (!selection) return;
+
+    let charIndex = 0;
+    const range = document.createRange();
+    range.setStart(editorRef.current, 0);
+    range.collapse(true);
+
+    const nodeStack: Node[] = [editorRef.current];
+    let node: Node | undefined;
+    let foundStart = false;
+    let foundEnd = false;
+
+    while (!foundEnd && (node = nodeStack.pop())) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const textLength = node.textContent?.length || 0;
+        const nextCharIndex = charIndex + textLength;
+
+        if (!foundStart && position.start >= charIndex && position.start <= nextCharIndex) {
+          range.setStart(node, position.start - charIndex);
+          foundStart = true;
+        }
+
+        if (foundStart && position.end >= charIndex && position.end <= nextCharIndex) {
+          range.setEnd(node, position.end - charIndex);
+          foundEnd = true;
+        }
+
+        charIndex = nextCharIndex;
+      } else {
+        let i = node.childNodes.length;
+        while (i--) {
+          nodeStack.push(node.childNodes[i]);
+        }
+      }
+    }
+
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }, []);
+
+  // Create highlighted HTML from plain text
+  const createHighlightedHTML = useCallback((text: string): string => {
+    if (!text) return '';
+
+    // Escape HTML entities
+    const escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    // Replace {{variables}} with highlighted spans
+    const highlighted = escaped.replace(
+      /(\{\{[^}]+\}\})/g,
+      '<span class="highlighted-variable">$1</span>'
+    );
+
+    // Convert newlines to br tags
+    return highlighted.replace(/\n/g, '<br>');
+  }, []);
+
+  // Handle input
+  const handleInput = useCallback(() => {
+    if (isComposing.current || !editorRef.current) return;
+
+    const plainText = getPlainText(editorRef.current);
+    onChange(plainText);
+  }, [getPlainText, onChange]);
+
+  // Handle paste - ensure plain text only
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const text = e.clipboardData.getData('text/plain');
+    document.execCommand('insertText', false, text);
+  }, []);
+
+  // Handle composition (for IME input)
+  const handleCompositionStart = useCallback(() => {
+    isComposing.current = true;
+  }, []);
+
+  const handleCompositionEnd = useCallback(() => {
+    isComposing.current = false;
+    handleInput();
+  }, [handleInput]);
+
+  // Handle drop events - adapt for div element
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    if (onDrop) {
+      // Create a synthetic event that looks like a textarea event
+      onDrop(e as unknown as React.DragEvent<HTMLTextAreaElement>);
+    }
+  }, [onDrop]);
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    if (onDragOver) {
+      onDragOver(e as unknown as React.DragEvent<HTMLTextAreaElement>);
+    }
+  }, [onDragOver]);
+
+  // Update the content when value changes from outside
   useEffect(() => {
-    handleScroll();
-  }, [value]);
+    if (!editorRef.current) return;
+
+    const currentText = getPlainText(editorRef.current);
+    if (currentText !== value) {
+      const cursorPos = saveCursorPosition();
+      editorRef.current.innerHTML = createHighlightedHTML(value);
+      if (document.activeElement === editorRef.current) {
+        restoreCursorPosition(cursorPos);
+      }
+    }
+  }, [value, getPlainText, createHighlightedHTML, saveCursorPosition, restoreCursorPosition]);
+
+  // Initial render
+  useEffect(() => {
+    if (editorRef.current && !editorRef.current.innerHTML) {
+      editorRef.current.innerHTML = createHighlightedHTML(value);
+    }
+  }, []);
 
   return (
     <div className={`highlighted-textarea-wrapper ${className}`}>
-      {/* Syntax highlighted background */}
       <div
-        ref={highlightRef}
-        className="highlight-layer"
-        aria-hidden="true"
-      >
-        <pre>
-          {highlightVariables(value)}
-          {/* Add newline at end to match textarea rendering */}
-          {'\n'}
-        </pre>
-      </div>
-
-      {/* Editable textarea overlay */}
-      <textarea
-        ref={textareaRef}
-        className={`editable-layer ${isFocused ? 'focused' : ''}`}
-        value={value}
-        onChange={handleChange}
-        onScroll={handleScroll}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        placeholder={placeholder}
+        ref={editorRef}
+        className="editable-content"
+        contentEditable
+        onInput={handleInput}
+        onPaste={handlePaste}
+        onCompositionStart={handleCompositionStart}
+        onCompositionEnd={handleCompositionEnd}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        data-placeholder={placeholder}
         spellCheck={false}
+        suppressContentEditableWarning
       />
     </div>
   );

@@ -36,11 +36,12 @@ const findComponentById = (treeData: any[], id: string): ComponentType | null =>
 };
 
 const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallback, index }) => {
-  const { 
-    updateSection, 
-    deleteSection, 
+  const {
+    updateSection,
+    deleteSection,
     toggleSectionOpen,
     updateSectionFromLinkedComponent,
+    addSectionFromComponent,
   } = usePromptContext();
   
   const { treeData } = useTreeContext();
@@ -52,15 +53,16 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
   useEffect(() => {
     if (section.linkedComponentId) {
       const linkedComponent = findComponentById(treeData, section.linkedComponentId);
-      
-      if (linkedComponent && 
+
+      if (linkedComponent &&
           (linkedComponent.content !== section.originalContent ||
            linkedComponent.componentType !== section.type ||
            linkedComponent.name !== section.name)) {
         updateSectionFromLinkedComponent(promptId, section.id, linkedComponent);
       }
     }
-  }, [treeData, section, updateSectionFromLinkedComponent]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [treeData, section.linkedComponentId, section.originalContent, section.type, section.name, promptId, updateSectionFromLinkedComponent]);
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     updateSection(promptId, section.id, { 
@@ -80,18 +82,48 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingOver(false);
-    
+
     try {
       const data = e.dataTransfer.getData("application/json");
-      const component = JSON.parse(data);
-      
-      if (component && component.type === "component") {
+      const dragData = JSON.parse(data);
+
+      if (!dragData) return;
+
+      // Handle folder drop with multiple components
+      if (dragData.dragType === "folder" && dragData.components && Array.isArray(dragData.components)) {
+        const components = dragData.components;
+
+        if (components.length === 0) return;
+
+        console.log('[Folder Drop] Components:', components);
+
+        // Update current section with first component
+        const firstComponent = components[0];
+        console.log('[Folder Drop] First component:', firstComponent);
+
         updateSection(promptId, section.id, {
-          content: component.content,
-          type: component.componentType,
-          name: component.name,
-          linkedComponentId: component.id,
-          originalContent: component.content,
+          content: firstComponent.content,
+          type: firstComponent.componentType || 'instruction',
+          name: firstComponent.name,
+          linkedComponentId: firstComponent.id,
+          originalContent: firstComponent.content,
+        });
+
+        // Add remaining components as new sections after the current one
+        components.slice(1).forEach((component: ComponentType, idx: number) => {
+          console.log(`[Folder Drop] Adding component ${idx + 1}:`, component);
+          // Add each component at index + 1 + idx to insert them sequentially after current section
+          addSectionFromComponent(promptId, component, index + 1 + idx);
+        });
+      }
+      // Handle standard component drop (original format)
+      else if (dragData.type === "component" && dragData.componentType) {
+        updateSection(promptId, section.id, {
+          content: dragData.content,
+          type: dragData.componentType,
+          name: dragData.name,
+          linkedComponentId: dragData.id,
+          originalContent: dragData.content,
         });
       }
     } catch (error) {

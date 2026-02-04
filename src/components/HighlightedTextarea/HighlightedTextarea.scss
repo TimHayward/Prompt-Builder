@@ -2,83 +2,53 @@
   position: relative;
   width: 100%;
   min-height: fit-content;
-  overflow: visible;
 
-  // Syntax highlighted background layer
-  .highlight-layer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    overflow: auto;
-    pointer-events: none;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    color: transparent;
-    background: transparent;
-    z-index: 1;
-
-    pre {
-      margin: 0;
-      padding: 0.25rem;
-      padding-bottom: 0;
-      font-family: inherit;
-      font-size: inherit;
-      line-height: 1.6;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      color: colors.$text-color;
-      background: transparent;
-
-      // Highlighted variable styling
-      .highlighted-variable {
-        color: colors.$accent-color;
-        background-color: rgba(colors.$accent-color, 0.15);
-        padding: 0.1rem 0.2rem;
-        border-radius: 3px;
-        font-weight: 500;
-        border: 1px solid rgba(colors.$accent-color, 0.3);
-      }
-    }
-  }
-
-  // Editable textarea overlay
-  .editable-layer {
-    position: relative;
+  // Single editable content div with direct styling
+  .editable-content {
+    box-sizing: border-box;
     width: 100%;
-    min-height: 0;
+    min-height: 1.6em;
     padding: 0.25rem;
-    padding-bottom: 0;
     margin: 0;
-    margin-top: 0.25rem;
     font-family: inherit;
     font-size: inherit;
+    font-weight: inherit;
     line-height: 1.6;
     color: colors.$text-color;
     background: transparent;
     border: none;
     outline: none;
-    resize: none;
-    overflow: hidden;
     white-space: pre-wrap;
     word-wrap: break-word;
-    z-index: 2;
-    caret-color: colors.$text-color;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    cursor: text;
 
-    &::placeholder {
+    // Placeholder styling
+    &:empty::before {
+      content: attr(data-placeholder);
       color: colors.$light-gray;
       opacity: 0.5;
+      pointer-events: none;
     }
 
-    // Make text transparent so highlighted layer shows through
-    // but keep caret visible
-    -webkit-text-fill-color: transparent;
-    color: transparent;
+    // Focus styling
+    &:focus {
+      outline: none;
+    }
 
-    // Show text selection
-    &::selection {
+    // Text selection
+    &::selection,
+    & *::selection {
       background-color: rgba(colors.$accent-color, 0.3);
+    }
+
+    // Highlighted variable styling
+    .highlighted-variable {
+      color: colors.$accent-color;
+      background-color: rgba(colors.$accent-color, 0.15);
+      border-radius: 3px;
+      box-shadow: 0 0 0 1px rgba(colors.$accent-color, 0.3);
     }
   }
 }

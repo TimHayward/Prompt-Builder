@@ -118,7 +118,7 @@ const PromptEditor: React.FC = () => {
 
         if (droppedItem.dragType === "existingSection") {
           // Handle reordering of an existing section
-          if (typeof droppedItem.sectionId === 'string' && 
+          if (typeof droppedItem.sectionId === 'string' &&
               typeof activePromptId === 'string' &&
               droppedItem.sectionId && // Ensure not empty string
               activePromptId &&       // Ensure not empty string
@@ -140,12 +140,32 @@ const PromptEditor: React.FC = () => {
             if (finalInsertionIndex < 0) {
                 finalInsertionIndex = 0;
             }
-            
+
             moveSectionToIndex(activePromptId, droppedItem.sectionId, finalInsertionIndex);
           }
+        } else if (droppedItem.dragType === "folder" && droppedItem.components) {
+          // Handle folder drop with multiple components
+          console.log('[PromptEditor] Folder drop - Components:', droppedItem.components);
+          const components = droppedItem.components as ComponentNodeType[];
+
+          // Add all components as new sections
+          components.forEach((component: ComponentNodeType, idx: number) => {
+            console.log(`[PromptEditor] Adding component ${idx + 1}:`, component);
+            const newSection: SectionType = {
+              id: uuidv4(),
+              name: component.name,
+              content: component.content,
+              type: component.componentType || 'instruction',
+              linkedComponentId: component.id,
+              originalContent: component.content,
+              open: true,
+              dirty: false,
+            };
+            addSectionAtIndex(activePrompt.id, newSection, insertionIndex + idx);
+          });
         } else {
-          // Handle adding a new section from a componentNode (existing logic)
-          const componentNode = droppedItem as ComponentNodeType; // Assuming it's a ComponentNodeType if not existingSection
+          // Handle adding a new section from a single component
+          const componentNode = droppedItem as ComponentNodeType;
           const newSection: SectionType = {
             id: uuidv4(), // Changed from Date.now() to uuidv4() for string ID
             name: componentNode.name,

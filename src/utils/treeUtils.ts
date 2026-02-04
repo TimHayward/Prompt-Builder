@@ -13,11 +13,28 @@ import { TreeNode, FolderType, ComponentType } from "../types"; // Ensure Compon
  */
 export const isDescendant = (descendant: TreeNode, ancestor: FolderType): boolean => {
   if (ancestor.type !== "folder") return false;
-  
+
   return ancestor.children.some((child) => {
     if (child.id === descendant.id) return true;
     return child.type === "folder" && isDescendant(descendant, child);
   });
+};
+
+/**
+ * Recursively collects all components from a folder and its subfolders
+ * @param node The folder node to collect components from
+ * @returns Array of all ComponentType objects found in the folder hierarchy
+ */
+export const getAllComponentsFromFolder = (node: TreeNode): ComponentType[] => {
+  if (node.type === "component") {
+    return [node];
+  }
+
+  if (node.type === "folder") {
+    return node.children.flatMap(child => getAllComponentsFromFolder(child));
+  }
+
+  return [];
 };
 
 /**
