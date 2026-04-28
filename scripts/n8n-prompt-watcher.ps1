@@ -67,7 +67,7 @@ function Send-PromptToWebhook {
         catch [System.IO.IOException] {
             if ($attempt -eq $maxAttempts) {
                 Write-Warning "$(Get-Date -Format 's') [FAIL] Cannot read after $maxAttempts attempts: $FileName"
-                return
+                return $false
             }
             Start-Sleep -Milliseconds (400 * $attempt)
         }
@@ -83,9 +83,43 @@ function Send-PromptToWebhook {
             -ContentType 'application/json' -TimeoutSec 30 | Out-Null
 
         Write-Host "$(Get-Date -Format 's') [OK]    $FileName"
+        return $true
     }
     catch {
         Write-Warning "$(Get-Date -Format 's') [ERROR] $FileName — $($_.Exception.Message)"
+        return $false
+    }
+}
+
+function Rename-ProcessedPromptFile {
+    param(
+        [string]$FilePath,
+        [string]$FileName
+    )
+
+    if ($FileName -notmatch '^Prompt - (.+)$') {
+        return
+    }
+
+    $baseName = $Matches[1]
+    $targetName = "Uploaded - $baseName"
+    $targetPath = Join-Path -Path (Split-Path -Parent $FilePath) -ChildPath $targetName
+
+    # Avoid collisions if an uploaded file with the same name already exists.
+    if (Test-Path $targetPath) {
+        $stem = [System.IO.Path]::GetFileNameWithoutExtension($baseName)
+        $ext = [System.IO.Path]::GetExtension($baseName)
+        $suffix = Get-Date -Format 'yyyyMMdd-HHmmss'
+        $targetName = "Uploaded - $stem-$suffix$ext"
+        $targetPath = Join-Path -Path (Split-Path -Parent $FilePath) -ChildPath $targetName
+    }
+
+    try {
+        Rename-Item -Path $FilePath -NewName $targetName -ErrorAction Stop
+        Write-Host "$(Get-Date -Format 's') [RENAMED] $FileName -> $targetName"
+    }
+    catch {
+        Write-Warning "$(Get-Date -Format 's') [WARN] Uploaded but failed to rename '$FileName' — $($_.Exception.Message)"
     }
 }
 
@@ -137,7 +171,10 @@ try {
             $fileName = [System.IO.Path]::GetFileName($filePath)
             # Brief pause to let the writing process finish flushing
             Start-Sleep -Milliseconds 500
-            Send-PromptToWebhook -FilePath $filePath -FileName $fileName -Url $WebhookUrl
+            $uploaded = Send-PromptToWebhook -FilePath $filePath -FileName $fileName -Url $WebhookUrl
+            if ($uploaded) {
+                Rename-ProcessedPromptFile -FilePath $filePath -FileName $fileName
+            }
         }
         Start-Sleep -Milliseconds 200
     }
