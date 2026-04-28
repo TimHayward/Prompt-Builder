@@ -1,0 +1,165 @@
+{
+  "_readme": [
+    "SETUP CHECKLIST",
+    "1. Import this file into n8n via Workflows -> Import from File.",
+    "2. In node 'Forward To Prompt Builder API', update the URL to the address the n8n container",
+    "   can reach your Prompt Builder app on.",
+    "   Examples:",
+    "     Same Docker host:            http://host.docker.internal:3000/api/prompts/ingest",
+    "     Specific host IP:            http://192.168.1.x:3000/api/prompts/ingest",
+    "     Named Docker service:        http://prompt-builder:3000/api/prompts/ingest",
+    "   The current placeholder is http://host.docker.internal:3000/api/prompts/ingest.",
+    "   A 405 error means something is responding but rejecting the method — the app is not",
+    "   reachable at the configured URL. Check the URL first.",
+    "3. Activate the workflow; copy the Webhook URL shown on the Webhook node.",
+    "4. Set that URL as -WebhookUrl when running scripts/n8n-prompt-watcher.ps1.",
+    "5. Payload expected from watcher: { filename: string, content: string }."
+  ],
+  "name": "Prompt Builder - Ingest Markdown Prompts (API)",
+  "nodes": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-100000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 300],
+      "webhookId": "prompt-ingest",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "prompt-ingest",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-100000000002",
+      "name": "Validate Payload",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-filename",
+              "leftValue": "={{ !!(($json.body ?? $json).filename) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "cond-content",
+              "leftValue": "={{ !!(($json.body ?? $json).content) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-100000000003",
+      "name": "Forward To Prompt Builder API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [760, 220],
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3000/api/prompts/ingest",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body ?? $json }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-100000000004",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1020, 220],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, result: $json } }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-100000000005",
+      "name": "Respond Invalid Payload",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [760, 420],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false, error: 'Invalid payload: filename and content are required' } }}",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Payload": {
+      "main": [
+        [
+          {
+            "node": "Forward To Prompt Builder API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Invalid Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Forward To Prompt Builder API": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "instanceId": "prompt-builder-ingest-api"
+  }
+}
