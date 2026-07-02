@@ -1,0 +1,30 @@
+services:
+  prompt-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    image: promptbuilder:latest
+    container_name: prompt-builder
+
+    restart: always
+
+    ports:
+      - "3000:3000"
+
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+
+    volumes:
+      - prompt_builder_data:/app/data
+
+    command: >
+      sh -lc "HOSTNAME=0.0.0.0 npm run db:init || true &&
+      HOSTNAME=0.0.0.0 npm run dev -- --port 3000"
+
+volumes:
+  prompt_builder_data:
+    external: true
+    name: prompt_builder_data
