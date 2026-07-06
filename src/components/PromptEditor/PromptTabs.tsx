@@ -35,9 +35,9 @@ const PromptTabs: React.FC<PromptTabsProps> = ({
 }) => {
   const { addPrompt, deletePrompt, duplicatePrompt } = usePromptContext(); // Add duplicatePrompt
 
-  // Handle adding a new prompt
-  const handleAddPrompt = () => {
-    const newPrompt = addPrompt();
+  // Handle adding a new prompt (no blank starter section)
+  const handleAddPrompt = async () => {
+    const newPrompt = await addPrompt(undefined, { sections: [] });
     setActivePromptId(newPrompt.id); // newPrompt.id is string
   };
 

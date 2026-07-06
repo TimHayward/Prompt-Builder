@@ -16,7 +16,7 @@ type PromptContextType = {
   setPrompts: React.Dispatch<React.SetStateAction<Prompt[]>>;
   activePromptId: string | null;
   setActivePromptId: React.Dispatch<React.SetStateAction<string | null>>;
-  addPrompt: (name?: string) => Promise<Prompt>;
+  addPrompt: (name?: string, options?: { sections?: Section[]; variables?: Record<string, string> }) => Promise<Prompt>;
   duplicatePrompt: (promptIdToDuplicate: string) => Promise<Prompt | null>;
   addSectionToPrompt: (promptId: string, type?: Settings['defaultSectionType']) => string | undefined;
   updateSection: (promptId: string, sectionId: string, updates: Partial<Omit<Section, "id">>) => void;
@@ -180,21 +180,24 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     }
   }, 1000), [appInitialized]);
 
-  const addPrompt = useCallback(async (name?: string): Promise<Prompt> => {
+  const addPrompt = useCallback(async (name?: string, options?: { sections?: Section[]; variables?: Record<string, string> }): Promise<Prompt> => {
     activePromptIdChangeIsFromAddPrompt.current = true;
     const tempClientId = uuidv4();
 
     const newPromptName = name || settings.defaultPromptName || `Prompt ${promptsRef.current.length + 1}`;
-    const initialSections: Section[] = settings.defaultSectionType
-      ? [{
-          id: uuidv4(),
-          name: 'Section 1',
-          content: '',
-          type: settings.defaultSectionType,
-          open: true,
-          dirty: false,
-        }]
-      : [];
+    const initialSections: Section[] = options?.sections
+      ? options.sections
+      : settings.defaultSectionType
+        ? [{
+            id: uuidv4(),
+            name: 'Section 1',
+            content: '',
+            type: settings.defaultSectionType,
+            open: true,
+            dirty: false,
+          }]
+        : [];
+    const initialVariables: Record<string, string> = options?.variables ?? {};
 
     // Data for the API - ensure it matches what the backend expects for a new prompt.
     // 'open' and 'dirty' are primarily UI concerns but might be stored if desired.
@@ -202,7 +205,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     const promptDataForApi = {
       name: newPromptName,
       sections: initialSections, // Sending full initial sections
-      variables: {}, // Initialize with empty variables
+      variables: initialVariables,
       num: promptsRef.current.length + 1, // Or other logic for 'num'
     };
 
@@ -210,7 +213,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
       id: tempClientId,
       name: newPromptName,
       sections: initialSections,
-      variables: {},
+      variables: initialVariables,
       num: promptDataForApi.num,
     };
 

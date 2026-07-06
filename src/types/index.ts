@@ -2,13 +2,17 @@
  * Type definitions for Prompt Builder
  */
 
+import type { SectionTypeValue } from "../lib/frameworks";
+
+export type { SectionTypeValue };
+
 // Component types for the sidebar tree
 export type ComponentType = {
   id: string; // Changed from number
   name: string;
   type: "component";
   content: string;
-  componentType: "instruction" | "role" | "context" | "format" | "style";
+  componentType: SectionTypeValue;
 };
 
 // Folder type for the sidebar tree
@@ -28,14 +32,14 @@ export type Section = {
   id: string; // Changed from number
   name: string;
   content: string;
-  type: "instruction" | "role" | "context" | "format" | "style";
+  type: SectionTypeValue;
   linkedComponentId?: string; // Changed from number to string
   originalContent?: string;
   open: boolean;
   dirty: boolean;
   editingHeader?: boolean;
   editingHeaderTempName?: string;
-  editingHeaderTempType?: "instruction" | "role" | "context" | "format" | "style";
+  editingHeaderTempType?: SectionTypeValue;
 };
 
 // Prompt type containing sections
@@ -51,7 +55,7 @@ export type Prompt = {
 export type Settings = {
   autoSave: boolean;
   defaultPromptName: string;
-  defaultSectionType: "instruction" | "role" | "context" | "format" | "style";
+  defaultSectionType: SectionTypeValue;
   theme: "dark" | "light";
   markdownPromptingEnabled: boolean;
   systemPrompt: string;

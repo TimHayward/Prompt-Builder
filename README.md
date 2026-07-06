@@ -56,14 +56,8 @@ We welcome contributions! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for
 
 - Reporting bugs or suggesting features.
 
-## Feature Ideas 💡
-Here are some potential enhancements for the project:
-- Automatic formatting
-- Built in meta-prompting
-- Component prompt variables
-- Component nesting
-- Upgrade Styles/Design (please...)
-- Compiled Prompt Libraries
+## Backlog 💡
+Planned remediations, enhancements, and new features live in [BACKLOG.md](BACKLOG.md).
 
 ## Built With 🔧
 Frontend: Vite, React, TypeScript, SCSS

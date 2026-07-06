@@ -8,6 +8,15 @@
 import React, { useState, useEffect } from "react";
 import ModalBase from "./ModalBase";
 import { useTreeContext } from "../../contexts/TreeContext";
+import {
+  FRAMEWORKS,
+  DEFAULT_FRAMEWORK_ID,
+  DEFAULT_TYPE,
+  getFramework,
+  getFrameworkForType,
+  getTypeLabel,
+  SectionTypeValue
+} from "../../lib/frameworks";
 
 const ComponentModal: React.FC = () => {
   const {
@@ -21,7 +30,8 @@ const ComponentModal: React.FC = () => {
 
   const [componentName, setComponentName] = useState("");
   const [componentContent, setComponentContent] = useState("");
-  const [componentType, setComponentType] = useState<"instruction" | "role" | "context" | "format" | "style">("instruction");
+  const [componentType, setComponentType] = useState<SectionTypeValue>(DEFAULT_TYPE);
+  const [frameworkId, setFrameworkId] = useState<string>(DEFAULT_FRAMEWORK_ID);
   const [error, setError] = useState("");
 
   // Reset form when modal opens/closes or editing component changes
@@ -32,15 +42,25 @@ const ComponentModal: React.FC = () => {
         setComponentName(componentBeingEdited.name);
         setComponentContent(componentBeingEdited.content);
         setComponentType(componentBeingEdited.componentType);
+        setFrameworkId(getFrameworkForType(componentBeingEdited.componentType).id);
       } else {
         // Adding a new component
         setComponentName("");
         setComponentContent("");
-        setComponentType("instruction");
+        setComponentType(DEFAULT_TYPE);
+        setFrameworkId(DEFAULT_FRAMEWORK_ID);
       }
       setError("");
     }
   }, [isComponentModalOpen, componentBeingEdited]);
+
+  const handleFrameworkChange = (id: string) => {
+    const framework = getFramework(id);
+    setFrameworkId(framework.id);
+    if (!framework.types.includes(componentType)) {
+      setComponentType(framework.types[0]);
+    }
+  };
 
   // Submit handler
   const handleSubmit = (e: React.FormEvent) => {
@@ -94,17 +114,28 @@ const ComponentModal: React.FC = () => {
         </div>
 
         <div className="form-group">
-          <label htmlFor="componentType">Type:</label>
-          <select 
-            id="componentType" 
-            value={componentType} 
-            onChange={(e) => setComponentType(e.target.value as any)}
+          <label htmlFor="componentFramework">Framework:</label>
+          <select
+            id="componentFramework"
+            value={frameworkId}
+            onChange={(e) => handleFrameworkChange(e.target.value)}
           >
-            <option value="instruction">Instruction</option>
-            <option value="role">Role</option>
-            <option value="context">Context</option>
-            <option value="format">Format</option>
-            <option value="style">Style</option>
+            {FRAMEWORKS.map((framework) => (
+              <option key={framework.id} value={framework.id}>{framework.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="componentType">Type:</label>
+          <select
+            id="componentType"
+            value={componentType}
+            onChange={(e) => setComponentType(e.target.value as SectionTypeValue)}
+          >
+            {getFramework(frameworkId).types.map((type) => (
+              <option key={type} value={type}>{getTypeLabel(type)}</option>
+            ))}
           </select>
         </div>
 

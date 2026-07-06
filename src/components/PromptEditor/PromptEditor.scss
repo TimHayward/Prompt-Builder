@@ -216,18 +216,13 @@
      padding-top: 0.5rem;
      position: relative; // Added for insertion indicator positioning
 
-     .context { &::before{ background-color: colors.$context-color; } }
-     .format { &::before{ background-color: colors.$format-color; } }
-     .instruction { &::before{ background-color: colors.$instruction-color; } }
-     .role { &::before{ background-color: colors.$role-color; } }
-     .style { &::before{ background-color: colors.$style-color; } }
-
      .section{
       position: relative;
       margin-bottom: 0.5rem;
 
       &::before{
         content: '';
+        background-color: var(--section-color, colors.$instruction-color);
         width: 0.3rem;
         border-radius: 0.15rem;
         height: 100%;

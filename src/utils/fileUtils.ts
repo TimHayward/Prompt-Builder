@@ -4,6 +4,7 @@
  */
 
 import { FolderType, Prompt, ComponentType, Section } from "../types"; // Added ComponentType and Section
+import { ALL_TYPE_VALUES } from "../lib/frameworks";
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -65,8 +66,8 @@ export const parseLoadedData = (data: any): {
 
     // --- Start of ID Transformation and Enhanced Validation ---
     const oldNumericIdToNewStringIdMap: Map<number, string> = new Map();
-    const validComponentTypes = ["instruction", "role", "context", "format", "style"];
-    const validSectionTypes = ["instruction", "role", "context", "format", "style"];
+    const validComponentTypes: string[] = ALL_TYPE_VALUES;
+    const validSectionTypes: string[] = ALL_TYPE_VALUES;
 
     // Helper function to process tree nodes (folders and components)
     const processNode = (node: any, parentPath: string = "ROOT"): FolderType | ComponentType => {

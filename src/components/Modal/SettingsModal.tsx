@@ -9,6 +9,7 @@ import React, { useState, useEffect } from "react";
 import ModalBase from "./ModalBase";
 import { useAppContext } from "../../contexts/AppContext";
 import Switch from "@mui/material/Switch";
+import { SectionTypeValue } from "../../lib/frameworks";
 
 const SettingsModal: React.FC = () => {
   const { 
@@ -21,7 +22,7 @@ const SettingsModal: React.FC = () => {
   const [formData, setFormData] = useState({
     autoSave: true,
     defaultPromptName: "",
-    defaultSectionType: "instruction" as "instruction" | "role" | "context" | "format" | "style",
+    defaultSectionType: "instruction" as SectionTypeValue,
     theme: "dark" as "dark" | "light",
     markdownPromptingEnabled: false,
     systemPrompt: ""

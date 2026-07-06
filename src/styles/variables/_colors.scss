@@ -16,6 +16,8 @@ $hover-gray: #686868;
 $hover-gray-light: #8b8b8b;
 
 // Section type colors
+// Source of truth for per-type colors is src/lib/frameworks.ts;
+// $instruction-color remains as the CSS fallback for the section color bar.
 $instruction-color: #e67e22;
 $role-color: #f7e920;
 $context-color: #3498db;

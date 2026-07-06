@@ -412,3 +412,85 @@ small {
     }
   }
 }
+
+// Import Prompt from Markdown modal
+.import-prompt-modal {
+  .modal-content {
+    width: 70vw;
+    max-width: 900px;
+  }
+
+  .modal-body {
+    max-height: 78vh;
+    overflow-y: auto;
+    @include mixins.custom-scrollbar();
+  }
+
+  .import-note,
+  .import-empty {
+    width: 97%;
+    margin: 0.25rem auto 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    color: colors.$light-gray;
+    background-color: color.adjust(colors.$dark-gray, $lightness: 4%);
+
+    code {
+      background-color: color.adjust(colors.$dark-gray, $lightness: -4%);
+      padding: 0 0.25rem;
+      border-radius: 3px;
+    }
+  }
+
+  .import-rows {
+    width: 97%;
+    margin: 0.5rem auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .import-row {
+    border: 1px solid color.adjust(colors.$dark-gray, $lightness: 5%);
+    border-radius: 4px;
+    padding: 0.5rem;
+    background-color: color.adjust(colors.$dark-gray, $lightness: 2%);
+
+    .import-row-main {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .import-row-name {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .import-row-type {
+      flex: 0 0 auto;
+      width: 11rem;
+
+      &.unmatched {
+        border-color: colors.$warning-color;
+        box-shadow: 0 0 0 1px colors.$warning-color;
+      }
+    }
+
+    .import-row-toggle {
+      @include mixins.flex(row, center, center);
+      color: colors.$text-color;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.25rem;
+    }
+
+    .import-row-content {
+      width: 100%;
+      margin-top: 0.5rem;
+      box-sizing: border-box;
+    }
+  }
+}

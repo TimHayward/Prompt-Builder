@@ -12,6 +12,7 @@ import SimpleTreeView from './SimpleTreeView';
 import { useAppContext } from '@/contexts/AppContext';
 import { useTreeContext } from '@/contexts/TreeContext';
 import { FolderType, ComponentType } from '@/types'; // Removed TreeNode
+import { ALL_TYPE_VALUES } from '@/lib/frameworks';
 import { mergeTreeData } from '@/utils/treeUtils';
 import { v4 as uuidv4 } from 'uuid'; // Added for generating string IDs
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -35,7 +36,7 @@ const CommunityComponentsModal: React.FC = () => {
   const [libraryFiles, setLibraryFiles] = useState<LibraryFile[]>([]);
   const [manifestError, setManifestError] = useState<string | null>(null);
 
-  const validComponentTypes = ["instruction", "role", "context", "format", "style"];
+  const validComponentTypes: string[] = ALL_TYPE_VALUES;
 
   // Helper function to assign new UUIDs to library nodes
   const processNodeForLibrary = (node: any): FolderType | ComponentType => {

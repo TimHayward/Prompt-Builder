@@ -28,7 +28,27 @@
       color: colors.$text-color;
     }
   }
-  
+
+  .import-controls {
+    padding: 0.25rem 0.5rem 0.5rem;
+
+    .import-prompt-btn {
+      @include mixins.btn();
+      @include mixins.flex(row, center, center);
+      gap: 0.4rem;
+      width: 100%;
+      padding: 0.4rem;
+      color: colors.$text-color;
+      background-color: colors.$dark-gray;
+      border-radius: 0.25rem;
+      font-size: 0.9rem;
+
+      &:hover {
+        background-color: colors.$hover-gray;
+      }
+    }
+  }
+
   .tree-container {
     flex: 1;
     overflow-y: auto;
@@ -201,14 +221,6 @@
     }
   }
 }
-
-// Component icon colors
-.context-icon { color: colors.$context-color; }
-.format-icon { color: colors.$format-color; }
-.instruction-icon { color: colors.$instruction-color; }
-.role-icon { color: colors.$role-color; }
-.style-icon { color: colors.$style-color; }
-
 
 @media (max-width: 1200px) {
   #side-bar {

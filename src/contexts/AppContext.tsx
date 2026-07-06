@@ -28,6 +28,8 @@ type AppContextType = {
   setSettingsModalOpen: (open: boolean) => void;
   isCommunityModalOpen: boolean;
   setCommunityModalOpen: (open: boolean) => void;
+  importPromptPayload: { filename: string; content: string } | null;
+  setImportPromptPayload: (payload: { filename: string; content: string } | null) => void;
   appInitialized: boolean;
 };
 
@@ -41,6 +43,8 @@ const AppContext = createContext<AppContextType>({
   setSettingsModalOpen: () => {},
   isCommunityModalOpen: false,
   setCommunityModalOpen: () => {},
+  importPromptPayload: null,
+  setImportPromptPayload: () => {},
   appInitialized: false,
 });
 
@@ -56,6 +60,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
   const [isCommunityModalOpen, setCommunityModalOpen] = useState(false);
+  const [importPromptPayload, setImportPromptPayload] = useState<{ filename: string; content: string } | null>(null);
   const [appInitialized, setAppInitialized] = useState(false);
 
   // Load settings on component mount
@@ -157,6 +162,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         setSettingsModalOpen,
         isCommunityModalOpen,
         setCommunityModalOpen,
+        importPromptPayload,
+        setImportPromptPayload,
         appInitialized,
       }}
     >

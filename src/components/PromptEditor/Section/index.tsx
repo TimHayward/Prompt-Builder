@@ -12,6 +12,7 @@ import { useTreeContext } from "@/contexts/TreeContext";
 import SectionHeader from "./SectionHeader";
 import HighlightedTextarea from "@/components/HighlightedTextarea";
 import { usePrompts } from "@/hooks/usePrompts"; // Added
+import { getTypeColor } from "@/lib/frameworks";
 
 interface SectionProps {
   section: SectionType;
@@ -61,7 +62,6 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
         updateSectionFromLinkedComponent(promptId, section.id, linkedComponent);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [treeData, section.linkedComponentId, section.originalContent, section.type, section.name, promptId, updateSectionFromLinkedComponent]);
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -151,8 +151,9 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
   };
 
   return (
-    <div 
+    <div
       className={`section ${section.open ? "open" : "closed"} ${isDraggingOver ? "drag-over" : ""} ${section.type}`}
+      style={{ "--section-color": getTypeColor(section.type) } as React.CSSProperties}
     >
       <div 
         className="section-drag-handle"

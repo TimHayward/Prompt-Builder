@@ -8,10 +8,12 @@
 import React, { useRef, useState } from "react";
 import { TreeNode, FolderType, ComponentType } from "@/types";
 import { useTreeContext } from "@/contexts/TreeContext";
+import { useAppContext } from "@/contexts/AppContext";
 import TreeView from "./TreeView";
 import FileControls from "./FileControls";
 import "./SideBar.scss";
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
 
 const Sidebar: React.FC = () => {
   const { 
@@ -26,10 +28,27 @@ const Sidebar: React.FC = () => {
     handleMoveNodeUp,
     handleMoveNodeDown,
   } = useTreeContext();
-  
+  const { setImportPromptPayload } = useAppContext();
+
   const [isAddingFolder, setIsAddingFolder] = useState<string | null>(null);
   const [newFolderName, setNewFolderName] = useState("");
   const newFolderInputRef = useRef<HTMLInputElement>(null);
+  const mdInputRef = useRef<HTMLInputElement>(null);
+
+  // Read a picked .md file and hand it to the import modal
+  const handleMdFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const content = await file.text();
+      setImportPromptPayload({ filename: file.name, content });
+    } catch (err) {
+      console.error("Failed to read markdown file:", err);
+      alert("Failed to read the selected file.");
+    } finally {
+      if (mdInputRef.current) mdInputRef.current.value = "";
+    }
+  };
   
   // Focus input when adding a new folder
   React.useEffect(() => {
@@ -109,6 +128,23 @@ const Sidebar: React.FC = () => {
           <MoreVertIcon fontSize="inherit"/>
         </button>
       </header>
+      <div className="import-controls">
+        <input
+          type="file"
+          accept=".md,.markdown"
+          ref={mdInputRef}
+          style={{ display: "none" }}
+          onChange={handleMdFileChange}
+        />
+        <button
+          className="import-prompt-btn"
+          onClick={() => mdInputRef.current?.click()}
+          title="Import a Markdown prompt"
+        >
+          <UploadFileIcon fontSize="inherit" />
+          <span>Import Prompt</span>
+        </button>
+      </div>
       <div className="tree-container">
         <TreeView
           treeData={treeData}

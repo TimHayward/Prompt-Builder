@@ -389,7 +389,7 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
     
     if (!draggedNode || !targetNode) return;
     
-    let actualTargetFolderId = targetNodeId;
+    const actualTargetFolderId = targetNodeId;
     if (targetNode.type !== "folder") {
         // This logic needs to find the parent of targetNode if it's a component.
         // For now, we assume targetNodeId is a folder or we need a findParent function.

@@ -11,6 +11,13 @@ import { usePromptContext } from "@/contexts/PromptContext";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import CloseIcon from '@mui/icons-material/Close';
+import {
+  FRAMEWORKS,
+  getFramework,
+  getFrameworkForType,
+  getTypeLabel,
+  SectionTypeValue
+} from "@/lib/frameworks";
 
 interface SectionHeaderProps {
   section: Section;
@@ -31,6 +38,7 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
   const [isEditing, setIsEditing] = useState(section.editingHeader || false); // Initialize with section.editingHeader
   const [editName, setEditName] = useState(section.name);
   const [editType, setEditType] = useState(section.type);
+  const [editFrameworkId, setEditFrameworkId] = useState(getFrameworkForType(section.type).id);
   const nameInputRef = useRef<HTMLInputElement>(null); // Ref for the name input
   const editZoneRef = useRef<HTMLDivElement>(null); // Ref for the section-edit div
   const headerInfoRef = useRef<HTMLDivElement>(null); // Ref for the section-info div
@@ -47,7 +55,9 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
     if (section.editingHeader) {
       setIsEditing(true);
       setEditName(section.editingHeaderTempName !== undefined ? section.editingHeaderTempName : section.name);
-      setEditType(section.editingHeaderTempType !== undefined ? section.editingHeaderTempType : section.type);
+      const initialType = section.editingHeaderTempType !== undefined ? section.editingHeaderTempType : section.type;
+      setEditType(initialType);
+      setEditFrameworkId(getFrameworkForType(initialType).id);
       // Reset the editingHeader flag in the context once editing is initiated
       // Also clear temp names/types
       updateSection(promptId, section.id, { 
@@ -103,6 +113,16 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
     setIsEditing(true);
     setEditName(section.name);
     setEditType(section.type);
+    setEditFrameworkId(getFrameworkForType(section.type).id);
+  };
+
+  // Switch framework while editing; keep the type if the new framework shares it
+  const handleFrameworkChange = (id: string) => {
+    const framework = getFramework(id);
+    setEditFrameworkId(framework.id);
+    if (!framework.types.includes(editType)) {
+      setEditType(framework.types[0]);
+    }
   };
   
   // Save header edit
@@ -133,24 +153,6 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
     }
   };
 
-  // Get section type color class
-  const getTypeClass = () => {
-    switch (section.type) {
-      case "instruction":
-        return "instruction-type";
-      case "role":
-        return "role-type";
-      case "context":
-        return "context-type";
-      case "format":
-        return "format-type";
-      case "style":
-        return "style-type";
-      default:
-        return "";
-    }
-  };
-
   return (
     <div 
       className="section-header"
@@ -170,22 +172,31 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
               autoFocus
               ref={nameInputRef}
             />
+            <select
+              value={editFrameworkId}
+              onChange={(e) => handleFrameworkChange(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              title="Framework"
+            >
+              {FRAMEWORKS.map((framework) => (
+                <option key={framework.id} value={framework.id}>{framework.label}</option>
+              ))}
+            </select>
             •
             <select
               value={editType}
-              onChange={(e) => {setEditType(e.target.value as any)}}
+              onChange={(e) => {setEditType(e.target.value as SectionTypeValue)}}
               onClick={(e) => e.stopPropagation()}
+              title="Type"
             >
-              <option value="instruction">Instruction</option>
-              <option value="role">Role</option>
-              <option value="context">Context</option>
-              <option value="format">Format</option>
-              <option value="style">Style</option>
+              {getFramework(editFrameworkId).types.map((type) => (
+                <option key={type} value={type}>{getTypeLabel(type)}</option>
+              ))}
             </select>
           </div>
         ) : (
-            <div onClick={(e) => {if(section.open){startEdit(e)}}} className={`section-display ${getTypeClass()}`}>
-            {section.name} • {section.type ? section.type.charAt(0).toUpperCase() + section.type.slice(1) : 'Section'}
+            <div onClick={(e) => {if(section.open){startEdit(e)}}} className="section-display">
+            {section.name} • {section.type ? getTypeLabel(section.type) : 'Section'}
             </div>
         )}
       </div>

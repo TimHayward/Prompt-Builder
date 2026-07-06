@@ -15,6 +15,7 @@ import VariablesPane from "@/components/VariablesPane";
 import ComponentModal from "@/components/Modal/ComponentModal";
 import SettingsModal from "@/components/Modal/SettingsModal";
 import CommunityComponentsModal from "@/components/Modal/CommunityComponentsModal";
+import ImportPromptModal from "@/components/Modal/ImportPromptModal";
 import MenuBar from '@/components/MenuBar'; 
 import "./App.scss";
 
@@ -56,6 +57,7 @@ const AppContent: React.FC = () => {
       <ComponentModal />
       <SettingsModal />
       <CommunityComponentsModal />
+      <ImportPromptModal />
     </main>
   );
 };
