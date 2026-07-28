@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Prompt, Section, ComponentType, Settings } from "@/types";
 import { useAppContext } from './AppContext';
 import { debounce } from "@/utils/debounce";
-import { extractVariablesFromSections } from "@/utils/variableUtils";
+import { extractVariablesFromSections, extractVariableSpecsFromSections, VariableSpec } from "@/utils/variableUtils";
 
 // Context type definition
 type PromptContextType = {
@@ -37,6 +37,7 @@ type PromptContextType = {
   updatePromptVariables: (promptId: string, variables: Record<string, string>) => void;
   getPromptVariables: (promptId: string) => Record<string, string>;
   getPromptVariableNames: (promptId: string) => string[];
+  getPromptVariableSpecs: (promptId: string) => VariableSpec[];
   isPromptsLoading: boolean;
 };
 
@@ -67,6 +68,7 @@ const PromptContext = createContext<PromptContextType>({
   updatePromptVariables: () => {},
   getPromptVariables: () => ({}),
   getPromptVariableNames: () => [],
+  getPromptVariableSpecs: () => [],
   isPromptsLoading: true, // Default to true
 });
 
@@ -602,6 +604,15 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     return extractVariablesFromSections(prompt.sections);
   }, [prompts]);
 
+  const getPromptVariableSpecs = useCallback((promptId: string): VariableSpec[] => {
+    // Find the prompt from the prompts array (current render state, not stale ref)
+    const prompt = prompts.find(p => p.id === promptId);
+    if (!prompt) {
+      return [];
+    }
+    return extractVariableSpecsFromSections(prompt.sections);
+  }, [prompts]);
+
   return (
     <PromptContext.Provider
       value={{
@@ -630,6 +641,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
         updatePromptVariables,
         getPromptVariables,
         getPromptVariableNames,
+        getPromptVariableSpecs,
         isPromptsLoading,
       }}
     >

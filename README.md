@@ -47,6 +47,18 @@ This version of Prompt Builder runs as a local web application on your computer,
 
 You should now see the Prompt Builder application running locally! Your prompts and component library will be saved in the `database.sqlite` file.
 
+## Variables 🔤
+
+Anything wrapped in double braces becomes an editable field in the Variables pane, and is substituted when you copy the prompt.
+
+| Syntax | Pane shows |
+| --- | --- |
+| `{{tone}}` | A free-text box |
+| `{{mail/teams/calendar}}` | A dropdown of the three options, plus `Custom…` for free text |
+| `{{channel: mail/teams/calendar}}` | The same dropdown, labelled `channel` |
+
+A `/` only creates a choice list when there are at least two options and none of them are empty, so `{{https://example.com}}` stays a plain free-text variable. Spacing is ignored — `{{ mail / teams }}` and `{{mail/teams}}` are the same variable. Reuse the same variable across sections by repeating the token; with the labelled form, a bare `{{channel}}` elsewhere shares the value. Leaving a variable empty removes the token from the copied prompt.
+
 ## Contribute to Prompt Builder 🤝
 We welcome contributions! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
 
@@ -57,7 +69,7 @@ We welcome contributions! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for
 - Reporting bugs or suggesting features.
 
 ## Backlog 💡
-Planned remediations, enhancements, and new features live in [BACKLOG.md](BACKLOG.md).
+Planned remediations, enhancements, and new features live in [BACKLOG.md](BACKLOG.md). Finished items are archived in [BACKLOG-completed.md](BACKLOG-completed.md).
 
 ## Built With 🔧
 Frontend: Vite, React, TypeScript, SCSS

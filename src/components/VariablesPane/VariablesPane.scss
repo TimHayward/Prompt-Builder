@@ -86,9 +86,9 @@
         }
       }
 
-      .variable-input {
+      .variable-input,
+      .variable-select {
         width: 100%;
-        min-height: 60px;
         padding: 0.5rem;
         background-color: colors.$bg-color;
         border: 1px solid colors.$dark-gray;
@@ -96,7 +96,6 @@
         color: colors.$text-color;
         font-family: typography.$primary-font;
         font-size: typography.$font-size-sm;
-        resize: vertical;
         transition: border-color 0.2s ease;
 
         &:focus {
@@ -104,10 +103,33 @@
           border-color: colors.$accent-color;
           background-color: rgba(colors.$accent-color, 0.05);
         }
+      }
+
+      .variable-input {
+        min-height: 60px;
+        resize: vertical;
 
         &::placeholder {
           color: colors.$light-gray;
           opacity: 0.5;
+        }
+      }
+
+      // Choice-list variables, e.g. {{mail/teams/calendar}}
+      .variable-select {
+        cursor: pointer;
+        // Native select arrows ignore the dark theme, so draw our own
+        appearance: none;
+        padding-right: 1.75rem;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%23cccccc' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.6rem center;
+        background-size: 0.65rem;
+
+        option {
+          // Some browsers render the popup with the page background otherwise
+          background-color: colors.$side-bar-bg;
+          color: colors.$text-color;
         }
       }
     }

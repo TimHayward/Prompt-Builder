@@ -4,6 +4,8 @@ Drafted 2026-07-06 from a full code review (frontend, backend/data layer, and th
 
 **How to use this file.** Each item is self-contained and written to be executed cold by an AI coding model. Pick an item, read the referenced files, implement, and satisfy the acceptance criteria. Line numbers were accurate at drafting time — treat them as starting points and re-verify against the current code before editing.
 
+**When an item is done.** Once its acceptance criteria genuinely pass, move the whole item verbatim out of this file into [`BACKLOG-completed.md`](BACKLOG-completed.md) under `## Completed`, appending a `**Completed:** <YYYY-MM-DD> · <commit SHA>` line. Keep the ID — IDs are never reused. This file should only ever contain open work.
+
 **Tags.**
 - Priority: **P0** data loss / broken behavior · **P1** correctness & robustness · **P2** quality & maintainability · **P3** new features.
 - Model: **Sonnet 5** for mechanical/localized changes · **Opus 4.8** for cross-cutting design or feature work.
@@ -85,6 +87,7 @@ Drafted 2026-07-06 from a full code review (frontend, backend/data layer, and th
 **Problem:** `replaceVariables` builds `new RegExp("\\{\\{" + variableName + "\\}\\}")` ([src/utils/variableUtils.ts:68](src/utils/variableUtils.ts#L68)); a name containing regex metacharacters (`.`, `(`, `+`, …) breaks or mis-substitutes.
 **Action:** Escape the name (standard `escapeRegExp` helper) or replace via `split("{{" + name + "}}").join(value)`.
 **Acceptance:** A variable named `price ($usd)` substitutes correctly everywhere it appears.
+**Note:** Superseded by **D7**, whose token-scanning rewrite of `replaceVariables` removes the dynamic `RegExp` entirely and fixes this as a side effect. Do B5 standalone only if D7 is deferred.
 
 ### B6 — Unify the two markdown parsers — [P1] [Opus 4.8] [L]
 **Problem:** The same markdown file parses differently depending on entry path. Server ingest uses a `Heading:` line regex `^([A-Za-z][A-Za-z ]{0,30}):\s*(.*)$` ([src/utils/markdownParser.ts:27](src/utils/markdownParser.ts#L27)) — prose like `Note: see below` starts a bogus section, and headings > 31 chars or containing digits are silently dropped into body text. The client importer splits on `#` ATX headers with fenced-code awareness ([src/utils/markdownImport.ts:63](src/utils/markdownImport.ts#L63)).
@@ -197,6 +200,7 @@ Drafted 2026-07-06 from a full code review (frontend, backend/data layer, and th
 *Depends on: C3.*
 **Spec:** A component's content may reference another component by name with `{{> Component Name}}`. Resolution happens at compile time in the shared compiler: replace each reference with the target's (recursively resolved) content; detect cycles and fail compilation with a clear message naming the cycle; unresolved names compile to a visible `[missing: name]` marker. UI: an "insert component reference" affordance in `ComponentModal` (searchable dropdown of library components); referenced components show a badge in the tree. Nested components' variables surface through D1's merge.
 **Acceptance:** A→B→C nesting compiles fully expanded; A→B→A reports a cycle instead of hanging; deleting a referenced component makes the missing-marker appear in compiled output.
+**Note:** Today the extractor `/\{\{([^}]+)\}\}/g` happily matches `{{> Component Name}}` and surfaces `> Component Name` as an editable variable in the pane. **D7** reserves the `>` (and `#`, `!`) sigil, so once D7 lands this token is skipped by extraction and substitution and the namespace is free for D2 to claim.
 
 ### D3 — Built-in meta-prompting (AI refine) — [P3] [Opus 4.8] [L]
 *Depends on: A5 (prod build), B8 (validation pattern).*
@@ -207,6 +211,7 @@ Drafted 2026-07-06 from a full code review (frontend, backend/data layer, and th
 *Depends on: C3.*
 **Spec:** A `formatPrompt` pure function beside the shared compiler, plus a "Format" action in `ActionBar`: normalize section heading levels per the framework registry (`src/lib/frameworks.ts`), collapse 3+ consecutive blank lines to one, trim trailing whitespace per line, normalize variable spacing (`{{ x }}` → `{{x}}`), and leave fenced code blocks untouched. Offer as both an on-copy toggle in Settings and a manual action.
 **Acceptance:** Unit tests cover each rule incl. the fenced-code exemption; formatting is idempotent (`format(format(x)) === format(x)`).
+**Note:** If **D7** has landed, the variable-spacing rule must be widened rather than left as-is: normalize choice tokens to D7's canonical form (`{{a/b/c}}` and `{{label: a/b/c}}` — no spaces around `/`, exactly one after `:`) so that `{{ mail / teams }}` normalizes without changing which variable it refers to. Reuse D7's `parseVariableToken` rather than writing a second grammar.
 
 ### D5 — Compiled prompt libraries (export / import bundles) — [P3] [Opus 4.8] [M]
 *Depends on: B6, B7.*
@@ -218,6 +223,70 @@ Drafted 2026-07-06 from a full code review (frontend, backend/data layer, and th
 **Spec:** Three workstreams: (1) **Finish the color-system migration** started in the import changeset — `frameworks.ts` registry is the single source of type colors; remove the legacy per-type SCSS fallbacks in `src/styles/variables/_colors.scss:19-20` once every consumer (drag preview, icons, sections) reads the registry. (2) **Theme toggle UI** — theme state already exists (`page.tsx:44-46`) and a dead `theme` field sits in SettingsModal; add the actual control in Settings and persist via settings JSON; audit both themes for contrast. (3) **Token normalization** — consolidate spacing/typography into SCSS variables/mixins (extend `src/styles/variables/`), replacing magic numbers in component SCSS.
 **Acceptance:** No hard-coded type colors outside `frameworks.ts`; theme switchable from Settings and persists across reloads; both themes pass a contrast spot-check on Sidebar, editor, and modals.
 
+### D7 — Variable choice lists (`{{a/b/c}}` dropdowns) — [P3] [Opus 4.8] [M]
+*Depends on: nothing. **Absorbs B5.** Self-contained — can land before the C-block.*
+
+**Problem:** Every `{{token}}` becomes one free-text `<textarea>` in the Variables pane ([src/components/VariablesPane/index.tsx:104-117](src/components/VariablesPane/index.tsx#L104-L117)). That is right for open-ended values (`{{tone}}`) but wrong when a variable has a small, known set of valid values — the user retypes `teams` every time and typos ship silently into the copied prompt.
+
+**Spec:** A `/` inside the braces means "these are the choices". `{{mail/teams/calendar}}` renders as a dropdown; a `Custom…` entry falls back to today's textarea so free text is never locked out. An optional label form `{{channel: mail/teams/calendar}}` gives long lists a readable name. **No DB migration and no type changes** — `prompt.variables` stays `Record<string, string>`; only *what variables exist* and *how one renders* change.
+
+1. **Grammar** — in `src/utils/variableUtils.ts`, applied to the trimmed inner text of each token:
+   - **Reserved sigils.** Inner text starting with `>`, `#`, or `!` is not a variable: skip it in both extraction and substitution (reserves D2's `{{> Component Name}}`).
+   - **Label split.** Match `^([^:/]+):\s*(.+)$` → `label` = group 1 trimmed, `rest` = group 2. The label part may not contain `/`; that is what stops `https://example.com` parsing as a label.
+   - **Options.** Split `rest` (or the whole inner text if unlabelled) on `/`. Options exist only if there are **≥2 parts and every part is non-empty after trimming**.
+   - **No options ⇒ no behavior change.** The token is a free-text variable keyed on the whole trimmed inner text, byte-identical to today. A label only activates alongside a real option list, so `{{Note: see below}}` and `{{tone: formal}}` keep working exactly as they do now.
+   - **Key (storage identity):** labelled options → the label; unlabelled options → `options.join('/')` (so spacing is irrelevant); free text → the trimmed inner text.
+   - **Display label:** the label / `options.join(' / ')` / the inner text respectively.
+   - **Merging:** same key twice ⇒ one pane entry, option lists unioned in first-appearance order. `{{channel: mail/teams}}` and a bare `{{channel}}` elsewhere share one value.
+   - Consequence: `/` (and `:` before an option list) become reserved in variable names, with no escape hatch. The all-parts-non-empty guard already lets URLs and `a//b` typos fall through to free text.
+
+   Cases the parser must satisfy, in order:
+
+   | Token | Key | Options |
+   |---|---|---|
+   | `{{tone}}` | `tone` | — |
+   | `{{mail/teams/calendar}}` | `mail/teams/calendar` | mail, teams, calendar |
+   | `{{ mail / teams }}` | `mail/teams` | mail, teams |
+   | `{{channel: mail/teams/calendar}}` | `channel` | mail, teams, calendar |
+   | `{{Note: see below}}` | `Note: see below` | — |
+   | `{{tone: formal}}` | `tone: formal` | — |
+   | `{{https://example.com}}` | `https://example.com` | — |
+   | `{{a//b}}` | `a//b` | — |
+   | `{{> Component Name}}` | *(skipped)* | — |
+
+2. **Parser API** — add to [src/utils/variableUtils.ts](src/utils/variableUtils.ts):
+   ```ts
+   export type VariableSpec = { key: string; label: string; options: string[] }; // options: [] = free text
+   export const parseVariableToken = (inner: string): VariableSpec | null;       // null = reserved sigil
+   export const extractVariableSpecs = (text: string): VariableSpec[];
+   export const extractVariableSpecsFromSections = (sections): VariableSpec[];   // merges, unions options
+   ```
+   Export one shared `VARIABLE_TOKEN_RE` and use it everywhere, replacing the three duplicated copies of the pattern ([variableUtils.ts:16](src/utils/variableUtils.ts#L16), `:68`, [HighlightedTextarea/index.tsx:144](src/components/HighlightedTextarea/index.tsx#L144)). Keep `extractVariables`/`extractVariablesFromSections` returning `string[]`, reimplemented as `…Specs(…).map(s => s.key)`, so `buildVariablesObject` ([src/utils/markdownParser.ts:65-71](src/utils/markdownParser.ts#L65-L71)) and the ingest path need no edit.
+
+3. **Substitution** — rewrite `replaceVariables` ([variableUtils.ts:61-73](src/utils/variableUtils.ts#L61-L73)) to scan tokens instead of rebuilding them, which is the entire B5 fix plus the trim-asymmetry fix and removes the dynamic `RegExp`:
+   ```ts
+   text.replace(VARIABLE_TOKEN_RE, (match, inner) => {
+     const spec = parseVariableToken(inner);
+     if (!spec) return match;                                    // reserved sigil
+     return spec.key in variables ? (variables[spec.key] ?? '') : match;
+   });
+   ```
+   Preserved: unknown keys stay as literal `{{…}}`; an empty value removes the token. Fixed: `{{ tone }}` now substitutes (today it is listed in the pane and then never replaced, because extraction trims but substitution rebuilds the literal token), and regex metacharacters in names are inert.
+
+4. **Context** — add `getPromptVariableSpecs(promptId): VariableSpec[]` beside `getPromptVariableNames` ([src/contexts/PromptContext.tsx:598-603](src/contexts/PromptContext.tsx#L598-L603)), reading the fresh `prompts` array, and expose it on the context value + type.
+
+5. **UI** — new `src/components/VariablesPane/VariableField.tsx`, props `{ spec, value, onChange }`:
+   - `spec.options.length === 0` → render today's `<textarea>` verbatim including its placeholder. Free-text variables must look and behave exactly as they do now.
+   - Otherwise a `<select>`: disabled placeholder `Select an option…` (selected while `value === ''`), one option per entry, separator, then `Custom…`.
+   - **Mode is derived, not persisted:** `isCustom = forceCustom || (value !== '' && !spec.options.includes(value))`, where `forceCustom` is local state set only by picking `Custom…`, cleared when a real option is picked or `spec.key` changes. This makes values stored before the token grew an option list — or typed then removed from the list — reopen correctly in custom mode.
+   - In custom mode the select reads `Custom…` and the textarea renders beneath it, autofocused.
+   - An unset choice variable stays empty and substitutes to nothing on Copy, matching how unfilled free-text variables behave today.
+   - [VariablesPane/index.tsx](src/components/VariablesPane/index.tsx): swap `variableNames: string[]` for specs, key local state and the add/prune effect (`:23-51`) on `spec.key`, render `<VariableField>` per spec with `spec.label` as the label. Leave the Save/Reset flow alone — that is **C13**.
+
+6. **Styling & highlighting** — style `.variable-select` to match `.variable-input` ([VariablesPane.scss:89-111](src/components/VariablesPane/VariablesPane.scss#L89-L111)) plus a custom chevron, since native select arrows ignore the dark theme; the `.variable-label::before/::after` braces (`:74-86`) still work for labels. In [HighlightedTextarea/index.tsx:142-147](src/components/HighlightedTextarea/index.tsx#L142-L147) swap the plain string replace for a replacer that parses the token and adds a `highlighted-variable--choice` modifier when it has options, with a style beside [HighlightedTextarea.scss:47-52](src/components/HighlightedTextarea/HighlightedTextarea.scss#L47-L52). Note the highlighter runs on HTML-escaped text, but only `& < >` are escaped, so `/` and `:` survive and the parser works unchanged. Document the three token forms in README.
+
+**Acceptance:** `Send this via {{mail/teams/calendar}} and use a {{channel: formal/casual}} tone.` yields two dropdowns in the pane and choice-styled tokens in the editor. Picking `teams` and copying produces `Send this via teams`. Picking `Custom…`, typing `slack`, saving and reloading reopens the field in custom mode with `slack`, and Copy substitutes it. Leaving the second unset emits nothing in its place with no stray braces. Adding a bare `{{channel}}` in another section still shows one pane entry and substitutes both tokens. `{{tone}}` behaves exactly as before. Regression checks that fail on pre-D7 code: `replaceVariables('{{ tone }}', { tone: 'x' }) === 'x'` and `replaceVariables('{{v1.0/v2.0}}', { 'v1.0/v2.0': 'v2.0' }) === 'v2.0'` (B5). `npm run lint` and `npm run build` clean.
+
 ---
 
 ## Suggested sequencing for the week
@@ -226,4 +295,4 @@ Drafted 2026-07-06 from a full code review (frontend, backend/data layer, and th
 2. **Data-integrity block:** A2, A3, A6, B1, B4 (small, high-payoff), then A7 and A4.
 3. **Platform block:** A5, B2, B3, B9, B8.
 4. **Quality ratchet:** C2 → C1 → C3/C4 → C12 (tests lock in the fixes above).
-5. **Features (D)** only after C3/C10 exist — most D items build on them.
+5. **Features (D)** only after C3/C10 exist — most D items build on them. The exception is **D7**, which touches only `variableUtils` and the Variables pane and can land at any point; doing it early also retires B5 and clears the `>` sigil that D2 needs.

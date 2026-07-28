@@ -7,6 +7,7 @@
  */
 
 import React, { useRef, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
+import { VARIABLE_TOKEN_REGEX, parseVariableToken } from '../../utils/variableUtils';
 import './HighlightedTextarea.scss';
 
 interface HighlightedTextareaProps {
@@ -133,17 +134,31 @@ const HighlightedTextarea = forwardRef<HTMLTextAreaElement, HighlightedTextareaP
   const createHighlightedHTML = useCallback((text: string): string => {
     if (!text) return '';
 
-    // Escape HTML entities
-    const escaped = text
+    // Escape per segment rather than up front: escaping first would turn a
+    // reserved token like {{> Component}} into {{&gt; Component}} and hide the
+    // sigil from the parser.
+    const escape = (value: string): string => value
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
 
-    // Replace {{variables}} with highlighted spans
-    const highlighted = escaped.replace(
-      /(\{\{[^}]+\}\})/g,
-      '<span class="highlighted-variable">$1</span>'
-    );
+    // Wrap {{variables}} in highlighted spans, flagging choice lists separately
+    let highlighted = '';
+    let cursor = 0;
+
+    for (const match of text.matchAll(VARIABLE_TOKEN_REGEX)) {
+      const spec = parseVariableToken(match[1]);
+      const token = escape(match[0]);
+
+      highlighted += escape(text.slice(cursor, match.index));
+      highlighted += spec
+        ? `<span class="highlighted-variable${spec.options.length > 0 ? ' highlighted-variable--choice' : ''}">${token}</span>`
+        : token;
+
+      cursor = match.index + match[0].length;
+    }
+
+    highlighted += escape(text.slice(cursor));
 
     // Convert newlines to br tags
     return highlighted.replace(/\n/g, '<br>');

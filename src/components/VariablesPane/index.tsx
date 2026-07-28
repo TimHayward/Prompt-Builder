@@ -7,53 +7,56 @@
 
 import React, { useState, useEffect } from 'react';
 import { usePromptContext } from '../../contexts/PromptContext';
+import { VariableSpec } from '../../utils/variableUtils';
+import VariableField from './VariableField';
 import './VariablesPane.scss';
 
 const VariablesPane: React.FC = () => {
-  const { activePromptId, prompts, getPromptVariableNames, getPromptVariables, updatePromptVariables } = usePromptContext();
-  
-  const [variableNames, setVariableNames] = useState<string[]>([]);
+  const { activePromptId, prompts, getPromptVariableSpecs, getPromptVariables, updatePromptVariables } = usePromptContext();
+
+  const [variableSpecs, setVariableSpecs] = useState<VariableSpec[]>([]);
   const [variableValues, setVariableValues] = useState<Record<string, string>>({});
   const [hasChanges, setHasChanges] = useState(false);
 
   // Get the active prompt
   const activePrompt = prompts.find(p => p.id === activePromptId);
 
-  // Update variable names when active prompt or its sections change
+  // Update variables when active prompt or its sections change
   useEffect(() => {
     if (activePromptId && activePrompt) {
-      const names = getPromptVariableNames(activePromptId);
-      setVariableNames(names);
-      
-       // Only initialize variable values if they're not already set or if variable names changed
+      const specs = getPromptVariableSpecs(activePromptId);
+      setVariableSpecs(specs);
+
+       // Only initialize variable values if they're not already set or if the variables changed
        setVariableValues(prevValues => {
          const currentValues = getPromptVariables(activePromptId);
          const updatedValues: Record<string, string> = { ...prevValues };
-         
+         const keys = specs.map(spec => spec.key);
+
          // Add any new variables that aren't in the current values
-         names.forEach(name => {
-           if (!(name in updatedValues)) {
-             updatedValues[name] = currentValues[name] || '';
+         keys.forEach(key => {
+           if (!(key in updatedValues)) {
+             updatedValues[key] = currentValues[key] || '';
            }
          });
-         
-         // Remove any variables that are no longer in the names list
-         Object.keys(updatedValues).forEach(name => {
-           if (!names.includes(name)) {
-             delete updatedValues[name];
+
+         // Remove any variables that are no longer in the prompt
+         Object.keys(updatedValues).forEach(key => {
+           if (!keys.includes(key)) {
+             delete updatedValues[key];
            }
          });
-         
+
          return updatedValues;
        });
       setHasChanges(false);
     }
   }, [activePromptId, activePrompt?.sections]);
 
-  const handleVariableChange = (variableName: string, value: string) => {
+  const handleVariableChange = (variableKey: string, value: string) => {
     setVariableValues(prev => ({
       ...prev,
-      [variableName]: value
+      [variableKey]: value
     }));
     setHasChanges(true);
   };
@@ -69,8 +72,8 @@ const VariablesPane: React.FC = () => {
     if (activePromptId) {
       const currentValues = getPromptVariables(activePromptId);
       const resetValues: Record<string, string> = {};
-      variableNames.forEach(name => {
-        resetValues[name] = currentValues[name] || '';
+      variableSpecs.forEach(spec => {
+        resetValues[spec.key] = currentValues[spec.key] || '';
       });
       setVariableValues(resetValues);
       setHasChanges(false);
@@ -93,25 +96,24 @@ const VariablesPane: React.FC = () => {
         <h2>Variables</h2>
       </header>
 
-      {variableNames.length === 0 ? (
+      {variableSpecs.length === 0 ? (
         <div className="empty-state">
           <p>No variables found in this prompt</p>
           <span className="hint">Variables are formatted as {`{{variableName}}`}</span>
+          <span className="hint">Use {`{{mail/teams/calendar}}`} for a list of options</span>
         </div>
       ) : (
         <>
           <div className="variables-list">
-            {variableNames.map(variableName => (
-              <div key={variableName} className="variable-item">
-                <label htmlFor={`var-${variableName}`} className="variable-label">
-                  {variableName}
+            {variableSpecs.map(spec => (
+              <div key={spec.key} className="variable-item">
+                <label htmlFor={`var-${spec.key}`} className="variable-label">
+                  {spec.label}
                 </label>
-                <textarea
-                  id={`var-${variableName}`}
-                  className="variable-input"
-                  value={variableValues[variableName] || ''}
-                  onChange={(e) => handleVariableChange(variableName, e.target.value)}
-                  placeholder={`Enter value for {{${variableName}}}`}
+                <VariableField
+                  spec={spec}
+                  value={variableValues[spec.key] || ''}
+                  onChange={(value) => handleVariableChange(spec.key, value)}
                 />
               </div>
             ))}
@@ -136,7 +138,7 @@ const VariablesPane: React.FC = () => {
                 </button>
               </>
             )}
-            {!hasChanges && variableNames.length > 0 && (
+            {!hasChanges && variableSpecs.length > 0 && (
               <span className="saved-indicator">Saved</span>
             )}
           </div>

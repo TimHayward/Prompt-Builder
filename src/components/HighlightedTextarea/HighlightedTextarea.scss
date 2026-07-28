@@ -50,5 +50,14 @@
       border-radius: 3px;
       box-shadow: 0 0 0 1px rgba(colors.$accent-color, 0.3);
     }
+
+    // Choice lists, e.g. {{mail/teams/calendar}} — a dashed ring distinguishes
+    // "pick one of these" from a free-text variable
+    .highlighted-variable--choice {
+      background-color: rgba(colors.$accent-color, 0.08);
+      box-shadow: none;
+      outline: 1px dashed rgba(colors.$accent-color, 0.6);
+      outline-offset: -1px;
+    }
   }
 }
