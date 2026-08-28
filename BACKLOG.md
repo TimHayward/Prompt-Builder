@@ -127,9 +127,11 @@ Use an appropriate current Node LTS base image.
 
 ### Remaining
 
-The image, compose file and initialisation script were rewritten for this in `3807015`: a multi-stage build (`npm ci` → `next build` → runtime on `node:22-bookworm-slim`), `next start` instead of `next dev`, and `npm run db:init` now exiting non-zero so a failed initialisation stops the container before it serves anything.
+The image, compose file and initialisation script were rewritten for this in `3807015`: a multi-stage build (`npm ci` → `next build` → runtime), `next start` instead of `next dev`, and `npm run db:init` now exiting non-zero so a failed initialisation stops the container before it serves anything.
 
-What is left is the acceptance run itself — `docker compose up --build`, confirming the four criteria above. It could not be executed at the time of the change because the local Docker daemon was not responding.
+A second attempt (`fd8e6fb`) got the build as far as the dependency stage and found one real defect: `node:22` ships npm 10, which rejects the lockfile because vite’s optional peer `yaml` has no entry in it. The base image is now `node:24-bookworm-slim`, whose npm 11 matches the npm that generated the lock.
+
+What is still outstanding is the acceptance run itself — `docker compose up --build`, confirming the four criteria above. Both attempts ended with the local Docker daemon returning 500 on every API call and then timing out entirely, so the container has never been observed running. Note also that port 3000 was already held by a local dev server, so the run will need that freed (or a published-port override).
 
 ---
 
