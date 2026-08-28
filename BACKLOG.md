@@ -1,298 +1,2031 @@
-# Prompt Builder — Backlog
+# Prompt Builder Backlog
 
-Drafted 2026-07-06 from a full code review (frontend, backend/data layer, and the in-flight markdown-import changeset) plus the former "Feature Ideas" list in README.md.
+## Product direction
 
-**How to use this file.** Each item is self-contained and written to be executed cold by an AI coding model. Pick an item, read the referenced files, implement, and satisfy the acceptance criteria. Line numbers were accurate at drafting time — treat them as starting points and re-verify against the current code before editing.
+Prompt Builder is a local-first library and editor for reusable source prompts.
 
-**When an item is done.** Once its acceptance criteria genuinely pass, move the whole item verbatim out of this file into [`BACKLOG-completed.md`](BACKLOG-completed.md) under `## Completed`, appending a `**Completed:** <YYYY-MM-DD> · <commit SHA>` line. Keep the ID — IDs are never reused. This file should only ever contain open work.
+The primary workflow is:
 
-**Tags.**
-- Priority: **P0** data loss / broken behavior · **P1** correctness & robustness · **P2** quality & maintainability · **P3** new features.
-- Model: **Sonnet 5** for mechanical/localized changes · **Opus 4.8** for cross-cutting design or feature work.
-- Size: **S** < 1 h · **M** half-day · **L** multi-session.
+```text
+Find
+  ↓
+Select
+  ↓
+Customise
+  ↓
+Resolve
+  ↓
+Copy
+```
 
----
+Prompt Builder does not execute prompts against AI models. Its responsibility ends when the resolved prompt is copied to the clipboard.
 
-## A — P0 Remediations
+The application should remain provider-neutral.
 
-### A1 — Untrack committed SQLite database files — [P0] [Sonnet 5] [S]
-**Problem:** `data/prompt_builder.db`, `data/prompt_builder.db-shm`, and `data/prompt_builder.db-wal` are tracked in git (`git ls-files data/` confirms) and show as modified on every run. `.gitignore` contains `/data` (added in commit `dc088d9`) but that does not untrack already-committed files. Committing a WAL/SHM pair snapshotted at a different point than the main DB can produce a corrupt database on checkout, and every merge risks binary conflicts.
-**Action:** Run `git rm --cached data/prompt_builder.db data/prompt_builder.db-shm data/prompt_builder.db-wal` and commit. Confirm `/data` remains in `.gitignore`.
-**Acceptance:** `git ls-files data/` returns nothing; running the app no longer dirties `git status`; the local `data/` files still exist on disk and the app still boots against them.
+The primary persistent artefacts are:
 
-### A2 — Fix stale-ref persistence in PromptContext (reorders/inserts lost on reload) — [P0] [Sonnet 5] [M]
-**Problem:** `promptsRef.current` is only refreshed in a `useEffect` ([src/contexts/PromptContext.tsx:92-94](src/contexts/PromptContext.tsx#L92-L94)), so inside the same handler it still holds the **pre-mutation** state. `moveSection` ([PromptContext.tsx:436-439](src/contexts/PromptContext.tsx#L436-L439)), `moveSectionToIndex` ([:465-467](src/contexts/PromptContext.tsx#L465-L467)), and `addSectionAtIndex` (~`:545-547`) all call `updatePromptInApi(promptsRef.current.find(...))`, persisting the old section order — the reorder/insert is silently lost on reload.
-**Action:** Follow the pattern already used correctly in `updateSection`/`deleteSection` ([:396-402](src/contexts/PromptContext.tsx#L396-L402), `:413-417`): compute the updated prompt object inline (the same transformation applied in the `setPrompts` updater) and pass **that** to `updatePromptInApi`. Audit every other caller of `promptsRef.current` in the same tick for the same bug.
-**Acceptance:** Reorder sections via the up/down controls and drag-to-index, add a section mid-list, then hard-reload: the new order and new section persist. No other handler persists pre-mutation state.
+- prompts
+- prompt sections
+- reusable components
+- folders
+- variable definitions
+- settings
 
-### A3 — Active prompt never restored: phantom `/api/app-config` endpoint — [P0] [Sonnet 5] [M]
-**Problem:** `PromptContext` fetches `GET /api/app-config/activePromptId` ([src/contexts/PromptContext.tsx:113](src/contexts/PromptContext.tsx#L113)) and `PUT`s the same path ([:148](src/contexts/PromptContext.tsx#L148)), but no such route exists (`src/app/api/` contains only `components`, `prompts`, `settings`, `prompts/ingest`). Every call 404s: the active tab is never restored across reloads and saves silently fail. Meanwhile `GET /api/settings` already returns `activePromptId` ([src/app/api/settings/route.ts:31](src/app/api/settings/route.ts#L31)), but `AppContext` discards it ([src/contexts/AppContext.tsx:74-75](src/contexts/AppContext.tsx#L74-L75)) and its save sends only `{ settings }` ([:114](src/contexts/AppContext.tsx#L114)).
-**Action:** Route active-prompt persistence through the existing `/api/settings` endpoints: read `activePromptId` from the settings response on load, and include it in the settings `POST` body (the settings route already persists `active_prompt_id` on the `app_config` row). Delete the two dead `/api/app-config/...` fetches. Alternative (only if cleaner separation is wanted): add the missing route — but prefer reusing settings.
-**Acceptance:** Open prompt B, reload the app: prompt B is the active tab. Network tab shows no 404s during load or tab switching.
+Variable values entered while preparing a prompt are working state rather than part of the source prompt by default.
 
-### A4 — Stop `POST /api/components` wiping ingested data; fix ingest tree placement — [P0] [Opus 4.8] [L]
-**Problem:** Two conflicting write paths into `component_library`:
-1. The client's bulk tree save does `DELETE FROM component_library` then re-inserts only what the client sent ([src/app/api/components/route.ts:45](src/app/api/components/route.ts#L45) onward). Anything the ingest API created since the client last fetched is destroyed on the next autosave — a data-loss race.
-2. The ingest route inserts its folder with `parent_id = NULL` ([src/app/api/prompts/ingest/route.ts:76](src/app/api/prompts/ingest/route.ts#L76), `:89`), creating a second root that competes with the single "Components" root the UI expects, so ingested folders generally never appear in the sidebar. (The client-side import in `ImportPromptModal.tsx:167` correctly inserts under `treeData[0]`.)
-**Action:**
-- Change the ingest route to locate the existing root folder (the sole `parent_id IS NULL` node of `item_type='folder'`) and insert the ingest folder **under** it; create the root only if the table is genuinely empty.
-- Replace the wipe-and-rewrite bulk save with a merge: upsert every node the client sent (`INSERT ... ON CONFLICT(id) DO UPDATE` preserving `created_at`), and delete only rows whose ids the client knew about but omitted — e.g. have the client send the set of ids it loaded, or compute deletions as `existing ids − sent ids` restricted to subtrees the client owns. Ingest-created rows the client has never seen must survive.
-- Use `db.transaction()` (as the ingest route already does) instead of manual `BEGIN`/`COMMIT` ([components/route.ts:40](src/app/api/components/route.ts#L40)).
-- Have the client refresh the tree (or merge new nodes) after ingest — at minimum document that a reload shows ingested folders.
-**Acceptance:** With the app open, POST a file to `/api/prompts/ingest`; then edit the tree in the UI (triggering autosave); reload — the ingested folder exists, appears under the root in the sidebar, and `created_at` values of untouched nodes are unchanged.
+Variable definitions remain part of the source prompt, including:
 
-### A5 — Production Docker build; unsilence DB init; vet the better-sqlite3 bump — [P0] [Opus 4.8] [M]
-**Problem:** `Dockerfile:1` is `FROM node:26.4.0` — an unvetted bump off `-slim` made only to satisfy the `better-sqlite3` `^11→^12` engines constraint (`package.json`, lockfile `engines: 20.x…26.x`). `Dockerfile:13` and `docker-compose.yml:24` run the **dev** server (`npm run dev -- --port 3000`, `NODE_ENV=development`) as the deployment, and prefix it with `npm run db:init || true` — while `scripts/init-db.mjs:83-88` catches errors without setting a non-zero exit code. A failed schema init is therefore doubly silenced and the app 500s on every query against a table-less DB.
-**Action:**
-- Convert to a multi-stage Dockerfile: build stage (`npm ci`, `next build` with `output: 'standalone'` in `next.config.ts`), runtime stage on a pinned current-LTS `-slim` image with the packages better-sqlite3 needs (or rely on its prebuilt binaries), running `node server.js` / `next start`.
-- Make `init-db.mjs` exit `1` on any error; remove `|| true` from Dockerfile and compose so a failed init stops the container with a visible error.
-- Decide the `better-sqlite3` version deliberately: either keep `^12` (verify it installs and runs on the chosen Node LTS) or revert to `^11`; run `npm install` and boot to verify either way.
-**Acceptance:** `docker compose up --build` from scratch serves the app via a production `next start` (no Turbopack dev banner); breaking the schema intentionally (e.g. bad SQL in init) causes the container to exit non-zero with the error visible in logs; image is based on a real, pinned `-slim` tag.
+- variable name
+- label
+- available options
+- syntax
+- defaults where supported
 
-### A6 — Clipboard copy emits literal `\n\n` characters — [P0] [Sonnet 5] [S]
-**Problem:** [src/components/PromptEditor/ActionBar.tsx:53](src/components/PromptEditor/ActionBar.tsx#L53) concatenates `systemPrompt + "\\n\\n" + promptText`. The double-escaped string puts the literal characters backslash-n twice into the clipboard instead of a blank line whenever markdown prompting is enabled.
-**Action:** Change to `"\n\n"`.
-**Acceptance:** With markdown prompting on, Copy Prompt produces a system prompt separated from the body by one blank line; no backslashes appear.
+Example:
 
-### A7 — Per-prompt debounce: rapid cross-prompt edits lose saves — [P0] [Opus 4.8] [M]
-**Problem:** `updatePromptInApi` is a single debounced closure created once ([src/contexts/PromptContext.tsx:144-181](src/contexts/PromptContext.tsx#L144-L181)); one internal timer serves all prompts. Editing prompt A then prompt B within the debounce window cancels A's pending save — A's changes are lost. `saveActivePromptIdToApi` shares the pattern.
-**Action:** Replace with a keyed debounce (map of prompt-id → timer, or a small `debounceByKey(fn, ms)` utility in `src/utils/`), so each prompt's save is debounced independently. Flush pending saves on unload (`beforeunload`) if straightforward. Apply the audit to `saveActivePromptIdToApi` (single-key, likely fine once A3 reroutes it).
-**Acceptance:** Edit prompt A, switch tabs and edit prompt B within 1 s, reload after 2 s: both edits persisted. Existing single-prompt debounce behavior (no request per keystroke) still holds.
+```text
+{{channel: email/Teams/WhatsApp}}
+```
+
+The options `email`, `Teams` and `WhatsApp` belong to the source prompt.
+
+If the user selects `Teams`, that selection belongs to the current working state.
+
+Resetting working values must restore the variable to an unpopulated state without removing its available options.
 
 ---
 
-## B — P1 Remediations
+# Priority definitions
 
-### B1 — Linked-component sync loop: `originalContent` never updated — [P1] [Sonnet 5] [S]
-**Problem:** `updateSectionFromLinkedComponent` updates a section's `content`/`type`/`name` but not `originalContent` ([src/contexts/PromptContext.tsx:494-508](src/contexts/PromptContext.tsx#L494-L508)). The Section effect re-syncs whenever `linkedComponent.content !== section.originalContent` ([src/components/PromptEditor/Section/index.tsx:58-63](src/components/PromptEditor/Section/index.tsx#L58-L63)), so after one sync the comparison stays true forever — redundant updates and a perpetually `dirty` section on every `treeData` change.
-**Action:** Set `originalContent` to the linked component's content inside `updateSectionFromLinkedComponent`.
-**Acceptance:** Edit a linked component; the section syncs once, is not re-marked dirty on unrelated tree changes, and React DevTools shows no repeated update loop.
+## P0
 
-### B2 — Standardize Next 15 async `params` in dynamic API routes — [P1] [Sonnet 5] [S]
-**Problem:** `[id]` route handlers type `params` as a plain object though Next 15 supplies a Promise. [src/app/api/prompts/[id]/route.ts:10-14](src/app/api/prompts/[id]/route.ts#L10-L14) awaits it in the body but the catch blocks read `params.id` synchronously (`:41`, `:108`, `:151`) — logging `undefined`. [src/app/api/components/[id]/route.ts:22](src/app/api/components/[id]/route.ts#L22) never awaits at all, which Next flags and will break in a future release.
-**Action:** In every dynamic route: type `params: Promise<{ id: string }>`, `const { id } = await params;` once at the top, and use `id` everywhere including catch blocks.
-**Acceptance:** `npm run build` passes with no `params` warnings; forcing an error in a handler logs the real id.
+Data loss, incorrect persistence, broken behaviour or repository risks which can directly corrupt or lose user data.
 
-### B3 — Enable SQLite foreign-key enforcement — [P1] [Sonnet 5] [S]
-**Problem:** `src/lib/db.ts` never runs `PRAGMA foreign_keys = ON` (better-sqlite3 defaults OFF), so every `ON DELETE CASCADE` / `SET NULL` in `scripts/init-db.mjs` is dead. Folder deletes rely on a cascade that never fires; the prompts DELETE route compensates manually.
-**Action:** Add `db.pragma('foreign_keys = ON');` at connection open in `src/lib/db.ts` (next to the existing WAL pragma, ~`:24`). Re-test: deleting a folder cascades to children; deleting the active prompt nulls `app_config.active_prompt_id`.
-**Acceptance:** Delete a folder with children via the API — child rows are gone; existing routes still pass manual smoke tests (no new FK violations on normal flows, e.g. bulk save inserting children before parents must still work — verify insert order or use deferred approach).
+## P1
 
-### B4 — Folder expansion state never restored — [P1] [Sonnet 5] [S]
-**Problem:** `GET /api/components` omits `is_expanded` from its SELECT ([src/app/api/components/route.ts:17](src/app/api/components/route.ts#L17)) even though the POST writes it (`:65`); `buildTreeFromApiData` then defaults every folder to collapsed ([src/contexts/TreeContext.tsx:172](src/contexts/TreeContext.tsx#L172)).
-**Action:** Add `is_expanded` to the SELECT and map it (SQLite integer → boolean) in the tree build.
-**Acceptance:** Expand some folders, reload: expansion state is restored.
+Correctness, reliability and architectural changes required to provide a stable application model.
 
-### B5 — Escape variable names in regex substitution — [P1] [Sonnet 5] [S]
-**Problem:** `replaceVariables` builds `new RegExp("\\{\\{" + variableName + "\\}\\}")` ([src/utils/variableUtils.ts:68](src/utils/variableUtils.ts#L68)); a name containing regex metacharacters (`.`, `(`, `+`, …) breaks or mis-substitutes.
-**Action:** Escape the name (standard `escapeRegExp` helper) or replace via `split("{{" + name + "}}").join(value)`.
-**Acceptance:** A variable named `price ($usd)` substitutes correctly everywhere it appears.
-**Note:** Superseded by **D7**, whose token-scanning rewrite of `replaceVariables` removes the dynamic `RegExp` entirely and fixes this as a side effect. Do B5 standalone only if D7 is deferred.
+## P2
 
-### B6 — Unify the two markdown parsers — [P1] [Opus 4.8] [L]
-**Problem:** The same markdown file parses differently depending on entry path. Server ingest uses a `Heading:` line regex `^([A-Za-z][A-Za-z ]{0,30}):\s*(.*)$` ([src/utils/markdownParser.ts:27](src/utils/markdownParser.ts#L27)) — prose like `Note: see below` starts a bogus section, and headings > 31 chars or containing digits are silently dropped into body text. The client importer splits on `#` ATX headers with fenced-code awareness ([src/utils/markdownImport.ts:63](src/utils/markdownImport.ts#L63)).
-**Action:** Extract one shared, header-based parsing core (pure, no MUI/React imports — respect the client/server split documented at [markdownImport.ts:4-7](src/utils/markdownImport.ts#L4-L7)) used by both `parsePromptMarkdown` (ingest) and `parseMarkdownByHeaders` (import modal). Align section-type mapping with the registry in `src/lib/frameworks.ts` (aliases, framework detection). Keep any `# type: Title` special-casing in one place.
-**Acceptance:** The same sample file POSTed to `/api/prompts/ingest` and imported via the UI produces identical section names, types, and content. Unit tests cover: prose colons, long headings, fenced code containing `#`, and the `# type: Title` form.
+Maintainability, usability, consistency and engineering quality improvements.
 
-### B7 — Finish the markdown-import feature loose ends — [P1] [Opus 4.8] [M]
-*(Assumes the current import/frameworks changeset is committed.)*
-**Problem/Action — four items:**
-1. **Duplicated headings:** `parseMarkdownByHeaders` keeps the `# Header` line as the first line of `content` ([src/utils/markdownImport.ts:119](src/utils/markdownImport.ts#L119)) and `ImportPromptModal` stores it verbatim ([src/components/Modal/ImportPromptModal.tsx:149](src/components/Modal/ImportPromptModal.tsx#L149), `:182`); compiled prompts re-emit their own per-section header, doubling it. Strip the heading line from stored content (the name already carries it).
-2. **Empty-tree dangling links:** `handleImport` only inserts components into the tree `if (root)` ([ImportPromptModal.tsx:167](src/components/Modal/ImportPromptModal.tsx#L167)) but always creates the prompt with `linkedComponentId`s (`:180-189`). On an empty tree this yields sections linked to nonexistent components. Create the root folder when missing (or import unlinked in that case).
-3. **Missing drag colors for new types:** `TreeNode.tsx:98` builds `dragging-component-${type}` but `App.scss:42-60` styles only the legacy five types. Drive the drag-preview border color from the `frameworks.ts` registry (inline CSS var, like Section's `--section-color`) instead of per-type SCSS classes.
-4. **Lint check:** an `eslint-disable-next-line react-hooks/exhaustive-deps` was removed at [src/components/PromptEditor/Section/index.tsx:65](src/components/PromptEditor/Section/index.tsx#L65) without changing the dep array — run `npm run lint` and resolve whatever surfaces.
-**Acceptance:** Importing a markdown file then copying the compiled prompt shows each heading once; import into a brand-new empty library works with functional links; dragging a component of a new type (e.g. `goal`) shows its registry color; `npm run lint` is clean.
+## P3
 
-### B8 — Define and enforce the API trust model — [P1] [Opus 4.8] [M]
-**Problem:** Every route is unauthenticated, including destructive `POST /api/components` (full library replace) and `POST /api/prompts/ingest` (arbitrary writes, no body-size cap). Fine for localhost-only, but the compose/n8n setup reaches across containers and can expose port 3000 to the LAN.
-**Action:**
-- Bind the published port to loopback in `docker-compose.yml` (`127.0.0.1:3000:3000`) as the default; document how to widen it deliberately.
-- Add an optional shared-secret header check to `/api/prompts/ingest` (secret via env var; skip check when unset), and set the header in the n8n workflow (`scripts/n8n-workflow-prompt-ingest.json`).
-- Add a request body-size limit and shape validation (e.g. zod) to `ingest` and `settings` POST bodies.
-- Document the trust model (localhost, single user) in README.
-**Acceptance:** Default compose is unreachable from other LAN hosts; ingest rejects wrong/missing secret when configured and oversized bodies with 4xx; README states the model.
-
-### B9 — Compose volume fails on fresh checkout — [P1] [Sonnet 5] [S]
-**Problem:** `docker-compose.yml:29` declares `prompt_builder_data` with `external: true`; a fresh `docker compose up` errors until the operator manually runs `docker volume create prompt_builder_data`. Undocumented.
-**Action:** Make the volume non-external (compose-managed), or keep external and document the create step in README. Prefer non-external unless there's a reason to share the volume.
-**Acceptance:** `docker compose up` succeeds on a machine that has never created the volume; data persists across `down`/`up`.
+New product capabilities.
 
 ---
 
-## C — P2 Enhancements
+# A. P0 Remediations
 
-### C1 — Re-enable disabled lint rules and fix violations — [P2] [Sonnet 5] [M]
-**Problem:** `eslint.config.mjs:15-24` disables `react-hooks/exhaustive-deps`, `@typescript-eslint/no-unused-vars`, and `no-explicit-any` — the safety nets that would have caught several bugs above. `as any` casts at `TreeContext.tsx:129,148,180` among others.
-**Action:** Re-enable the three rules; fix resulting violations (do C2's dead-code removal first — it eliminates many). Where a dep-array exclusion is genuinely intended, keep a targeted `eslint-disable-next-line` with a one-line reason.
-**Acceptance:** `npm run lint` passes with the rules on; no blanket rule-offs remain in the config.
+## A1. Remove SQLite runtime files from Git
 
-### C2 — Remove dead dependencies and dead code — [P2] [Sonnet 5] [M]
-**Problem:** Leftovers from the pre-SQLite hosted era. Dependencies unused anywhere: `@supabase/*`, `mysql2`, `bcryptjs`, `tunnel-ssh`, `posthog-*`, `dotenv`, `ts-node`. Dead code: `src/hooks/useDragDrop.ts` and `src/hooks/useAutosizeTextArea.ts` (never imported); `getNodePath` (useTreeData), `copyPromptToClipboard` and `createSectionFromComponent` (usePrompts); unused React imports at `MenuBar/index.tsx:5`; dead `formData` fields `autoSave/defaultPromptName/defaultSectionType/theme` in [SettingsModal.tsx:22-29](src/components/Modal/SettingsModal.tsx#L22-L29); misleading "placeholder and not fully implemented" warning in `duplicatePrompt` ([PromptContext.tsx:263](src/contexts/PromptContext.tsx#L263) — it is implemented); inert `useImperativeHandle` fake-textarea in `HighlightedTextarea` (`index.tsx:37-46`) and its dead `autosize` prop; no-op `library-options` button ([Sidebar/index.tsx:125-129](src/components/Sidebar/index.tsx#L125-L129)) — wire it to something or remove it.
-**Action:** Delete the deps (`npm uninstall …`), delete the dead files/functions/fields, re-verify each with a grep for imports before removal. Keep `dotenv` only if any script actually loads it.
-**Acceptance:** `npm run build` and the app's main flows work; `package.json` lists no unused runtime deps; grep finds no references to removed symbols.
+**Priority:** P0  
+**Size:** S
 
-### C3 — Single source of truth for compiled prompt text — [P2] [Opus 4.8] [M]
-**Problem:** Two divergent implementations of "the prompt as text": `getCompiledPromptText` emits `# type: name` headers and applies neither variables nor the system prompt ([PromptContext.tsx:527-532](src/contexts/PromptContext.tsx#L527-L532)), while the real copy path in [ActionBar.tsx:40-54](src/components/PromptEditor/ActionBar.tsx#L40-L54) strips headers and applies variables.
-**Action:** Create `src/utils/compilePrompt.ts`: `compilePrompt(prompt, settings, variableValues, opts)` handling headers (per markdown-prompting setting), variable substitution (via B5-fixed util), and system-prompt prepending. Use it from both ActionBar and `getCompiledPromptText`; delete the duplicated logic. This is also where B7-1's "headings once" rule becomes testable, and the seam for D4 formatting.
-**Acceptance:** Copy output is byte-identical to before (modulo the A6 fix); both call sites use the shared function; unit tests cover header on/off, variables, system prompt.
+### Problem
 
-### C4 — Deduplicate the default system prompt — [P2] [Sonnet 5] [S]
-**Problem:** Three divergent copies: `AppContext.tsx:18`, `SettingsModal.tsx:42`, and `settings/route.ts:17` (truncated server-side, so DB defaults differ from client defaults).
-**Action:** Move the full text to one shared constant (e.g. `src/lib/defaults.ts`, importable by both client and server code) and import it in all three places.
-**Acceptance:** Grep shows a single definition; a fresh DB's default matches the client's.
+Runtime SQLite files are currently tracked:
 
-### C5 — Real loading, error, and failure states — [P2] [Sonnet 5] [M]
-**Problem:** `isPromptsLoading`/`isTreeLoading` exist but nothing renders them; `src/app/loading.tsx` is `<div>loading...</div>` and `error.tsx` is the default stub; failed optimistic deletes are swallowed ([PromptContext.tsx:342-347](src/contexts/PromptContext.tsx#L342-L347)) leaving UI and DB out of sync; most fetch failures are console-only.
-**Action:** Render lightweight skeleton/loading states in Sidebar and PromptEditor while loading; style `loading.tsx`/`error.tsx` properly; on failed mutations, revert the optimistic update and surface a toast/banner (a minimal toast utility is enough — no new dependency required).
-**Acceptance:** Throttled network shows loading states; killing the server mid-delete restores the prompt in the UI with a visible error message.
+```text
+data/prompt_builder.db
+data/prompt_builder.db-shm
+data/prompt_builder.db-wal
+```
 
-### C6 — Consistent destructive-action confirmation — [P2] [Sonnet 5] [S]
-**Problem:** Deleting a component/folder asks via `window.confirm` ([TreeNode.tsx:188-198](src/components/Sidebar/TreeView/TreeNode.tsx#L188-L198)); deleting a prompt tab deletes instantly with no confirmation ([PromptTabs.tsx:48-52](src/components/PromptEditor/PromptTabs.tsx#L48-L52)); `window.alert` is used elsewhere. Blocking native dialogs clash with the app's modal system.
-**Action:** Add a small reusable `ConfirmModal` on `ModalBase`; use it for tree deletes and prompt-tab deletes; remove `window.confirm`/`alert` usages.
-**Acceptance:** Both delete flows show the same styled confirmation; no `window.confirm`/`window.alert` remain in `src/`.
+These are live application state and should never be source-controlled.
 
-### C7 — Modal and landmark accessibility — [P2] [Sonnet 5] [M]
-**Problem:** `ModalBase` has no `role="dialog"`/`aria-modal`, no focus trap, no Escape handling, and closes on any document `mousedown` outside ([ModalBase.tsx:43-54](src/components/Modal/ModalBase.tsx#L43-L54)) — which fires mid-text-selection. `layout.tsx:21-23` wraps children in `<main>` and `page.tsx:49` renders another `<main>` (duplicate landmark).
-**Action:** Add dialog semantics, focus trap (focus first element on open, restore on close), Escape-to-close; close on `click` outside rather than `mousedown`. Remove one of the nested `<main>`s (keep the one in `page.tsx`; make layout's wrapper a `<div>`).
-**Acceptance:** Keyboard-only: open modal → focus lands inside, Tab cycles within, Escape closes, focus returns to trigger. Selecting text inside a modal and releasing outside does not close it. One `<main>` in the DOM.
+The WAL and SHM files may not represent the same transactional state as the primary database and can cause binary conflicts or database corruption after checkout.
 
-### C8 — Consume TreeContext directly in the tree (remove prop drilling) — [P2] [Sonnet 5] [M]
-**Problem:** `Sidebar → TreeView → TreeNode` threads ~14 props through each level and recursively ([TreeView.tsx:32-49](src/components/Sidebar/TreeView/TreeView.tsx#L32-L49), [TreeNode.tsx:319-339](src/components/Sidebar/TreeView/TreeNode.tsx#L319-L339)) although everything lives in `TreeContext`.
-**Action:** Have `TreeNode`/`TreeView` call `useTreeContext()` for handlers and shared state; keep only per-node data (`node`, `depth`) as props. Memoize `TreeNode` if re-render breadth becomes visible.
-**Acceptance:** Prop lists shrink to node-local data; all tree interactions (rename, delete, drag, expand) still work.
+### Action
 
-### C9 — Server-side validation and deterministic ordering — [P2] [Sonnet 5] [S]
-**Problem:** `GET /api/prompts` has no `ORDER BY` ([prompts/route.ts:18](src/app/api/prompts/route.ts#L18)) — tab order is arbitrary SQLite order. `sections`/`variables`/`settings_json` are persisted without shape validation; one malformed node aborts the entire bulk tree save via the CHECK constraint (`init-db.mjs:42`) with no per-node validation before the loop.
-**Action:** Add `ORDER BY num, created_at` to the prompts list. Validate JSON shapes on write (zod schemas shared from `src/types/`); in the bulk components save, validate all nodes first and return a 400 naming the offending node before touching the DB.
-**Acceptance:** Tab order is stable across reloads; posting a malformed node returns 400 with a useful message and leaves the library untouched.
+Remove the three files from Git tracking while leaving the local files untouched.
 
-### C10 — Versioned DB migrations — [P2] [Opus 4.8] [M]
-**Problem:** `scripts/init-db.mjs` is `CREATE TABLE IF NOT EXISTS` only; schema evolution (e.g. the retrofitted `variables` column that routes defensively `COALESCE`) is ad hoc. Any future column addition breaks existing self-hosted DBs.
-**Action:** Add a tiny migration runner keyed on `PRAGMA user_version`: numbered migration files (SQL or JS) applied in order inside a transaction at startup (from `src/lib/db.ts`) or via `db:init`. Migration 1 = current schema. Document adding a migration in CONTRIBUTING.md.
-**Acceptance:** Fresh DB and existing DB both end at the same `user_version` with identical schema (`sqlite3 .schema` diff empty); a sample migration adding a column applies exactly once.
+Ensure `/data` remains excluded by `.gitignore`.
 
-### C11 — Watcher resilience: periodic rescan — [P2] [Sonnet 5] [S]
-**Problem:** `scripts/n8n-prompt-watcher.ps1` sweeps existing files only at startup (`:158`); if the webhook is down when a file arrives, the file is never retried until the watcher restarts (rename-on-success at `:118` means unprocessed files keep their `Prompt - *.md` name).
-**Action:** In the main loop, every N minutes (e.g. 5) re-enumerate the watch dir for `Prompt - *.md` files older than the debounce window and enqueue any not already queued. The idempotent upsert on the server makes duplicate delivery safe.
-**Acceptance:** Stop n8n, drop a file, restart n8n: within the rescan interval the file is ingested and renamed `Uploaded - …` with no watcher restart.
+### Acceptance
 
-### C12 — Test infrastructure and first test suite — [P2] [Opus 4.8] [L]
-**Problem:** Zero tests, no runner, no `test` script (`package.json` has only `dev/build/start/lint/db:init`).
-**Action:** Add Vitest + React Testing Library (+ `@vitejs/plugin-react`, jsdom). First suites, in value order: the shared compile utility (C3); the unified markdown parser (B6) edge cases; `variableUtils` incl. B5 regression; PromptContext reorder persistence (A2 regression — assert the payload passed to fetch); one API route test against a temp SQLite file (better-sqlite3 in-memory or tmp path via env override in `src/lib/db.ts`). Add `"test": "vitest run"` and mention it in CONTRIBUTING.md.
-**Acceptance:** `npm test` runs green locally; A2/A6/B5 each have a test that fails on the pre-fix code.
-
-### C13 — VariablesPane: stop silently discarding unsaved values — [P2] [Sonnet 5] [S]
-**Problem:** The pane mirrors `prompt.variables` into local `variableValues` ([VariablesPane/index.tsx:15-17](src/components/VariablesPane/index.tsx#L15-L17)) and persists only on explicit Save (`:61-66`); the sync effect (`:51`) resets local state when switching prompts, discarding unsaved edits without warning. Also `getPromptVariables` reads the stale `promptsRef` while `getPromptVariableNames` reads fresh `prompts` (`PromptContext.tsx:591-603`) — inconsistent sources.
-**Action:** Persist variable values on blur or a short debounce (drop the explicit Save, or keep it as a no-op affordance); make both getters read the same fresh source.
-**Acceptance:** Type a variable value, switch prompt tabs and back: the value survives without pressing Save.
+- `git ls-files data/` returns no SQLite files
+- running Prompt Builder does not modify Git status because SQLite changed
+- the local database remains available
+- the application boots normally
 
 ---
 
-## D — P3 New Features
-*(Redrafted from the former README "Feature Ideas". Each assumes relevant P0/P1 groundwork above — noted per item.)*
+## A2. Correct stale-state persistence in PromptContext
 
-### D1 — Component-level prompt variables — [P3] [Opus 4.8] [L]
-*Depends on: C10 (migration), B5.*
-**Spec:** Components in the library can declare variables. `{{var}}` extraction already exists at prompt level (`src/utils/variableUtils.ts`, `VariablesPane`). Add: (1) a `variables` JSON column on `component_library` via a migration — name, optional default, optional description per variable; (2) auto-extraction of `{{…}}` placeholders in the component editor (`ComponentModal`) with a small list UI to set defaults/descriptions; (3) when a component is linked into a section, merge its variables (with defaults pre-filled) into the prompt's VariablesPane, deduplicating by name; (4) compile-time substitution stays in the shared compiler (C3).
-**Acceptance:** Create a component with `{{tone}}` (default "formal"); drag it into a prompt; VariablesPane shows `tone` pre-filled; Copy Prompt substitutes it; a second component reusing `{{tone}}` shares one pane entry.
+**Priority:** P0  
+**Size:** M
 
-### D2 — Component nesting / composition — [P3] [Opus 4.8] [L]
-*Depends on: C3.*
-**Spec:** A component's content may reference another component by name with `{{> Component Name}}`. Resolution happens at compile time in the shared compiler: replace each reference with the target's (recursively resolved) content; detect cycles and fail compilation with a clear message naming the cycle; unresolved names compile to a visible `[missing: name]` marker. UI: an "insert component reference" affordance in `ComponentModal` (searchable dropdown of library components); referenced components show a badge in the tree. Nested components' variables surface through D1's merge.
-**Acceptance:** A→B→C nesting compiles fully expanded; A→B→A reports a cycle instead of hanging; deleting a referenced component makes the missing-marker appear in compiled output.
-**Note:** Today the extractor `/\{\{([^}]+)\}\}/g` happily matches `{{> Component Name}}` and surfaces `> Component Name` as an editable variable in the pane. **D7** reserves the `>` (and `#`, `!`) sigil, so once D7 lands this token is skipped by extraction and substitution and the namespace is free for D2 to claim.
+### Problem
 
-### D3 — Built-in meta-prompting (AI refine) — [P3] [Opus 4.8] [L]
-*Depends on: A5 (prod build), B8 (validation pattern).*
-**Spec:** An "Improve with AI" action for a section or the whole prompt. Settings gains an Anthropic API key field stored in `app_config.settings_json` (server-side only — the key must never be sent to the browser after save; mask it in the settings GET). New route `POST /api/ai/refine` `{ scope: 'section'|'prompt', content, instruction? }` calls the Anthropic Messages API (model configurable, default the current Sonnet) with a fixed meta-prompt asking for an improved version. UI: button in `SectionHeader`/`ActionBar` → modal showing original vs. suggestion side-by-side → Accept replaces content (marking the section dirty), Reject discards. Handle missing key (prompt user to Settings), API errors (surface message), and never log the key or prompt bodies.
-**Acceptance:** With a valid key, refining a section returns a suggestion and Accept updates content; without a key the UI directs to Settings; the key is absent from all client-visible API responses and logs.
+Several prompt mutations update React state and then immediately retrieve the prompt from `promptsRef.current`.
 
-### D4 — Automatic formatting — [P3] [Sonnet 5] [M]
-*Depends on: C3.*
-**Spec:** A `formatPrompt` pure function beside the shared compiler, plus a "Format" action in `ActionBar`: normalize section heading levels per the framework registry (`src/lib/frameworks.ts`), collapse 3+ consecutive blank lines to one, trim trailing whitespace per line, normalize variable spacing (`{{ x }}` → `{{x}}`), and leave fenced code blocks untouched. Offer as both an on-copy toggle in Settings and a manual action.
-**Acceptance:** Unit tests cover each rule incl. the fenced-code exemption; formatting is idempotent (`format(format(x)) === format(x)`).
-**Note:** If **D7** has landed, the variable-spacing rule must be widened rather than left as-is: normalize choice tokens to D7's canonical form (`{{a/b/c}}` and `{{label: a/b/c}}` — no spaces around `/`, exactly one after `:`) so that `{{ mail / teams }}` normalizes without changing which variable it refers to. Reuse D7's `parseVariableToken` rather than writing a second grammar.
+The ref still contains the pre-mutation value until the relevant effect executes.
 
-### D5 — Compiled prompt libraries (export / import bundles) — [P3] [Opus 4.8] [M]
-*Depends on: B6, B7.*
-**Spec:** Export a prompt (with its linked components) or a component folder as a portable single-file bundle (JSON envelope: version, prompts[], components[] with tree structure, variables). Import merges a bundle through the existing `ImportPromptModal` review flow (reusing its type-mapping UI), generating fresh ids and inserting under the root; name collisions get a ` (imported)` suffix. Round-trip must preserve section types, component links, and variables. Export via a download button in the prompt tab context menu and folder context menu.
-**Acceptance:** Export a prompt with 3 linked components on machine A; import on a clean DB: identical sections/types/links/variables; importing the same bundle twice produces suffixed copies, not corruption.
+This can cause reordered or inserted sections to be saved using the previous state.
 
-### D6 — Style / design refresh — [P3] [Sonnet 5 → Opus 4.8] [L]
-*Depends on: B7-3.*
-**Spec:** Three workstreams: (1) **Finish the color-system migration** started in the import changeset — `frameworks.ts` registry is the single source of type colors; remove the legacy per-type SCSS fallbacks in `src/styles/variables/_colors.scss:19-20` once every consumer (drag preview, icons, sections) reads the registry. (2) **Theme toggle UI** — theme state already exists (`page.tsx:44-46`) and a dead `theme` field sits in SettingsModal; add the actual control in Settings and persist via settings JSON; audit both themes for contrast. (3) **Token normalization** — consolidate spacing/typography into SCSS variables/mixins (extend `src/styles/variables/`), replacing magic numbers in component SCSS.
-**Acceptance:** No hard-coded type colors outside `frameworks.ts`; theme switchable from Settings and persists across reloads; both themes pass a contrast spot-check on Sidebar, editor, and modals.
+### Action
 
-### D7 — Variable choice lists (`{{a/b/c}}` dropdowns) — [P3] [Opus 4.8] [M]
-*Depends on: nothing. **Absorbs B5.** Self-contained — can land before the C-block.*
+For every prompt mutation:
 
-**Problem:** Every `{{token}}` becomes one free-text `<textarea>` in the Variables pane ([src/components/VariablesPane/index.tsx:104-117](src/components/VariablesPane/index.tsx#L104-L117)). That is right for open-ended values (`{{tone}}`) but wrong when a variable has a small, known set of valid values — the user retypes `teams` every time and typos ship silently into the copied prompt.
+1. Calculate the updated prompt explicitly.
+2. Apply that same object to local state.
+3. Pass that exact object to the persistence layer.
 
-**Spec:** A `/` inside the braces means "these are the choices". `{{mail/teams/calendar}}` renders as a dropdown; a `Custom…` entry falls back to today's textarea so free text is never locked out. An optional label form `{{channel: mail/teams/calendar}}` gives long lists a readable name. **No DB migration and no type changes** — `prompt.variables` stays `Record<string, string>`; only *what variables exist* and *how one renders* change.
+Audit all same-tick reads of `promptsRef.current`.
 
-1. **Grammar** — in `src/utils/variableUtils.ts`, applied to the trimmed inner text of each token:
-   - **Reserved sigils.** Inner text starting with `>`, `#`, or `!` is not a variable: skip it in both extraction and substitution (reserves D2's `{{> Component Name}}`).
-   - **Label split.** Match `^([^:/]+):\s*(.+)$` → `label` = group 1 trimmed, `rest` = group 2. The label part may not contain `/`; that is what stops `https://example.com` parsing as a label.
-   - **Options.** Split `rest` (or the whole inner text if unlabelled) on `/`. Options exist only if there are **≥2 parts and every part is non-empty after trimming**.
-   - **No options ⇒ no behavior change.** The token is a free-text variable keyed on the whole trimmed inner text, byte-identical to today. A label only activates alongside a real option list, so `{{Note: see below}}` and `{{tone: formal}}` keep working exactly as they do now.
-   - **Key (storage identity):** labelled options → the label; unlabelled options → `options.join('/')` (so spacing is irrelevant); free text → the trimmed inner text.
-   - **Display label:** the label / `options.join(' / ')` / the inner text respectively.
-   - **Merging:** same key twice ⇒ one pane entry, option lists unioned in first-appearance order. `{{channel: mail/teams}}` and a bare `{{channel}}` elsewhere share one value.
-   - Consequence: `/` (and `:` before an option list) become reserved in variable names, with no escape hatch. The all-parts-non-empty guard already lets URLs and `a//b` typos fall through to free text.
+### Acceptance
 
-   Cases the parser must satisfy, in order:
+The following survive a hard reload:
 
-   | Token | Key | Options |
-   |---|---|---|
-   | `{{tone}}` | `tone` | — |
-   | `{{mail/teams/calendar}}` | `mail/teams/calendar` | mail, teams, calendar |
-   | `{{ mail / teams }}` | `mail/teams` | mail, teams |
-   | `{{channel: mail/teams/calendar}}` | `channel` | mail, teams, calendar |
-   | `{{Note: see below}}` | `Note: see below` | — |
-   | `{{tone: formal}}` | `tone: formal` | — |
-   | `{{https://example.com}}` | `https://example.com` | — |
-   | `{{a//b}}` | `a//b` | — |
-   | `{{> Component Name}}` | *(skipped)* | — |
+- moving a section up
+- moving a section down
+- drag-to-index reorder
+- inserting a section in the middle
+- deleting a section
+- modifying a section
 
-2. **Parser API** — add to [src/utils/variableUtils.ts](src/utils/variableUtils.ts):
-   ```ts
-   export type VariableSpec = { key: string; label: string; options: string[] }; // options: [] = free text
-   export const parseVariableToken = (inner: string): VariableSpec | null;       // null = reserved sigil
-   export const extractVariableSpecs = (text: string): VariableSpec[];
-   export const extractVariableSpecsFromSections = (sections): VariableSpec[];   // merges, unions options
-   ```
-   Export one shared `VARIABLE_TOKEN_RE` and use it everywhere, replacing the three duplicated copies of the pattern ([variableUtils.ts:16](src/utils/variableUtils.ts#L16), `:68`, [HighlightedTextarea/index.tsx:144](src/components/HighlightedTextarea/index.tsx#L144)). Keep `extractVariables`/`extractVariablesFromSections` returning `string[]`, reimplemented as `…Specs(…).map(s => s.key)`, so `buildVariablesObject` ([src/utils/markdownParser.ts:65-71](src/utils/markdownParser.ts#L65-L71)) and the ingest path need no edit.
-
-3. **Substitution** — rewrite `replaceVariables` ([variableUtils.ts:61-73](src/utils/variableUtils.ts#L61-L73)) to scan tokens instead of rebuilding them, which is the entire B5 fix plus the trim-asymmetry fix and removes the dynamic `RegExp`:
-   ```ts
-   text.replace(VARIABLE_TOKEN_RE, (match, inner) => {
-     const spec = parseVariableToken(inner);
-     if (!spec) return match;                                    // reserved sigil
-     return spec.key in variables ? (variables[spec.key] ?? '') : match;
-   });
-   ```
-   Preserved: unknown keys stay as literal `{{…}}`; an empty value removes the token. Fixed: `{{ tone }}` now substitutes (today it is listed in the pane and then never replaced, because extraction trims but substitution rebuilds the literal token), and regex metacharacters in names are inert.
-
-4. **Context** — add `getPromptVariableSpecs(promptId): VariableSpec[]` beside `getPromptVariableNames` ([src/contexts/PromptContext.tsx:598-603](src/contexts/PromptContext.tsx#L598-L603)), reading the fresh `prompts` array, and expose it on the context value + type.
-
-5. **UI** — new `src/components/VariablesPane/VariableField.tsx`, props `{ spec, value, onChange }`:
-   - `spec.options.length === 0` → render today's `<textarea>` verbatim including its placeholder. Free-text variables must look and behave exactly as they do now.
-   - Otherwise a `<select>`: disabled placeholder `Select an option…` (selected while `value === ''`), one option per entry, separator, then `Custom…`.
-   - **Mode is derived, not persisted:** `isCustom = forceCustom || (value !== '' && !spec.options.includes(value))`, where `forceCustom` is local state set only by picking `Custom…`, cleared when a real option is picked or `spec.key` changes. This makes values stored before the token grew an option list — or typed then removed from the list — reopen correctly in custom mode.
-   - In custom mode the select reads `Custom…` and the textarea renders beneath it, autofocused.
-   - An unset choice variable stays empty and substitutes to nothing on Copy, matching how unfilled free-text variables behave today.
-   - [VariablesPane/index.tsx](src/components/VariablesPane/index.tsx): swap `variableNames: string[]` for specs, key local state and the add/prune effect (`:23-51`) on `spec.key`, render `<VariableField>` per spec with `spec.label` as the label. Leave the Save/Reset flow alone — that is **C13**.
-
-6. **Styling & highlighting** — style `.variable-select` to match `.variable-input` ([VariablesPane.scss:89-111](src/components/VariablesPane/VariablesPane.scss#L89-L111)) plus a custom chevron, since native select arrows ignore the dark theme; the `.variable-label::before/::after` braces (`:74-86`) still work for labels. In [HighlightedTextarea/index.tsx:142-147](src/components/HighlightedTextarea/index.tsx#L142-L147) swap the plain string replace for a replacer that parses the token and adds a `highlighted-variable--choice` modifier when it has options, with a style beside [HighlightedTextarea.scss:47-52](src/components/HighlightedTextarea/HighlightedTextarea.scss#L47-L52). Note the highlighter runs on HTML-escaped text, but only `& < >` are escaped, so `/` and `:` survive and the parser works unchanged. Document the three token forms in README.
-
-**Acceptance:** `Send this via {{mail/teams/calendar}} and use a {{channel: formal/casual}} tone.` yields two dropdowns in the pane and choice-styled tokens in the editor. Picking `teams` and copying produces `Send this via teams`. Picking `Custom…`, typing `slack`, saving and reloading reopens the field in custom mode with `slack`, and Copy substitutes it. Leaving the second unset emits nothing in its place with no stray braces. Adding a bare `{{channel}}` in another section still shows one pane entry and substitutes both tokens. `{{tone}}` behaves exactly as before. Regression checks that fail on pre-D7 code: `replaceVariables('{{ tone }}', { tone: 'x' }) === 'x'` and `replaceVariables('{{v1.0/v2.0}}', { 'v1.0/v2.0': 'v2.0' }) === 'v2.0'` (B5). `npm run lint` and `npm run build` clean.
+No persistence operation saves the pre-mutation state.
 
 ---
 
-## Suggested sequencing for the week
+## A3. Fix active prompt persistence
 
-1. **Commit hygiene first:** A1, then land the WIP import feature with B7 fixes, keeping A5's dependency decision out of that commit.
-2. **Data-integrity block:** A2, A3, A6, B1, B4 (small, high-payoff), then A7 and A4.
-3. **Platform block:** A5, B2, B3, B9, B8.
-4. **Quality ratchet:** C2 → C1 → C3/C4 → C12 (tests lock in the fixes above).
-5. **Features (D)** only after C3/C10 exist — most D items build on them. The exception is **D7**, which touches only `variableUtils` and the Variables pane and can land at any point; doing it early also retires B5 and clears the `>` sigil that D2 needs.
+**Priority:** P0  
+**Size:** M
+
+### Problem
+
+The frontend attempts to use an `/api/app-config/activePromptId` endpoint which does not exist.
+
+The settings endpoint already handles application configuration.
+
+### Action
+
+Use `/api/settings` as the authoritative persistence path for the active prompt.
+
+Remove calls to the nonexistent endpoint.
+
+### Acceptance
+
+- select Prompt B
+- reload Prompt Builder
+- Prompt B remains selected
+- no 404 requests occur while changing prompt tabs
+
+---
+
+## A4. Stop component-library bulk save from deleting external changes
+
+**Priority:** P0  
+**Size:** L
+
+### Problem
+
+The component library currently has destructive whole-table replacement behaviour.
+
+A client-side save can remove components or folders which were added through another ingestion path after the client originally loaded its state.
+
+### Action
+
+Replace whole-table deletion with transactional upsert behaviour.
+
+Updates should:
+
+- update known records
+- insert new records
+- delete only records explicitly removed by the client
+
+Do not remove records merely because they were absent from an old client snapshot.
+
+### Acceptance
+
+An externally ingested component remains present after:
+
+1. the UI has already loaded
+2. the external component is added
+3. the user edits another component
+4. autosave runs
+5. the application reloads
+
+---
+
+## A5. Correct Docker production deployment
+
+**Priority:** P0  
+**Size:** M
+
+### Problem
+
+The container currently runs the application using the Next.js development server.
+
+Database initialisation errors can also be silently ignored.
+
+### Action
+
+Create a production multi-stage image.
+
+Use:
+
+```text
+npm ci
+next build
+production runtime
+```
+
+Database initialisation must fail visibly and terminate the container when required.
+
+Use an appropriate current Node LTS base image.
+
+### Acceptance
+
+- `docker compose up --build` starts a production Next.js application
+- no Turbopack development banner appears
+- a database initialisation failure terminates the container
+- the error is visible in container logs
+
+---
+
+## A6. Fix literal newline characters in copied prompts
+
+**Priority:** P0  
+**Size:** S
+
+### Problem
+
+The clipboard path can emit literal `\n` characters rather than actual line breaks.
+
+### Action
+
+Correct the string handling and cover it with an automated test.
+
+### Acceptance
+
+System prompt and prompt content are separated by actual line breaks.
+
+No literal backslash characters appear.
+
+---
+
+## A7. Make autosave debounce prompt-specific
+
+**Priority:** P0  
+**Size:** M
+
+### Problem
+
+One debounce timer is shared across multiple prompts.
+
+Editing Prompt A and then Prompt B quickly can cancel Prompt A's pending save.
+
+### Action
+
+Use a keyed persistence queue:
+
+```text
+Prompt A → timer
+Prompt B → timer
+Prompt C → timer
+```
+
+Each prompt must debounce independently.
+
+### Acceptance
+
+Edit Prompt A and then Prompt B within one second.
+
+After autosave and reload, both edits remain.
+
+---
+
+# B. P1 Correctness and Data Integrity
+
+## B1. Enable SQLite foreign keys
+
+**Priority:** P1  
+**Size:** S
+
+Enable:
+
+```sql
+PRAGMA foreign_keys = ON;
+```
+
+at database connection time.
+
+### Acceptance
+
+Configured cascades and `SET NULL` operations execute correctly.
+
+---
+
+## B2. Standardise Next.js dynamic route parameters
+
+**Priority:** P1  
+**Size:** S
+
+Use the supported Next.js async parameter model consistently across all dynamic API routes.
+
+### Acceptance
+
+- production build succeeds
+- no dynamic route parameter warnings
+- error logging contains the actual object ID
+
+---
+
+## B3. Add runtime API validation
+
+**Priority:** P1  
+**Size:** M
+
+### Problem
+
+TypeScript casts currently provide compile-time convenience but no runtime protection.
+
+For example:
+
+```ts
+body as Partial<Prompt>
+```
+
+does not validate input.
+
+### Action
+
+Introduce Zod or an equivalent runtime schema library.
+
+Create schemas for:
+
+- prompts
+- sections
+- components
+- folders
+- settings
+- variable specifications
+- imports
+
+### Acceptance
+
+Malformed API payloads:
+
+- return HTTP 400
+- include a useful error
+- do not partially modify the database
+
+---
+
+## B4. Introduce explicit API request and response contracts
+
+**Priority:** P1  
+**Size:** M
+
+Define explicit models for:
+
+```text
+CreatePromptRequest
+UpdatePromptRequest
+PromptResponse
+ComponentResponse
+SettingsResponse
+ErrorResponse
+```
+
+Where practical, derive TypeScript types from runtime schemas.
+
+### Acceptance
+
+Frontend and API use the same contract definitions.
+
+---
+
+## B5. Introduce consistent API failure handling
+
+**Priority:** P1  
+**Size:** M
+
+### Problem
+
+Many frontend `fetch()` calls only catch network exceptions.
+
+HTTP 400 and HTTP 500 responses can therefore appear successful to the UI.
+
+### Action
+
+Introduce a shared API client which:
+
+1. performs the request
+2. checks HTTP status
+3. parses the response
+4. throws a typed application error
+5. provides useful failure information to the UI
+
+### Acceptance
+
+API failures result in visible application feedback and do not silently mark failed changes as saved.
+
+---
+
+## B6. Correct optimistic deletion behaviour
+
+**Priority:** P1  
+**Size:** S
+
+Do not permanently remove a prompt from the UI before confirming server-side deletion unless rollback is implemented.
+
+For a local-first application, prefer pessimistic delete unless there is a material UX reason not to.
+
+### Acceptance
+
+If database deletion fails, the prompt remains visible and an error is shown.
+
+---
+
+## B7. Restore folder expansion state
+
+**Priority:** P1  
+**Size:** S
+
+Persist and restore component folder expanded/collapsed state consistently.
+
+### Acceptance
+
+Expand folders, reload Prompt Builder and confirm the same folders remain expanded.
+
+---
+
+## B8. Unify Markdown parsing
+
+**Priority:** P1  
+**Size:** L
+
+### Problem
+
+Different Markdown import paths currently apply different parsing behaviour.
+
+### Action
+
+Create one shared Markdown parser.
+
+It must:
+
+- understand the same heading rules everywhere
+- respect fenced code blocks
+- map section types through one registry
+- support prompt variable syntax consistently
+
+### Acceptance
+
+The same Markdown document produces the same prompt structure regardless of import path.
+
+---
+
+## B9. Make prompt ordering deterministic
+
+**Priority:** P1  
+**Size:** S
+
+Add explicit ordering when loading prompts.
+
+Use a deterministic field such as:
+
+```text
+num
+created_at
+```
+
+### Acceptance
+
+Prompt tab order is stable across restarts.
+
+---
+
+## B10. Add versioned database migrations
+
+**Priority:** P1  
+**Size:** M
+
+### Problem
+
+`CREATE TABLE IF NOT EXISTS` is insufficient once existing installations need schema changes.
+
+### Action
+
+Introduce schema migrations using:
+
+```sql
+PRAGMA user_version
+```
+
+or an equivalent small migration system.
+
+### Acceptance
+
+- new installations reach the current schema
+- old installations migrate automatically
+- migrations run exactly once
+- database schema version can be inspected
+
+---
+
+# C. P1 Prompt Domain Model
+
+## C1. Separate source prompts from working prompt state
+
+**Priority:** P1  
+**Size:** L
+
+### Product model
+
+Prompt Builder must distinguish between:
+
+```text
+Source Prompt
+Working Prompt
+Resolved Prompt
+```
+
+### Source Prompt
+
+The persistent reusable library artefact.
+
+Example:
+
+```text
+Review the {{technology}} environment for {{customer}}.
+
+Produce the response in a {{tone: formal/technical/executive}} style.
+```
+
+### Working Prompt
+
+The source plus values for the current use:
+
+```text
+technology = Microsoft Intune
+customer = Contoso
+tone = technical
+```
+
+Working state may also contain temporary edits.
+
+### Resolved Prompt
+
+The exact text that will be copied:
+
+```text
+Review the Microsoft Intune environment for Contoso.
+
+Produce the response in a technical style.
+```
+
+### Action
+
+Introduce an explicit working-state model separate from persisted prompt source.
+
+Example:
+
+```ts
+type PromptWorkspace = {
+  promptId: string;
+  values: Record<string, string>;
+  sectionOverrides?: Record<string, string>;
+};
+```
+
+### Acceptance
+
+Entering working values does not mutate variable definitions in the source prompt.
+
+---
+
+## C2. Preserve variable definitions and option sets
+
+**Priority:** P1  
+**Size:** M
+
+### Requirement
+
+Variable options are part of the source prompt.
+
+Example:
+
+```text
+{{channel: email/Teams/WhatsApp}}
+```
+
+must always continue to expose:
+
+```text
+email
+Teams
+WhatsApp
+Custom
+```
+
+The working value is separate.
+
+### Acceptance
+
+Select:
+
+```text
+Teams
+```
+
+then clear working values.
+
+The source still contains:
+
+```text
+{{channel: email/Teams/WhatsApp}}
+```
+
+and all choices remain available.
+
+---
+
+## C3. Consolidate variable parsing into one grammar
+
+**Priority:** P1  
+**Size:** M
+
+Support consistently:
+
+```text
+{{tone}}
+{{mail/teams/calendar}}
+{{channel: mail/teams/calendar}}
+```
+
+Create one parser used by:
+
+- extraction
+- highlighting
+- substitution
+- validation
+- preview
+- import
+
+### Acceptance
+
+Whitespace variants such as:
+
+```text
+{{ mail / teams }}
+```
+
+resolve identically to:
+
+```text
+{{mail/teams}}
+```
+
+---
+
+## C4. Separate persisted Section data from UI state
+
+**Priority:** P1  
+**Size:** M
+
+### Problem
+
+Section currently mixes persistent prompt content and editor state.
+
+Persistent:
+
+```text
+name
+content
+type
+linkedComponentId
+```
+
+UI:
+
+```text
+open
+dirty
+editingHeader
+editingHeaderTempName
+```
+
+### Action
+
+Create separate models.
+
+Example:
+
+```ts
+type Section = {
+  id: string;
+  name: string;
+  content: string;
+  type: SectionTypeValue;
+};
+
+type SectionUiState = {
+  open: boolean;
+  dirty: boolean;
+  editingHeader: boolean;
+};
+```
+
+### Acceptance
+
+UI-only state is never serialised into stored prompt content.
+
+---
+
+## C5. Define reusable components as prompt fragments
+
+**Priority:** P1  
+**Size:** M
+
+### Product decision
+
+Components are reusable prompt fragments rather than independent prompt artefacts.
+
+Example library:
+
+```text
+Components
+├── Roles
+│   ├── Microsoft 365 Architect
+│   └── Security Reviewer
+├── Constraints
+│   ├── British English
+│   └── Cite Sources
+└── Output
+    ├── Markdown Table
+    └── Executive Summary
+```
+
+A component helps build a source prompt.
+
+### Default behaviour
+
+Inserting a component should create a copy by default.
+
+This prevents a later component edit from silently changing every existing prompt.
+
+### Future option
+
+Explicit linked components may remain available as an advanced feature.
+
+### Acceptance
+
+Insert a reusable component into Prompt A.
+
+Later modify the source component.
+
+Prompt A does not change unless the section was explicitly configured as linked.
+
+---
+
+## C6. Clarify linked component behaviour
+
+**Priority:** P1  
+**Size:** M
+
+If linked components remain supported, linkage must be explicit rather than implicit.
+
+The UI should clearly identify:
+
+```text
+Copied component
+```
+
+versus:
+
+```text
+Linked component
+```
+
+### Acceptance
+
+The user can determine from the editor whether a section will automatically follow future component changes.
+
+---
+
+# D. P1 Compilation and Clipboard Workflow
+
+## D1. Create a single prompt compiler
+
+**Priority:** P1  
+**Size:** M
+
+### Problem
+
+More than one implementation currently determines what constitutes the compiled prompt.
+
+### Action
+
+Create:
+
+```text
+compilePrompt()
+```
+
+as a pure domain function.
+
+It should handle:
+
+- ordered sections
+- variable substitution
+- system prompting
+- formatting options
+- unresolved variables
+- section headings where applicable
+
+### Acceptance
+
+Every feature that needs resolved prompt text uses this compiler.
+
+---
+
+## D2. Add first-class resolved prompt preview
+
+**Priority:** P1  
+**Size:** M
+
+Provide:
+
+```text
+Source | Preview
+```
+
+Preview must display exactly what Copy Prompt will place on the clipboard.
+
+### Example
+
+Source:
+
+```text
+Send the response using {{channel: email/Teams/WhatsApp}}
+in a {{tone: formal/casual}} tone.
+```
+
+Working values:
+
+```text
+channel = Teams
+tone = formal
+```
+
+Preview:
+
+```text
+Send the response using Teams
+in a formal tone.
+```
+
+### Acceptance
+
+Preview and clipboard output are byte-for-byte identical.
+
+---
+
+## D3. Add Clear Working Values
+
+**Priority:** P1  
+**Size:** S
+
+Provide a visible action:
+
+```text
+Clear values
+```
+
+This must:
+
+- clear current variable values
+- retain source prompt
+- retain variable definitions
+- retain variable option lists
+- retain source prompt edits
+
+### Acceptance
+
+Variable options remain intact after clearing.
+
+---
+
+## D4. Define unresolved variable behaviour
+
+**Priority:** P1  
+**Size:** S
+
+The compiler must have explicit behaviour for unpopulated variables.
+
+Current intended behaviour should be documented and tested.
+
+If empty variables are intended to resolve to empty text, ensure this behaviour is consistent.
+
+Consider warning users before copy when unresolved variables remain.
+
+### Acceptance
+
+Behaviour is consistent between preview and clipboard.
+
+---
+
+## D5. Introduce save-state visibility
+
+**Priority:** P1  
+**Size:** M
+
+Expose application persistence state such as:
+
+```text
+Saved
+Saving
+Unsaved changes
+Save failed
+```
+
+### Acceptance
+
+Users can determine whether changes have been persisted locally.
+
+---
+
+# E. P2 State and Architecture Refactoring
+
+## E1. Reduce PromptContext responsibilities
+
+**Priority:** P2  
+**Size:** L
+
+### Problem
+
+PromptContext currently manages:
+
+- loading
+- persistence
+- prompt mutation
+- section mutation
+- variable handling
+- prompt compilation
+- active prompt state
+- temporary UI state
+
+### Action
+
+Separate concerns into:
+
+```text
+domain
+API
+persistence
+state
+UI hooks
+```
+
+Suggested structure:
+
+```text
+src/features/prompts/
+  domain/
+  api/
+  hooks/
+  state/
+  components/
+```
+
+### Acceptance
+
+PromptContext becomes an orchestration layer rather than the primary business logic implementation.
+
+---
+
+## E2. Remove direct `setPrompts` exposure
+
+**Priority:** P2  
+**Size:** S
+
+Consumers should not mutate the prompt collection directly.
+
+Use intent-based methods:
+
+```text
+createPrompt
+renamePrompt
+deletePrompt
+moveSection
+updateSection
+```
+
+### Acceptance
+
+No component outside the state implementation calls `setPrompts`.
+
+---
+
+## E3. Use fail-fast React contexts
+
+**Priority:** P2  
+**Size:** S
+
+Contexts should default to:
+
+```ts
+undefined
+```
+
+rather than large collections of no-op methods.
+
+Hooks should throw when used outside the appropriate provider.
+
+### Acceptance
+
+Incorrect provider usage fails immediately during development.
+
+---
+
+## E4. Introduce repository abstractions
+
+**Priority:** P2  
+**Size:** M
+
+Create:
+
+```text
+promptsRepository
+componentsRepository
+settingsRepository
+```
+
+These should encapsulate SQLite persistence.
+
+React should not depend upon database implementation details.
+
+### Acceptance
+
+API routes delegate database operations to repositories.
+
+---
+
+## E5. Add typed database row mappers
+
+**Priority:** P2  
+**Size:** S
+
+Replace broad `any` usage around SQLite results.
+
+Create mappings such as:
+
+```text
+PromptRow → Prompt
+ComponentRow → Component
+```
+
+### Acceptance
+
+No routine prompt persistence path relies on untyped `any`.
+
+---
+
+# F. P2 Automated Testing
+
+## F1. Add test infrastructure
+
+**Priority:** P2  
+**Size:** M
+
+Introduce:
+
+- Vitest
+- React Testing Library
+- jsdom where required
+
+Add:
+
+```text
+npm test
+```
+
+### Acceptance
+
+Tests run locally with one command.
+
+---
+
+## F2. Add variable parser tests
+
+**Priority:** P2  
+**Size:** S
+
+Cover:
+
+```text
+{{tone}}
+{{ mail / teams }}
+{{channel: formal/casual}}
+custom choices
+regex metacharacters
+empty values
+unknown variables
+```
+
+---
+
+## F3. Add compiler tests
+
+**Priority:** P2  
+**Size:** M
+
+Cover:
+
+- multiple sections
+- section order
+- system prompt
+- variable resolution
+- blank variables
+- choice variables
+- custom variable values
+- formatting
+- preview equality
+
+---
+
+## F4. Add persistence regression tests
+
+**Priority:** P2  
+**Size:** M
+
+Cover:
+
+- reorder then reload
+- insert then reload
+- delete then reload
+- Prompt A and Prompt B edited inside debounce period
+
+---
+
+## F5. Add SQLite API integration tests
+
+**Priority:** P2  
+**Size:** M
+
+Use a temporary or isolated SQLite database.
+
+Cover prompt and component CRUD.
+
+---
+
+## F6. Add Playwright smoke tests
+
+**Priority:** P2  
+**Size:** L
+
+Initial scenarios:
+
+1. create prompt
+2. edit prompt
+3. reload
+4. verify persistence
+5. populate variable
+6. preview result
+7. copy prompt
+8. compare clipboard output
+9. clear values
+10. verify source options remain
+
+---
+
+# G. P2 CI and Repository Quality
+
+## G1. Add typecheck script
+
+Add:
+
+```json
+"typecheck": "tsc --noEmit"
+```
+
+---
+
+## G2. Add GitHub Actions CI
+
+Run:
+
+```text
+npm ci
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
+
+for every pull request.
+
+---
+
+## G3. Add dependency auditing
+
+Review and remove unused dependencies including historical hosted-service dependencies where confirmed unused.
+
+Candidate areas include:
+
+```text
+Supabase
+PostHog
+MySQL
+SSH tunnel
+bcrypt
+dotenv
+```
+
+Do not remove dependencies until usage has been verified.
+
+Consider using `knip`.
+
+---
+
+## G4. Standardise formatting
+
+Add Prettier and repository-wide formatting rules.
+
+Standardise:
+
+- quotes
+- indentation
+- trailing commas
+- line wrapping
+- import ordering where appropriate
+
+---
+
+## G5. Remove historical implementation comments
+
+Remove comments such as:
+
+```text
+Changed from number
+Corrected
+New property
+Removed
+```
+
+Git history already records implementation changes.
+
+Comments should explain why behaviour exists.
+
+---
+
+## G6. Remove workstation-specific paths
+
+Remove comments containing local machine paths such as:
+
+```text
+C:\Users\...
+```
+
+---
+
+## G7. Remove dead files and dead code
+
+Audit:
+
+- unused hooks
+- unused functions
+- unused imports
+- no-op UI buttons
+- abandoned configuration fields
+
+Remove only after confirming no references remain.
+
+---
+
+## G8. Remove large repository demo asset
+
+Replace the approximately 30 MB animated GIF with a more appropriate mechanism such as:
+
+- compressed WebM
+- GitHub release asset
+- externally hosted demo
+
+---
+
+# H. P2 Documentation
+
+## H1. Rewrite README for the current architecture
+
+The README should accurately describe:
+
+```text
+Next.js
+React
+TypeScript
+SCSS
+SQLite
+local-first operation
+```
+
+Remove references to historical Vite or Chrome extension architecture unless genuinely current.
+
+---
+
+## H2. Correct database documentation
+
+Document the actual database location:
+
+```text
+data/prompt_builder.db
+```
+
+and its backup implications.
+
+---
+
+## H3. Document the source/working/resolved model
+
+Explain:
+
+### Source Prompt
+
+Persistent reusable template.
+
+### Working Prompt
+
+Current values and temporary preparation state.
+
+### Resolved Prompt
+
+Exact clipboard output.
+
+---
+
+## H4. Document variable grammar
+
+Document all supported forms:
+
+```text
+{{tone}}
+
+{{mail/teams/calendar}}
+
+{{channel: mail/teams/calendar}}
+```
+
+Include:
+
+- whitespace rules
+- Custom option behaviour
+- repeated variables
+- empty values
+
+---
+
+## H5. Add architecture documentation
+
+Describe:
+
+```text
+UI
+ ↓
+domain/state
+ ↓
+API
+ ↓
+repository
+ ↓
+SQLite
+```
+
+This should remain intentionally lightweight.
+
+---
+
+# I. P3 Prompt Library Features
+
+## I1. Complete prompt duplication
+
+**Priority:** P3  
+**Size:** S
+
+Make duplicate prompt a fully supported and tested workflow.
+
+### Acceptance
+
+Duplicating a prompt creates an independent source prompt with independent section IDs and preserved variable definitions.
+
+---
+
+## I2. Add prompt descriptions
+
+Allow prompts to have a short description explaining intended use.
+
+---
+
+## I3. Add tags
+
+Example:
+
+```text
+Microsoft 365
+Security
+Development
+Research
+Writing
+```
+
+Allow multiple tags per prompt.
+
+---
+
+## I4. Add favourites
+
+Allow prompts to be marked:
+
+```text
+★ Favourite
+```
+
+Provide a favourite filter.
+
+---
+
+## I5. Add recently used prompts
+
+Track a local `last_used_at` timestamp.
+
+Display recently used prompts.
+
+---
+
+## I6. Add prompt search
+
+Search across:
+
+- prompt name
+- description
+- tags
+- section names
+- section content
+- variable names
+
+SQLite FTS5 should be considered.
+
+---
+
+# J. P3 Variable Improvements
+
+## J1. Preserve choice variables as source definitions
+
+This is mandatory throughout future variable development.
+
+Choice options must never be replaced by the last selected working value.
+
+---
+
+## J2. Add required variables
+
+Support a way to designate a variable as required.
+
+Example candidate syntax:
+
+```text
+{{!customer}}
+```
+
+or explicit metadata.
+
+Do not commit to syntax until reviewed.
+
+### Behaviour
+
+Before copy:
+
+```text
+Customer has not been populated.
+```
+
+The application may warn without blocking.
+
+---
+
+## J3. Add variable descriptions
+
+Allow variables to provide help text such as:
+
+```text
+customer
+Customer organisation being assessed
+```
+
+This may ultimately require metadata beyond inline prompt syntax.
+
+---
+
+## J4. Add variable defaults
+
+Allow a source definition to provide an optional default working value.
+
+This must remain distinguishable from the currently selected value.
+
+---
+
+## J5. Improve Custom option behaviour
+
+Choice variables must support:
+
+```text
+Custom…
+```
+
+A custom current value does not modify the persistent option list.
+
+---
+
+# K. P3 Working Prompt Enhancements
+
+## K1. Temporary section overrides
+
+Support making changes for the current prompt use without immediately modifying the source library prompt.
+
+Example source:
+
+```text
+Produce a comprehensive assessment.
+```
+
+Temporary working change:
+
+```text
+Produce a concise assessment.
+```
+
+Copy uses the temporary version.
+
+Reset returns to the stored source.
+
+---
+
+## K2. Explicit Edit Source mode
+
+Provide a clear distinction between:
+
+```text
+Edit Source
+```
+
+and:
+
+```text
+Modify Current Copy
+```
+
+This prevents accidental corruption of reusable library prompts.
+
+This requires careful UX design before implementation.
+
+---
+
+## K3. Reset Working Prompt
+
+Provide:
+
+```text
+Reset working prompt
+```
+
+This clears:
+
+- variable values
+- temporary text overrides
+
+while preserving:
+
+- source prompt
+- variable definitions
+- variable option lists
+- component definitions
+
+---
+
+# L. P3 Component Improvements
+
+## L1. Default component insertion to Copy
+
+Dragging or inserting a component into a prompt creates an independent section by default.
+
+This protects existing prompts from future component modifications.
+
+---
+
+## L2. Explicit linked component option
+
+Allow an advanced user to choose:
+
+```text
+Keep linked
+```
+
+when they genuinely want future component updates to flow into the prompt.
+
+---
+
+## L3. Show component origin
+
+A copied component may optionally retain provenance metadata:
+
+```text
+Originally inserted from:
+Security Reviewer
+```
+
+This is informational only.
+
+It must not create automatic synchronisation.
+
+---
+
+## L4. Show linked status visually
+
+Linked sections must be clearly identifiable.
+
+Example:
+
+```text
+🔗 Linked: Security Reviewer
+```
+
+---
+
+## L5. Warn before modifying a linked component
+
+If a component change will affect multiple prompts, Prompt Builder should report the number of linked prompts before saving.
+
+This applies only if linked components remain supported.
+
+---
+
+# M. P3 Backup, Import and Export
+
+## M1. Export entire library
+
+Provide:
+
+```text
+Export library
+```
+
+Create a JSON backup containing:
+
+- prompts
+- sections
+- component hierarchy
+- variable definitions
+- relevant settings
+- schema version
+
+---
+
+## M2. Import library backup
+
+Support restoring the application-level JSON backup.
+
+### Acceptance
+
+Export a library from one clean installation and import it into another.
+
+The resulting prompt library is functionally equivalent.
+
+---
+
+## M3. Add backup schema version
+
+Every exported JSON backup must contain:
+
+```json
+{
+  "schemaVersion": 1
+}
+```
+
+This is not intended to create an external standard.
+
+It exists solely to allow Prompt Builder to migrate its own historical exports.
+
+---
+
+## M4. Document database backup
+
+Because Prompt Builder is local first, document safe SQLite backup behaviour.
+
+Do not instruct users to casually copy an active WAL database without considering transaction state.
+
+---
+
+# N. P3 Prompt Quality Features
+
+## N1. Prompt linting
+
+Provide rule-based feedback such as:
+
+```text
+Unpopulated variable
+Missing linked component
+Duplicate section
+No output format specified
+Conflicting instructions
+```
+
+Start with deterministic rules rather than AI analysis.
+
+---
+
+## N2. Token estimation
+
+Show approximate prompt size.
+
+Possible output:
+
+```text
+Estimated tokens: 1,842
+```
+
+This should remain provider-neutral where possible.
+
+Provider-specific tokenisers may be optional later.
+
+---
+
+## N3. Prompt statistics
+
+Potentially show:
+
+```text
+Characters
+Words
+Sections
+Variables
+Estimated tokens
+```
+
+---
+
+# O. P3 History and Recovery
+
+## O1. Prompt revision history
+
+Lower priority than working-state separation.
+
+Allow deliberate source changes to create recoverable revisions.
+
+Possible actions:
+
+```text
+View
+Compare
+Restore
+```
+
+---
+
+## O2. Restore previous source prompt
+
+Allow a previous source revision to become current.
+
+Working values must not form part of revision history.
+
+---
+
+## O3. Component revision history
+
+Only consider this if components become sufficiently important that accidental changes create significant user impact.
+
+Do not implement before the component copy/link model is stable.
+
+---
+
+# Explicitly Out of Scope
+
+The following should not influence near-term architecture.
+
+## Hosted operation
+
+Prompt Builder is local first.
+
+Hosted or multi-user operation may be considered later.
+
+## Authentication
+
+No authentication requirement exists for the local application.
+
+## Cloud database
+
+SQLite remains the authoritative persistence mechanism.
+
+## Direct AI execution
+
+Prompt Builder does not currently send prompts directly to:
+
+```text
+OpenAI
+Anthropic
+Google
+Microsoft
+```
+
+## Provider API credentials
+
+Do not introduce model provider API key storage unless direct execution becomes an explicit future product decision.
+
+## Conversation history
+
+Prompt Builder is not a chat application.
+
+## Model output storage
+
+Prompt Builder stores source prompts, not AI responses.
+
+## Cross-platform interchange standard
+
+JSON and Markdown are Prompt Builder's practical import/export formats.
+
+There is no requirement to create a universal prompt standard.
+
+---
+
+# Recommended Implementation Sequence
+
+## Phase 1. Protect data
+
+Complete:
+
+```text
+A1
+A2
+A3
+A4
+A5
+A6
+A7
+B1
+```
+
+No major product features should be added before these are stable.
+
+---
+
+## Phase 2. Establish correctness boundaries
+
+Complete:
+
+```text
+B2
+B3
+B4
+B5
+B6
+B8
+B9
+B10
+```
+
+Introduce robust API contracts and migrations.
+
+---
+
+## Phase 3. Establish the prompt model
+
+Complete:
+
+```text
+C1
+C2
+C3
+C4
+C5
+C6
+```
+
+This establishes the source versus working versus resolved model.
+
+---
+
+## Phase 4. Make copy workflow authoritative
+
+Complete:
+
+```text
+D1
+D2
+D3
+D4
+D5
+```
+
+At the end of this phase:
+
+```text
+Preview === Clipboard
+```
+
+must be a guaranteed invariant.
+
+---
+
+## Phase 5. Add automated protection
+
+Complete:
+
+```text
+F1
+F2
+F3
+F4
+F5
+F6
+G1
+G2
+```
+
+This locks in the behaviour from the earlier phases.
+
+---
+
+## Phase 6. Simplify architecture and repository
+
+Complete:
+
+```text
+E1–E5
+G3–G8
+H1–H5
+```
+
+---
+
+## Phase 7. Improve library usability
+
+Complete selectively:
+
+```text
+I1–I6
+J1–J5
+K1–K3
+L1–L5
+```
+
+---
+
+## Phase 8. Local-first resilience
+
+Complete:
+
+```text
+M1
+M2
+M3
+M4
+```
+
+For a local-first application this should be treated as an important product capability rather than optional administration.
+
+---
+
+## Phase 9. Advanced capability
+
+Consider:
+
+```text
+N1–N3
+O1–O3
+```
+
+only after the core workflow is mature.
+
+---
+
+# Architectural invariants
+
+The following should be treated as design rules for future development.
+
+1. A source prompt is persistent.
+2. A working prompt is temporary unless the user explicitly saves changes to the source.
+3. Variable definitions belong to the source.
+4. Variable option lists belong to the source.
+5. Current variable values belong to working state by default.
+6. Clearing a value must never remove its definition.
+7. Preview and clipboard output must use the same compiler.
+8. Components are reusable prompt fragments.
+9. Component insertion creates a copy by default.
+10. Linked components must be explicit.
+11. SQLite is the authoritative persistence store.
+12. The application remains local first.
+13. Prompt Builder remains provider-neutral.
+14. AI execution is outside the current product boundary.
+15. JSON exports should contain an internal schema version.
+16. React UI state must not leak into the persisted prompt model.
+17. Persistence failures must never be silent.
+18. Database schema changes must use migrations.
+19. Data integrity takes precedence over optimistic UI behaviour.
+20. New features should improve one or more stages of:
+
+```text
+Find → Select → Customise → Resolve → Copy
+```
