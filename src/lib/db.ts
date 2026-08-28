@@ -16,16 +16,50 @@ if (!fs.existsSync(dbDirectory)) {
   fs.mkdirSync(dbDirectory, { recursive: true });
 }
 
+/**
+ * Fails loudly when the database is unusable rather than letting the app serve
+ * requests against a half-initialised file.
+ */
+const assertSchema = (database: Database.Database) => {
+  const requiredTables = ['component_library', 'prompts', 'app_config'];
+  const presentTables = new Set(
+    database
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+      .all()
+      .map(row => (row as { name: string }).name)
+  );
+
+  const missingTables = requiredTables.filter(table => !presentTables.has(table));
+  if (missingTables.length > 0) {
+    throw new Error(
+      `Database at ${dbPath} is missing the ${missingTables.join(', ')} table(s). ` +
+      'Run "npm run db:init" before starting the application.'
+    );
+  }
+
+  // component_library.sort_order records sibling order. Older databases predate
+  // it, so add it here rather than forcing a manual re-initialisation.
+  const componentColumns = database
+    .prepare('PRAGMA table_info(component_library)')
+    .all()
+    .map(column => (column as { name: string }).name);
+
+  if (!componentColumns.includes('sort_order')) {
+    database.exec('ALTER TABLE component_library ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0');
+  }
+};
+
 let dbInstance: Database.Database;
 
 try {
   dbInstance = new Database(dbPath);
-  // Optional: Enable WAL mode for better concurrency
+  // Enable WAL mode for better concurrency
   dbInstance.pragma('journal_mode = WAL');
+  assertSchema(dbInstance);
 } catch (error) {
-  console.error("Failed to connect to SQLite database:", error);
-  // Handle error appropriately, perhaps by exiting or using a fallback
-  // For now, we'll rethrow, but in a real app, you might have more sophisticated error handling
+  // Nothing downstream can work without the database, so surface the reason and
+  // let the failure propagate instead of serving requests against a broken file.
+  console.error(`Failed to open the SQLite database at ${dbPath}:`, error);
   throw error;
 }
 

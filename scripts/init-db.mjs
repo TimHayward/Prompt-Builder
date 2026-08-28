@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS component_library (
     content TEXT,
     component_type TEXT,
     is_expanded INTEGER DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0,
     created_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')),
     updated_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')),
     FOREIGN KEY (parent_id) REFERENCES component_library(id) ON DELETE CASCADE,
@@ -79,9 +80,22 @@ try {
   db.exec(createAppConfigTable);
   console.log(`'app_config' table created or already exists.`);
 
+  // Databases created before sort_order existed still need the column.
+  const componentColumns = db
+    .prepare('PRAGMA table_info(component_library)')
+    .all()
+    .map(column => column.name);
+
+  if (!componentColumns.includes('sort_order')) {
+    db.exec('ALTER TABLE component_library ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0');
+    console.log(`'component_library.sort_order' column added.`);
+  }
+
   console.log('Database initialization complete.');
 } catch (error) {
+  // Exit non-zero so callers — the Docker build and CI included — see the failure.
   console.error('Error initializing database:', error);
+  process.exitCode = 1;
 } finally {
   db.close();
   console.log('Database connection closed.');

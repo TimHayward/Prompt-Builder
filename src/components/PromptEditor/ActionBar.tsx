@@ -7,7 +7,7 @@
 
 import React from "react";
 import { usePromptContext } from "@/contexts/PromptContext";
-import { replaceVariables } from "@/utils/variableUtils";
+import { buildPromptText } from "@/utils/promptText";
 import { useClipboard } from "@/hooks/useClipboard";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -36,22 +36,12 @@ const ActionBar: React.FC<ActionBarProps> = ({
     const activePrompt = prompts.find(p => p.id === activePromptId);
     if (!activePrompt) return;
 
-    // Compile prompt text without section headers - just the content
-    let promptText = activePrompt.sections
-      .map(section => section.content)
-      .filter(content => content.trim()) // Remove empty sections
-      .join('\n\n');
-
-    // Replace variables with their values
-    const variables = getPromptVariables(activePromptId);
-    if (Object.keys(variables).length > 0) {
-      promptText = replaceVariables(promptText, variables);
-    }
-
-    if (markdownEnabled && systemPrompt) {
-      // If markdown is enabled, format the prompt text accordingly
-      promptText = systemPrompt + "\\n\\n" + promptText;
-    }
+    const promptText = buildPromptText({
+      sections: activePrompt.sections,
+      variables: getPromptVariables(activePromptId),
+      systemPrompt,
+      markdownEnabled,
+    });
 
     await copyToClipboard(promptText);
   };
