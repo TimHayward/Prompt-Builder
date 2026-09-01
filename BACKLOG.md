@@ -89,52 +89,6 @@ New product capabilities.
 
 ---
 
-# A. P0 Remediations
-
-## A5. Correct Docker production deployment
-
-**Priority:** P0  
-**Size:** M
-
-### Problem
-
-The container currently runs the application using the Next.js development server.
-
-Database initialisation errors can also be silently ignored.
-
-### Action
-
-Create a production multi-stage image.
-
-Use:
-
-```text
-npm ci
-next build
-production runtime
-```
-
-Database initialisation must fail visibly and terminate the container when required.
-
-Use an appropriate current Node LTS base image.
-
-### Acceptance
-
-- `docker compose up --build` starts a production Next.js application
-- no Turbopack development banner appears
-- a database initialisation failure terminates the container
-- the error is visible in container logs
-
-### Remaining
-
-The image, compose file and initialisation script were rewritten for this in `3807015`: a multi-stage build (`npm ci` → `next build` → runtime), `next start` instead of `next dev`, and `npm run db:init` now exiting non-zero so a failed initialisation stops the container before it serves anything.
-
-A second attempt (`fd8e6fb`) got the build as far as the dependency stage and found one real defect: `node:22` ships npm 10, which rejects the lockfile because vite’s optional peer `yaml` has no entry in it. The base image is now `node:24-bookworm-slim`, whose npm 11 matches the npm that generated the lock.
-
-What is still outstanding is the acceptance run itself — `docker compose up --build`, confirming the four criteria above. Both attempts ended with the local Docker daemon returning 500 on every API call and then timing out entirely, so the container has never been observed running. Note also that port 3000 was already held by a local dev server, so the run will need that freed (or a published-port override).
-
----
-
 # B. P1 Correctness and Data Integrity
 
 ## B1. Enable SQLite foreign keys

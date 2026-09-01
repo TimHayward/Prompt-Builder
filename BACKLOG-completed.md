@@ -230,3 +230,52 @@ Use the supported Next.js async parameter model consistently across all dynamic 
 - error logging contains the actual object ID
 
 **Completed:** 2026-08-28 · `3807015`
+
+---
+
+## A5. Correct Docker production deployment
+
+**Priority:** P0  
+**Size:** M
+
+### Problem
+
+The container currently runs the application using the Next.js development server.
+
+Database initialisation errors can also be silently ignored.
+
+### Action
+
+Create a production multi-stage image.
+
+Use:
+
+```text
+npm ci
+next build
+production runtime
+```
+
+Database initialisation must fail visibly and terminate the container when required.
+
+Use an appropriate current Node LTS base image.
+
+### Acceptance
+
+- `docker compose up --build` starts a production Next.js application
+- no Turbopack development banner appears
+- a database initialisation failure terminates the container
+- the error is visible in container logs
+
+### Outcome
+
+Verified on 2026-08-28 with `docker compose up --build` against a clean `prompt_builder_data` volume:
+
+- the container serves the built app — `next start`, `GET /` 200, the API routes answer, and a prompt created through the API survived a container restart;
+- the logs show only the plain Next.js start banner, with no Turbopack or development banner;
+- run against a corrupt database file, the container exits 1 without ever reaching `next start`;
+- that failure reads `Error initializing database: SqliteError: file is not a database` (`SQLITE_NOTADB`) in `docker logs`.
+
+Three defects surfaced along the way and were fixed: `node:22` ships npm 10, which rejects the lockfile over vite’s optional `yaml` peer (base image is now `node:24-bookworm-slim`, npm 11); `next build` imported `lib/db` while collecting page data and hit the new schema check against the image’s empty data directory (the connection now opens lazily); and `chown -R` over `node_modules` added minutes to every build (only `/app/data` and `/app/.next` need the node user).
+
+**Completed:** 2026-08-28 · `ec8e55b`
