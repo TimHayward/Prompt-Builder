@@ -8,9 +8,8 @@ import { db } from '@/lib/db'; // SQLite database instance
 import { Prompt } from '@/types'; // Assuming Prompt type is defined
 
 interface RouteParams {
-    params: {
-        id: string;
-    };
+    // Next.js 15 hands route params to the handler as a promise.
+    params: Promise<{ id: string }>;
 }
 
 /**
@@ -18,8 +17,9 @@ interface RouteParams {
  * Fetches a single prompt by its ID.
  */
 export async function GET(request: Request, { params }: RouteParams) {
+    const { id } = await params;
+
     try {
-        const { id } = await params;
         // Use COALESCE to handle NULL values for variables column (for backward compatibility)
         const stmt = db.prepare(`
             SELECT id, name, sections, COALESCE(variables, '{}') as variables, num, created_at, updated_at 
@@ -38,7 +38,7 @@ export async function GET(request: Request, { params }: RouteParams) {
             return NextResponse.json({ error: 'Prompt not found' }, { status: 404 });
         }
     } catch (error) {
-        console.error(`Error fetching prompt ${params.id}:`, error);
+        console.error(`Error fetching prompt ${id}:`, error);
         return NextResponse.json({ error: 'Failed to fetch prompt' }, { status: 500 });
     }
 }
@@ -48,8 +48,9 @@ export async function GET(request: Request, { params }: RouteParams) {
  * Updates an existing prompt by its ID.
  */
 export async function PUT(request: Request, { params }: RouteParams) {
+    const { id } = await params;
+
     try {
-        const { id } = await params;
 
         const body = await request.json();
         const { name, sections, variables, num } = body as Partial<Prompt>;
@@ -104,8 +105,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
         });
 
     } catch (error) {
-        // Access params.id safely for logging, it should be available if the signature is correct
-        console.error(`Error updating prompt ${params?.id || 'unknown'}:`, error);
+        console.error(`Error updating prompt ${id}:`, error);
         if (error instanceof SyntaxError) {
             return NextResponse.json({ error: 'Invalid JSON format in request body' }, { status: 400 });
         }
@@ -118,8 +118,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
  * Deletes a prompt by its ID.
  */
 export async function DELETE(request: Request, { params }: RouteParams) {
+    const { id } = await params;
+
     try {
-        const { id } = await params;
 
         // Check if the prompt exists
         const checkStmt = db.prepare('SELECT id FROM prompts WHERE id = ?');
@@ -148,7 +149,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
             return NextResponse.json({ error: 'Prompt not found or already deleted' }, { status: 404 });
         }
     } catch (error) {
-        console.error(`Error deleting prompt ${params.id}:`, error);
+        console.error(`Error deleting prompt ${id}:`, error);
         return NextResponse.json({ error: 'Failed to delete prompt' }, { status: 500 });
     }
 }

@@ -46,7 +46,10 @@ const parseOptions = (body: string): string[] => {
   // Needs at least two choices, every one non-empty. The non-empty rule is what
   // makes `https://example.com` and `a//b` typos fall through to free text.
   if (parts.length < 2 || parts.some(part => !part)) return [];
-  return parts;
+  // A choice repeated inside one token is a typo: offering it twice means
+  // nothing to the reader, and the duplicate breaks the dropdown's React keys.
+  // Deduplicating here matches how the same choice is folded across tokens.
+  return [...new Set(parts)];
 };
 
 /**

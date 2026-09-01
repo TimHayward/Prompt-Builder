@@ -13,18 +13,16 @@ services:
       - "3000:3000"
 
     environment:
-      NODE_ENV: development
+      NODE_ENV: production
       PORT: 3000
       HOSTNAME: 0.0.0.0
 
     volumes:
       - prompt_builder_data:/app/data
 
-    command: >
-      sh -lc "HOSTNAME=0.0.0.0 npm run db:init || true &&
-      HOSTNAME=0.0.0.0 npm run dev -- --port 3000"
+    # The image's CMD initialises the database and then serves the built app;
+    # overriding it here is what used to force the development server.
 
 volumes:
   prompt_builder_data:
-    external: true
     name: prompt_builder_data

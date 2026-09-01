@@ -8,9 +8,8 @@ import { db } from '@/lib/db'; // SQLite database instance
 import { FolderType, ComponentType } from '@/types';
 
 interface RouteParams {
-    params: {
-        id: string;
-    };
+    // Next.js 15 hands route params to the handler as a promise.
+    params: Promise<{ id: string }>;
 }
 
 /**
@@ -18,8 +17,9 @@ interface RouteParams {
  * Fetches a single component/folder by its ID.
  */
 export async function GET(request: Request, { params }: RouteParams) {
+    const { id } = await params;
+
     try {
-        const { id } = params;
         const stmt = db.prepare('SELECT id, parent_id, name, item_type, content, component_type, is_expanded, created_at, updated_at FROM component_library WHERE id = ?');
         const itemRaw = stmt.get(id) as any;
 
@@ -38,7 +38,7 @@ export async function GET(request: Request, { params }: RouteParams) {
             return NextResponse.json({ error: 'Item not found' }, { status: 404 });
         }
     } catch (error) {
-        console.error(`Error fetching item ${params.id}:`, error);
+        console.error(`Error fetching item ${id}:`, error);
         return NextResponse.json({ error: 'Failed to fetch item' }, { status: 500 });
     }
 }
@@ -48,8 +48,9 @@ export async function GET(request: Request, { params }: RouteParams) {
  * Updates an existing component/folder by its ID.
  */
 export async function PUT(request: Request, { params }: RouteParams) {
+    const { id } = await params;
+
     try {
-        const { id } = params;
         const body = await request.json();
         // Add is_expanded to destructuring, and ensure expanded from FolderType is mapped to is_expanded
         const { name, parent_id, item_type, content, component_type, expanded } = body as Partial<FolderType & ComponentType & { expanded: boolean }>;
@@ -157,7 +158,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
         }
 
     } catch (error) {
-        console.error(`Error updating item ${params.id}:`, error);
+        console.error(`Error updating item ${id}:`, error);
         if (error instanceof SyntaxError) {
             return NextResponse.json({ error: 'Invalid JSON format in request body' }, { status: 400 });
         }
@@ -170,8 +171,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
  * Deletes a component/folder by its ID. SQLite handles cascading deletes for children.
  */
 export async function DELETE(request: Request, { params }: RouteParams) {
+    const { id } = await params;
+
     try {
-        const { id } = params;
 
         // Check if the item exists
         const checkStmt = db.prepare('SELECT id FROM component_library WHERE id = ?');
@@ -189,7 +191,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
             return NextResponse.json({ error: 'Item not found or already deleted' }, { status: 404 });
         }
     } catch (error) {
-        console.error(`Error deleting item ${params.id}:`, error);
+        console.error(`Error deleting item ${id}:`, error);
         return NextResponse.json({ error: 'Failed to delete item' }, { status: 500 });
     }
 }

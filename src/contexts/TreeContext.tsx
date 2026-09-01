@@ -98,6 +98,11 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
     treeDataRef.current = treeData;
   }, [treeData]);
 
+  // Items the user actually deleted, held until a save reports them to the API.
+  // The server removes only these, so items added by another path since this
+  // client loaded survive a save that does not know about them.
+  const pendingDeletedIdsRef = React.useRef<Set<string>>(new Set());
+
   const isEffectivelyInitialOrEmpty = useCallback((data: FolderType[] | null | undefined): boolean => {
     if (!data || data.length === 0) {
       return true;
@@ -139,14 +144,16 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
     
     // Define the final root folder that we'll return
     // Use the ID from API if it exists, otherwise use our constant ID
+    // SQLite stores the flag as 0/1, so accept either that or a boolean.
+    const toExpanded = (value: unknown, fallback: boolean): boolean =>
+      value === undefined || value === null ? fallback : value === 1 || value === true;
+
     const rootFolder: FolderType = {
         id: rootFolderFromApi ? rootFolderFromApi.id : INITIAL_TREE_DATA_ROOT_ID,
         name: "Components",
         type: "folder",
         children: [],
-        expanded: rootFolderFromApi ? 
-          (rootFolderFromApi as any).is_expanded !== undefined ? (rootFolderFromApi as any).is_expanded === 1 : true 
-          : true,
+        expanded: rootFolderFromApi ? toExpanded((rootFolderFromApi as any).is_expanded, true) : true,
     };
 
     // Add the root folder to our map
@@ -169,7 +176,7 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
                 name: item.name,
                 type: "folder",
                 children: [],
-                expanded: item.is_expanded !== undefined ? item.is_expanded === true : false,
+                expanded: toExpanded(item.is_expanded, false),
                 parent_id: item.parent_id,
             };
         } else { // component
@@ -203,33 +210,24 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
   }, [INITIAL_TREE_DATA_ROOT_ID]);
 
 
-  // Debounced function to save the entire tree to the API
+  // Debounced function to save the tree to the API. The payload is the whole
+  // tree plus the deletions this client made; the API upserts the tree and
+  // removes only the listed items.
   const saveTreeToApi = useCallback(debounce(async (currentTreeData: FolderType[]) => {
-    console.log('[TreeContext] Attempting to save tree to API');
+    const deletedIds = Array.from(pendingDeletedIdsRef.current);
     try {
-      // We need to decide on the API endpoint and payload structure.
-      // Option 1: A single endpoint that accepts the entire tree.
-      // Option 2: Individual endpoints for create/update/delete of folders and components.
-      // For now, let's assume a POST to /api/components with the whole tree.
-      // The API would then be responsible for diffing and updating.
-      // This requires the /api/components POST route to handle an array of FolderType.
-      const response = await fetch('/api/components', { // This might need to be a PUT or a new endpoint e.g. /api/tree
-        method: 'POST', // Or PUT if replacing the whole tree
+      const response = await fetch('/api/components', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(currentTreeData), // Send the whole tree
+        body: JSON.stringify({ tree: currentTreeData, deletedIds }),
       });
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         console.error('Failed to save tree to API:', errorData.error || response.statusText);
-        // Consider error handling/reverting optimistic updates if necessary
+        // The deletions stay pending so the next save retries them.
       } else {
-        console.log('[TreeContext] Tree data successfully saved to API.');
-        // Optionally, re-fetch or update state with response if API modifies data
-        const savedTree = await response.json();
-        // If API returns the saved tree (potentially with new IDs or timestamps), update state
-        // This might cause a loop if not handled carefully with useEffect dependencies
-        // For now, assume optimistic updates are sufficient.
-        // setTreeData(savedTree); // Be cautious with this
+        // Only clear what this request carried; anything deleted meanwhile stays queued.
+        deletedIds.forEach(id => pendingDeletedIdsRef.current.delete(id));
       }
     } catch (error) {
       console.error('[TreeContext] Error saving tree to API:', error);
@@ -360,6 +358,10 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
   };
 
   const handleDeleteNode = (nodeId: string) => {
+    // Recorded so the save tells the API this item was removed on purpose;
+    // the API deletes its descendants with it.
+    pendingDeletedIdsRef.current.add(nodeId);
+
     // Optimistic update
     const newTreeData = removeNode(treeDataRef.current, nodeId);
     setTreeData(newTreeData);
