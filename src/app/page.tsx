@@ -21,7 +21,7 @@ import "./App.scss";
 
 // Inner App component that uses the contexts
 const AppContent: React.FC = () => {
-  const { settings, setSettingsModalOpen, setCommunityModalOpen } = useAppContext(); // Added setCommunityModalOpen
+  const { settings, setSettingsModalOpen } = useAppContext();
   const { handleNodeDrop } = useTreeContext();
 
   // Set up event listeners for drag and drop operations between tree and sections
@@ -52,7 +52,6 @@ const AppContent: React.FC = () => {
       <VariablesPane />
       <MenuBar 
         openSettings={() => setSettingsModalOpen(true)} 
-        openCommunityLibrary={() => setCommunityModalOpen(true)} // Pass openCommunityLibrary prop
       />
       <ComponentModal />
       <SettingsModal />

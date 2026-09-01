@@ -38,7 +38,7 @@ const VariableField: React.FC<VariableFieldProps> = ({ spec, value, onChange }) 
       className="variable-input"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      placeholder={`Enter value for {{${spec.label}}}`}
+      placeholder={`Enter value for ${spec.label}`}
       autoFocus={hasOptions}
     />
   );
