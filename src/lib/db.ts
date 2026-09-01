@@ -1,7 +1,11 @@
 // src/lib/db.ts
 /**
  * SQLite Database Connection
- * Initializes and exports the better-sqlite3 database instance.
+ *
+ * Opens the better-sqlite3 connection on first use rather than at import, so
+ * importing a route (as `next build` does when it collects page data) never
+ * touches the database. The first query is what opens it, and a database that
+ * is missing or unusable fails loudly there.
  */
 import Database from 'better-sqlite3';
 import path from 'path';
@@ -9,12 +13,6 @@ import fs from 'fs';
 
 const dbDirectory = path.resolve(process.cwd(), 'data');
 const dbPath = path.join(dbDirectory, 'prompt_builder.db');
-
-// Ensure the data directory exists
-// The init-db.mjs script should handle this, but it's good for robustness
-if (!fs.existsSync(dbDirectory)) {
-  fs.mkdirSync(dbDirectory, { recursive: true });
-}
 
 /**
  * Fails loudly when the database is unusable rather than letting the app serve
@@ -49,18 +47,40 @@ const assertSchema = (database: Database.Database) => {
   }
 };
 
-let dbInstance: Database.Database;
+let dbInstance: Database.Database | null = null;
 
-try {
-  dbInstance = new Database(dbPath);
-  // Enable WAL mode for better concurrency
-  dbInstance.pragma('journal_mode = WAL');
-  assertSchema(dbInstance);
-} catch (error) {
-  // Nothing downstream can work without the database, so surface the reason and
-  // let the failure propagate instead of serving requests against a broken file.
-  console.error(`Failed to open the SQLite database at ${dbPath}:`, error);
-  throw error;
-}
+const openDatabase = (): Database.Database => {
+  if (dbInstance) return dbInstance;
 
-export const db = dbInstance;
+  try {
+    // The init script normally creates this; recreate it for robustness.
+    if (!fs.existsSync(dbDirectory)) {
+      fs.mkdirSync(dbDirectory, { recursive: true });
+    }
+
+    const database = new Database(dbPath);
+    // Enable WAL mode for better concurrency
+    database.pragma('journal_mode = WAL');
+    assertSchema(database);
+
+    dbInstance = database;
+    return database;
+  } catch (error) {
+    // Nothing downstream can work without the database, so surface the reason
+    // and let the failure propagate instead of serving against a broken file.
+    console.error(`Failed to open the SQLite database at ${dbPath}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * The database handle. Behaves like a better-sqlite3 instance; the connection
+ * is established on the first property access.
+ */
+export const db = new Proxy({} as Database.Database, {
+  get(_target, property) {
+    const database = openDatabase();
+    const value = Reflect.get(database, property, database);
+    return typeof value === 'function' ? value.bind(database) : value;
+  },
+});

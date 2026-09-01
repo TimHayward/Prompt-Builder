@@ -20,11 +20,10 @@ if (!fs.existsSync(dbDirectory)) {
 }
 
 console.log(`Database path: ${dbPath}`);
-const db = new Database(dbPath);
 
-// Enable WAL mode for better concurrency (optional, but good practice)
-db.pragma('journal_mode = WAL');
-console.log('WAL mode enabled.');
+// Opened inside the try below so an unreadable or corrupt file is reported
+// the same way as any other initialisation failure.
+let db;
 
 // Define table creation queries
 const createComponentLibraryTable = `
@@ -71,6 +70,12 @@ CREATE TABLE IF NOT EXISTS app_config (
 
 // Execute table creation
 try {
+  db = new Database(dbPath);
+
+  // Enable WAL mode for better concurrency (optional, but good practice)
+  db.pragma('journal_mode = WAL');
+  console.log('WAL mode enabled.');
+
   db.exec(createComponentLibraryTable);
   console.log(`'component_library' table created or already exists.`);
 
@@ -97,6 +102,8 @@ try {
   console.error('Error initializing database:', error);
   process.exitCode = 1;
 } finally {
-  db.close();
-  console.log('Database connection closed.');
+  if (db) {
+    db.close();
+    console.log('Database connection closed.');
+  }
 }

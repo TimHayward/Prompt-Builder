@@ -34,8 +34,10 @@ COPY --from=builder /app/next.config.ts ./next.config.ts
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --from=builder /app/package.json ./package.json
 
-# The data directory is a volume mount point; create it so a first run works.
-RUN mkdir -p /app/data && chown -R node:node /app
+# The data directory is the volume mount point, and .next holds the caches
+# next start writes. Nothing else needs to be writable, so node_modules — by far
+# the largest tree — keeps its build-time ownership.
+RUN mkdir -p /app/data && chown -R node:node /app/data /app/.next
 USER node
 
 EXPOSE 3000
