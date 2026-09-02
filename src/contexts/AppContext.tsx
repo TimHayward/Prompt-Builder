@@ -5,6 +5,8 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { Settings } from "@/types";
+import { useToast } from "./ToastContext";
+import { apiRequest, apiSend, describeApiFailure } from "@/lib/apiClient";
 
 const LOCAL_STORAGE_SETTINGS_KEY = 'promptBuilderSettings'; // May still be used for temporary or non-critical settings
 
@@ -62,45 +64,35 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const [isCommunityModalOpen, setCommunityModalOpen] = useState(false);
   const [importPromptPayload, setImportPromptPayload] = useState<{ filename: string; content: string } | null>(null);
   const [appInitialized, setAppInitialized] = useState(false);
+  const { showToast } = useToast();
 
   // Load settings on component mount
   useEffect(() => {
     const loadSettings = async () => {
       setAppInitialized(false);
       try {
-        const response = await fetch('/api/settings');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.settings) {
-            setSettings(data.settings);
-          } else {
-            // No settings in DB, use defaults and save them
-            setSettings(DEFAULT_SETTINGS);
-            await fetch('/api/settings', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ settings: DEFAULT_SETTINGS, activePromptId: null }),
-            });
-          }
+        const data = await apiRequest<{ settings?: Settings }>('/api/settings');
+
+        if (data.settings) {
+          setSettings(data.settings);
         } else {
-          console.error('Failed to load settings from API, using defaults.');
+          // No settings stored yet: fall back to defaults and record them.
           setSettings(DEFAULT_SETTINGS);
-          // Optionally try to save defaults if API is reachable but settings are missing
-          await fetch('/api/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ settings: DEFAULT_SETTINGS, activePromptId: null }),
+          await apiSend('/api/settings', 'POST', {
+            settings: DEFAULT_SETTINGS,
+            activePromptId: null,
           });
         }
       } catch (error) {
-        console.error('Error loading settings:', error);
+        console.error('Failed to load settings:', error);
         setSettings(DEFAULT_SETTINGS); // Fallback to defaults on any error
+        showToast(describeApiFailure(error, 'Could not load your settings; using defaults.'));
       }
       setAppInitialized(true);
     };
 
     loadSettings();
-  }, []); // Run once on mount
+  }, [showToast]); // Run once on mount
 
   // Save settings when they change
   useEffect(() => {
@@ -108,32 +100,18 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
     const saveSettings = async () => {
       try {
-        const resp = await fetch('/api/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ settings }),
-        });
-
-        if (!resp.ok) {
-          // Log status and response body for debugging
-          let bodyText = '';
-          try { bodyText = await resp.text(); } catch (e) { /* ignore */ }
-          console.error(`Failed to save settings: ${resp.status} ${resp.statusText}`, bodyText);
-          // As a fallback, persist to localStorage so user changes aren't lost
-          try {
-            localStorage.setItem(LOCAL_STORAGE_SETTINGS_KEY, JSON.stringify(settings));
-          } catch (e) {
-            console.warn('Failed to persist settings to localStorage:', e);
-          }
-        }
+        await apiSend('/api/settings', 'POST', { settings });
       } catch (error) {
-        // Network or other error (e.g. server not reachable). Persist locally and log full error.
-        console.error('Error saving settings (network or server error):', error);
+        // Whether the server rejected the payload or was unreachable, the
+        // settings are kept locally so the user's choices survive, and the
+        // failure is shown rather than left in the console.
+        console.error('Failed to save settings:', error);
         try {
           localStorage.setItem(LOCAL_STORAGE_SETTINGS_KEY, JSON.stringify(settings));
         } catch (e) {
-          console.warn('Failed to persist settings to localStorage after network error:', e);
+          console.warn('Failed to persist settings to localStorage:', e);
         }
+        showToast(describeApiFailure(error, 'Could not save your settings.'));
       }
     };
 
@@ -141,7 +119,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     const debounceSave = setTimeout(saveSettings, 1000);
     return () => clearTimeout(debounceSave);
 
-  }, [settings, appInitialized]);
+  }, [settings, appInitialized, showToast]);
 
   // Function to update settings
   const updateSettings = (newSettings: Partial<Settings>) => {

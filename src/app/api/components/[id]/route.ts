@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db'; // SQLite database instance
 import { FolderType, ComponentType } from '@/types';
+import { errorResponse } from '@/lib/apiValidation';
 
 interface RouteParams {
     // Next.js 15 hands route params to the handler as a promise.
@@ -35,11 +36,11 @@ export async function GET(request: Request, { params }: RouteParams) {
             delete item.is_expanded; // Remove the original is_expanded after processing
             return NextResponse.json(item);
         } else {
-            return NextResponse.json({ error: 'Item not found' }, { status: 404 });
+            return errorResponse('Item not found', 404);
         }
     } catch (error) {
         console.error(`Error fetching item ${id}:`, error);
-        return NextResponse.json({ error: 'Failed to fetch item' }, { status: 500 });
+        return errorResponse('Failed to fetch item', 500);
     }
 }
 
@@ -59,7 +60,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
         const checkStmt = db.prepare('SELECT item_type FROM component_library WHERE id = ?');
         const existingItem = checkStmt.get(id) as { item_type: string } | undefined;
         if (!existingItem) {
-            return NextResponse.json({ error: 'Item not found' }, { status: 404 });
+            return errorResponse('Item not found', 404);
         }
 
         // Validate item_type specific fields if item_type is being changed or if it's a component
@@ -71,18 +72,18 @@ export async function PUT(request: Request, { params }: RouteParams) {
                 is_expanded_db = expanded ? 1 : 0;
             }
             if (body.hasOwnProperty('content') && content !== null) {
-                 return NextResponse.json({ error: 'Content must be null for folders' }, { status: 400 });
+                 return errorResponse('Content must be null for folders', 400);
             }
             if (body.hasOwnProperty('component_type') && component_type !== null) {
-                 return NextResponse.json({ error: 'Component type must be null for folders' }, { status: 400 });
+                 return errorResponse('Component type must be null for folders', 400);
             }
         } else if (effectiveItemType === 'component') {
             // Content and component_type checks remain the same
             if (body.hasOwnProperty('content') && content === null) {
-                return NextResponse.json({ error: 'Content cannot be null for a component' }, { status: 400 });
+                return errorResponse('Content cannot be null for a component', 400);
             }
             if (body.hasOwnProperty('component_type') && component_type === null) {
-                return NextResponse.json({ error: 'Component type cannot be null for a component' }, { status: 400 });
+                return errorResponse('Component type cannot be null for a component', 400);
             }
             // is_expanded should be null for components
             if (body.hasOwnProperty('expanded') && typeof expanded !== 'undefined') {
@@ -128,7 +129,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
         }
 
         if (updates.length === 0) {
-            return NextResponse.json({ error: 'No fields to update provided' }, { status: 400 });
+            return errorResponse('No fields to update provided', 400);
         }
 
         updates.push('updated_at = ?');
@@ -154,15 +155,12 @@ export async function PUT(request: Request, { params }: RouteParams) {
             return NextResponse.json(responseItem);
         } else {
             // Should not happen if update was successful and item existed
-            return NextResponse.json({ error: 'Failed to retrieve updated item' }, { status: 500 });
+            return errorResponse('Failed to retrieve updated item', 500);
         }
 
     } catch (error) {
         console.error(`Error updating item ${id}:`, error);
-        if (error instanceof SyntaxError) {
-            return NextResponse.json({ error: 'Invalid JSON format in request body' }, { status: 400 });
-        }
-        return NextResponse.json({ error: 'Failed to update item' }, { status: 500 });
+        return errorResponse('Failed to update item', 500);
     }
 }
 
@@ -179,7 +177,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
         const checkStmt = db.prepare('SELECT id FROM component_library WHERE id = ?');
         const existingItem = checkStmt.get(id);
         if (!existingItem) {
-            return NextResponse.json({ error: 'Item not found' }, { status: 404 });
+            return errorResponse('Item not found', 404);
         }
 
         const stmt = db.prepare('DELETE FROM component_library WHERE id = ?');
@@ -188,10 +186,10 @@ export async function DELETE(request: Request, { params }: RouteParams) {
         if (result.changes > 0) {
             return NextResponse.json({ message: 'Item deleted successfully' });
         } else {
-            return NextResponse.json({ error: 'Item not found or already deleted' }, { status: 404 });
+            return errorResponse('Item not found or already deleted', 404);
         }
     } catch (error) {
         console.error(`Error deleting item ${id}:`, error);
-        return NextResponse.json({ error: 'Failed to delete item' }, { status: 500 });
+        return errorResponse('Failed to delete item', 500);
     }
 }

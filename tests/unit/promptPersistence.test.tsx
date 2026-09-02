@@ -5,10 +5,11 @@
  * post-mutation prompt — the state a reload would restore — rather than the
  * value the mutation started from.
  */
-import { act, render, waitFor } from '@testing-library/react';
+import { act, cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppProvider } from '@/contexts/AppContext';
 import { PromptProvider, usePromptContext } from '@/contexts/PromptContext';
+import { ToastProvider } from '@/contexts/ToastContext';
 import type { Prompt, Section } from '@/types';
 
 const DEBOUNCE_MS = 1000;
@@ -77,11 +78,13 @@ const renderPromptContext = async () => {
   };
 
   render(
-    <AppProvider>
-      <PromptProvider>
-        <Probe />
-      </PromptProvider>
-    </AppProvider>
+    <ToastProvider>
+      <AppProvider>
+        <PromptProvider>
+          <Probe />
+        </PromptProvider>
+      </AppProvider>
+    </ToastProvider>
   );
 
   await waitFor(() => {
@@ -112,6 +115,9 @@ describe('PromptContext persistence', () => {
   });
 
   afterEach(() => {
+    // Rendered trees would otherwise pile up: the suite runs without vitest
+    // globals, so React Testing Library registers no cleanup of its own.
+    cleanup();
     vi.useRealTimers();
     vi.unstubAllGlobals();
   });

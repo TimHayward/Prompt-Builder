@@ -7,6 +7,8 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
 import { v4 as uuidv4 } from 'uuid';
 import { Prompt, Section, ComponentType, Settings } from "@/types";
 import { useAppContext } from './AppContext';
+import { useToast } from './ToastContext';
+import { apiRequest, apiSend, describeApiFailure } from "@/lib/apiClient";
 import { debounce, debounceKeyed } from "@/utils/debounce";
 import { extractVariablesFromSections, extractVariableSpecsFromSections, VariableSpec } from "@/utils/variableUtils";
 
@@ -85,6 +87,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
   const [activePromptId, setActivePromptId] = useState<string | null>(null);
   const [newlyAddedSectionIdForFocus, setNewlyAddedSectionIdForFocus] = useState<string | null>(null);
   const { settings, appInitialized } = useAppContext();
+  const { showToast } = useToast();
   const [isPromptsLoading, setIsPromptsLoading] = useState<boolean>(true);
 
   // promptsRef is the read model for mutations. It is written synchronously by
@@ -95,6 +98,8 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
   const activePromptIdChangeIsFromAddPrompt = useRef(false);
   // Read inside the debounced savers, which must not be rebuilt when it flips.
   const appInitializedRef = useRef(appInitialized);
+  // Same reason: the savers are built once, so they reach the toast through a ref.
+  const showToastRef = useRef(showToast);
 
   // Catches state set outside commitPrompts (initial load, the exposed setPrompts).
   useEffect(() => {
@@ -108,6 +113,10 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
   useEffect(() => {
     appInitializedRef.current = appInitialized;
   }, [appInitialized]);
+
+  useEffect(() => {
+    showToastRef.current = showToast;
+  }, [showToast]);
 
   /** Applies a new prompt list to both the ref and React state. */
   const commitPrompts = useCallback((nextPrompts: Prompt[]) => {
@@ -123,19 +132,13 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
       const fetchInitialData = async () => {
         setIsPromptsLoading(true);
         try {
-          const promptsResponse = await fetch('/api/prompts');
-          if (!promptsResponse.ok) throw new Error('Failed to fetch prompts');
-          const fetchedPrompts = await promptsResponse.json();
+          const fetchedPrompts = await apiRequest<Prompt[]>('/api/prompts');
           commitPrompts(fetchedPrompts);
 
           // The active prompt lives alongside the settings in app_config.
-          const settingsResponse = await fetch('/api/settings');
-          if (!settingsResponse.ok) {
-            // Not fatal: fall back to the first prompt rather than losing the library.
-            console.warn('Failed to fetch the active prompt ID; defaulting to the first prompt.');
-            setActivePromptId(fetchedPrompts.length > 0 ? fetchedPrompts[0].id : null);
-          } else {
-            const { activePromptId: storedActivePromptId } = await settingsResponse.json();
+          try {
+            const { activePromptId: storedActivePromptId } =
+              await apiRequest<{ activePromptId: string | null }>('/api/settings');
             const storedPromptExists = fetchedPrompts.some(
               (prompt: Prompt) => prompt.id === storedActivePromptId
             );
@@ -144,10 +147,15 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
                 ? storedActivePromptId
                 : (fetchedPrompts.length > 0 ? fetchedPrompts[0].id : null)
             );
+          } catch (error) {
+            // Not fatal: fall back to the first prompt rather than losing the library.
+            console.warn('Failed to fetch the active prompt ID; defaulting to the first prompt.', error);
+            setActivePromptId(fetchedPrompts.length > 0 ? fetchedPrompts[0].id : null);
           }
 
         } catch (error) {
           console.error("Error loading initial data:", error);
+          showToast(describeApiFailure(error, 'Could not load your prompts.'));
           commitPrompts([]);
           setActivePromptId(null);
         } finally {
@@ -156,7 +164,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
       };
       fetchInitialData();
     }
-  }, [appInitialized, commitPrompts]);
+  }, [appInitialized, commitPrompts, showToast]);
 
   // Effect to set first prompt as active if activePromptId is null and prompts are loaded
   useEffect(() => {
@@ -171,13 +179,12 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
   const saveActivePromptIdToApi = useMemo(() => debounce(async (currentActivePromptId: string | null) => {
     if (!appInitializedRef.current || activePromptIdChangeIsFromAddPrompt.current) return;
     try {
-      await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ activePromptId: currentActivePromptId }),
-      });
+      await apiSend('/api/settings', 'POST', { activePromptId: currentActivePromptId });
     } catch (error) {
       console.error('Failed to save active prompt ID:', error);
+      showToastRef.current(
+        describeApiFailure(error, 'Could not remember which prompt is open.')
+      );
     }
   }, 1000), []);
 
@@ -197,13 +204,17 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
       const { sections, ...restOfPrompt } = promptToUpdate;
       const sectionsForApi = sections.map(({ editingHeader, editingHeaderTempName, editingHeaderTempType, ...section }) => section);
 
-      await fetch(`/api/prompts/${promptToUpdate.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...restOfPrompt, sections: sectionsForApi }),
+      await apiSend(`/api/prompts/${promptToUpdate.id}`, 'PUT', {
+        ...restOfPrompt,
+        sections: sectionsForApi,
       });
     } catch (error) {
+      // An autosave that fails silently is the worst case: the editor looks
+      // saved while the change exists only in this tab.
       console.error(`Failed to update prompt ${promptToUpdate.id}:`, error);
+      showToastRef.current(
+        describeApiFailure(error, `Could not save "${promptToUpdate.name}".`)
+      );
     }
   }, 1000, promptToUpdate => promptToUpdate.id), []);
 
@@ -289,20 +300,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     };
 
     try {
-      const response = await fetch('/api/prompts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(promptDataForApi),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: response.statusText }));
-        console.error('Failed to create prompt:', response.status, errorData);
-        rollbackOptimisticPrompt();
-        throw new Error(`Failed to create prompt: ${errorData.message || response.statusText}`);
-      }
-
-      const createdPrompt: Prompt = await response.json();
+      const createdPrompt = await apiSend<Prompt>('/api/prompts', 'POST', promptDataForApi);
 
       commitPrompts(promptsRef.current.map(p => (p.id === tempClientId ? createdPrompt : p)));
       setActivePromptId(createdPrompt.id);
@@ -310,12 +308,15 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
       return createdPrompt;
     } catch (error) {
       console.error("Error in addPrompt:", error);
+      // The prompt is taken back out of the UI, so the failure is not hidden
+      // behind a tab that no longer exists on the server.
       rollbackOptimisticPrompt();
+      showToast(describeApiFailure(error, 'Could not create the prompt.'));
       throw error;
     } finally {
       activePromptIdChangeIsFromAddPrompt.current = false;
     }
-  }, [settings.defaultPromptName, settings.defaultSectionType, commitPrompts, setActivePromptId, promptsRef, activePromptIdRef]);
+  }, [settings.defaultPromptName, settings.defaultSectionType, commitPrompts, setActivePromptId, promptsRef, activePromptIdRef, showToast]);
 
   const duplicatePrompt = useCallback(async (promptIdToDuplicate: string): Promise<Prompt | null> => {
     console.warn("duplicatePrompt is a placeholder and not fully implemented.");
@@ -369,34 +370,35 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     };
 
     try {
-      const response = await fetch('/api/prompts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(promptDataForApi),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: response.statusText }));
-        console.error('Failed to create duplicated prompt:', errorData);
-        rollbackOptimisticPrompt();
-        throw new Error(`Failed to create duplicated prompt: ${errorData.message || response.statusText}`);
-      }
-      const createdPrompt: Prompt = await response.json();
+      const createdPrompt = await apiSend<Prompt>('/api/prompts', 'POST', promptDataForApi);
       commitPrompts(promptsRef.current.map(p => (p.id === tempClientId ? createdPrompt : p)));
       setActivePromptId(createdPrompt.id); // Ensure active ID is the server one
       return createdPrompt;
     } catch (error) {
       console.error("Error duplicating prompt:", error);
       rollbackOptimisticPrompt();
+      showToast(describeApiFailure(error, 'Could not duplicate the prompt.'));
       throw error;
     } finally {
       activePromptIdChangeIsFromAddPrompt.current = false;
     }
-  }, [commitPrompts, setActivePromptId, promptsRef, activePromptIdRef]);
+  }, [commitPrompts, setActivePromptId, promptsRef, activePromptIdRef, showToast]);
 
   const deletePrompt = useCallback(async (promptId: string) => {
-    // Drop any save still queued for this prompt so it cannot recreate it.
+    // Drop any save still queued for this prompt so it cannot recreate it. A
+    // pending edit to a prompt the user is deleting is not worth keeping, and
+    // the tab still holds it if the delete fails.
     updatePromptInApi.cancel(promptId);
+
+    try {
+      // Deleted on the server first: a prompt that vanishes from the tabs while
+      // it still exists in the database is the harder failure to notice.
+      await apiSend(`/api/prompts/${promptId}`, 'DELETE');
+    } catch (error) {
+      console.error(`Failed to delete prompt ${promptId}:`, error);
+      showToast(describeApiFailure(error, 'Could not delete the prompt.'));
+      return;
+    }
 
     const remainingPrompts = promptsRef.current.filter(p => p.id !== promptId);
     commitPrompts(remainingPrompts);
@@ -404,13 +406,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
       // Reads the list the deletion produced, not the one before it.
       setActivePromptId(remainingPrompts.length > 0 ? remainingPrompts[0].id : null);
     }
-    try {
-      await fetch(`/api/prompts/${promptId}`, { method: 'DELETE' });
-    } catch (error) {
-      console.error(`Failed to delete prompt ${promptId}:`, error);
-      // Potentially re-add prompt to UI or notify user
-    }
-  }, [commitPrompts, setActivePromptId, promptsRef, activePromptIdRef, updatePromptInApi]);
+  }, [commitPrompts, setActivePromptId, promptsRef, activePromptIdRef, updatePromptInApi, showToast]);
 
   const updatePromptName = useCallback((promptId: string, newName: string) => {
     mutatePrompt(promptId, prompt => ({ ...prompt, name: newName }));

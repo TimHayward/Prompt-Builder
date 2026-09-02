@@ -5,7 +5,8 @@
  */
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db'; // SQLite database instance
-import { Prompt } from '@/types'; // Assuming Prompt type is defined
+import { updatePromptRequestSchema } from '@/types/contracts';
+import { errorResponse, parseRequestBody } from '@/lib/apiValidation';
 
 interface RouteParams {
     // Next.js 15 hands route params to the handler as a promise.
@@ -35,11 +36,11 @@ export async function GET(request: Request, { params }: RouteParams) {
             };
             return NextResponse.json(prompt);
         } else {
-            return NextResponse.json({ error: 'Prompt not found' }, { status: 404 });
+            return errorResponse('Prompt not found', 404);
         }
     } catch (error) {
         console.error(`Error fetching prompt ${id}:`, error);
-        return NextResponse.json({ error: 'Failed to fetch prompt' }, { status: 500 });
+        return errorResponse('Failed to fetch prompt', 500);
     }
 }
 
@@ -51,20 +52,18 @@ export async function PUT(request: Request, { params }: RouteParams) {
     const { id } = await params;
 
     try {
+        // Validated before anything is read or written, so a malformed body
+        // cannot leave the prompt half-updated.
+        const parsed = await parseRequestBody(request, updatePromptRequestSchema);
+        if (!parsed.ok) return parsed.response;
 
-        const body = await request.json();
-        const { name, sections, variables, num } = body as Partial<Prompt>;
+        const { name, sections, variables, num } = parsed.data;
 
         // Check if the prompt exists
         const checkStmt = db.prepare('SELECT id FROM prompts WHERE id = ?');
         const existingPrompt = checkStmt.get(id);
         if (!existingPrompt) {
-            return NextResponse.json({ error: 'Prompt not found' }, { status: 404 });
-        }
-
-        // At least one updatable field must be provided
-        if (typeof name === 'undefined' && typeof sections === 'undefined' && typeof variables === 'undefined' && typeof num === 'undefined') {
-            return NextResponse.json({ error: 'No fields to update provided' }, { status: 400 });
+            return errorResponse('Prompt not found', 404);
         }
 
         const currentTimestamp = new Date().toISOString();
@@ -95,7 +94,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
         if (!updatedPromptRaw) {
             // Should not happen if update was successful and ID is correct
             console.error(`Failed to retrieve updated prompt ${id} after update.`);
-            return NextResponse.json({ error: 'Failed to retrieve prompt after update' }, { status: 500 });
+            return errorResponse('Failed to retrieve prompt after update', 500);
         }
         
         return NextResponse.json({ 
@@ -106,10 +105,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     } catch (error) {
         console.error(`Error updating prompt ${id}:`, error);
-        if (error instanceof SyntaxError) {
-            return NextResponse.json({ error: 'Invalid JSON format in request body' }, { status: 400 });
-        }
-        return NextResponse.json({ error: 'Failed to update prompt' }, { status: 500 });
+        return errorResponse('Failed to update prompt', 500);
     }
 }
 
@@ -126,7 +122,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
         const checkStmt = db.prepare('SELECT id FROM prompts WHERE id = ?');
         const existingPrompt = checkStmt.get(id);
         if (!existingPrompt) {
-            return NextResponse.json({ error: 'Prompt not found' }, { status: 404 });
+            return errorResponse('Prompt not found', 404);
         }
 
         // Before deleting, check if this prompt is the active_prompt_id in app_config
@@ -146,10 +142,10 @@ export async function DELETE(request: Request, { params }: RouteParams) {
             return NextResponse.json({ message: 'Prompt deleted successfully' });
         } else {
             // This case should ideally be caught by the checkStmt earlier
-            return NextResponse.json({ error: 'Prompt not found or already deleted' }, { status: 404 });
+            return errorResponse('Prompt not found or already deleted', 404);
         }
     } catch (error) {
         console.error(`Error deleting prompt ${id}:`, error);
-        return NextResponse.json({ error: 'Failed to delete prompt' }, { status: 500 });
+        return errorResponse('Failed to delete prompt', 500);
     }
 }

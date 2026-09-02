@@ -6,7 +6,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db'; // SQLite database instance
 import { v4 as uuidv4 } from 'uuid';
-import { Prompt } from '@/types'; // Assuming Prompt type is defined
+import { createPromptRequestSchema } from '@/types/contracts';
+import { errorResponse, parseRequestBody } from '@/lib/apiValidation';
 
 /**
  * GET /api/prompts
@@ -34,7 +35,7 @@ export async function GET() {
         return NextResponse.json(prompts);
     } catch (error) {
         console.error('Error fetching prompts:', error);
-        return NextResponse.json({ error: 'Failed to fetch prompts' }, { status: 500 });
+        return errorResponse('Failed to fetch prompts', 500);
     }
 }
 
@@ -44,12 +45,10 @@ export async function GET() {
  */
 export async function POST(request: Request) {
     try {
-        const body = await request.json();
-        const { name, sections, variables, num } = body as Partial<Prompt>; // Use Partial<Prompt> for incoming data
+        const parsed = await parseRequestBody(request, createPromptRequestSchema);
+        if (!parsed.ok) return parsed.response;
 
-        if (!name) {
-            return NextResponse.json({ error: 'Prompt name is required' }, { status: 400 });
-        }
+        const { name, sections, variables, num } = parsed.data;
 
         const newPromptId = uuidv4();
         const sectionsJson = JSON.stringify(sections || []); // Default to empty array if sections are not provided
@@ -76,14 +75,11 @@ export async function POST(request: Request) {
             }, { status: 201 });
         } else {
             // Should not happen if insert was successful
-            return NextResponse.json({ error: 'Failed to create prompt or retrieve it after creation' }, { status: 500 });
+            return errorResponse('Failed to create prompt or retrieve it after creation', 500);
         }
 
     } catch (error) {
         console.error('Error creating prompt:', error);
-        if (error instanceof SyntaxError) {
-            return NextResponse.json({ error: 'Invalid JSON format in request body' }, { status: 400 });
-        }
-        return NextResponse.json({ error: 'Failed to create prompt' }, { status: 500 });
+        return errorResponse('Failed to create prompt', 500);
     }
 }

@@ -9,6 +9,7 @@ import React, { useEffect } from "react";
 import { AppProvider, useAppContext } from "@/contexts/AppContext";
 import { TreeProvider, useTreeContext } from "@/contexts/TreeContext";
 import { PromptProvider } from "@/contexts/PromptContext";
+import { ToastProvider } from "@/contexts/ToastContext";
 import Sidebar from "@/components/Sidebar";
 import PromptEditor from "@/components/PromptEditor";
 import VariablesPane from "@/components/VariablesPane";
@@ -61,16 +62,19 @@ const AppContent: React.FC = () => {
   );
 };
 
-// Root App component with context providers
+// Root App component with context providers.
+// ToastProvider is outermost so the data contexts can report failed saves.
 const App: React.FC = () => {
   return (
-    <AppProvider>
-      <TreeProvider>
-        <PromptProvider>
-          <AppContent />
-        </PromptProvider>
-      </TreeProvider>
-    </AppProvider>
+    <ToastProvider>
+      <AppProvider>
+        <TreeProvider>
+          <PromptProvider>
+            <AppContent />
+          </PromptProvider>
+        </TreeProvider>
+      </AppProvider>
+    </ToastProvider>
   );
 };
 

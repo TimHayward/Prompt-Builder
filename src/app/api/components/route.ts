@@ -6,6 +6,8 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db'; // SQLite database instance
 import { v4 as uuidv4 } from 'uuid';
 import { FolderType, ComponentType, TreeNode } from '@/types';
+import { saveLibraryRequestSchema } from '@/types/contracts';
+import { errorResponse, parseRequestBody } from '@/lib/apiValidation';
 
 /** One component_library row as the save path builds it. */
 type LibraryRow = {
@@ -17,17 +19,6 @@ type LibraryRow = {
     component_type: string | null;
     is_expanded: number | null;
     sort_order: number;
-};
-
-/**
- * The save payload. `tree` is the client's whole tree; `deletedIds` are the
- * items the client actually removed. Anything absent from `tree` but not named
- * in `deletedIds` is left alone — that is what keeps components ingested by
- * another path from being wiped by a stale client snapshot.
- */
-type SaveLibraryBody = {
-    tree: FolderType[];
-    deletedIds?: string[];
 };
 
 /**
@@ -45,7 +36,7 @@ export async function GET() {
         return NextResponse.json(components);
     } catch (error) {
         console.error('Error fetching components:', error);
-        return NextResponse.json({ error: 'Failed to fetch components' }, { status: 500 });
+        return errorResponse('Failed to fetch components', 500);
     }
 }
 
@@ -84,26 +75,17 @@ const flattenTree = (nodes: TreeNode[], parentId: string | null, rows: LibraryRo
  * POST /api/components
  * Saves the component library tree.
  *
- * Accepts either `{ tree, deletedIds }` or, for older clients, a bare array of
- * root folders. Rows are upserted and only explicitly deleted ids are removed.
+ * Takes `{ tree, deletedIds }`: rows are upserted, and only the ids the client
+ * says it deleted are removed. Anything absent from `tree` but not named in
+ * `deletedIds` is left alone, so a stale client snapshot cannot wipe items that
+ * another path added.
  */
 export async function POST(request: Request) {
     try {
-        const body = await request.json() as SaveLibraryBody | FolderType[];
+        const parsed = await parseRequestBody(request, saveLibraryRequestSchema);
+        if (!parsed.ok) return parsed.response;
 
-        const treeData = Array.isArray(body) ? body : body?.tree;
-        const deletedIds = Array.isArray(body) ? [] : (body?.deletedIds ?? []);
-
-        if (!Array.isArray(treeData)) {
-            return NextResponse.json(
-                { error: 'Request body must be an array of FolderType, or { tree, deletedIds }' },
-                { status: 400 }
-            );
-        }
-
-        if (!Array.isArray(deletedIds) || deletedIds.some(id => typeof id !== 'string')) {
-            return NextResponse.json({ error: 'deletedIds must be an array of item ids' }, { status: 400 });
-        }
+        const { tree: treeData, deletedIds } = parsed.data;
 
         const rows: LibraryRow[] = [];
         treeData.forEach(rootNode => {
@@ -129,8 +111,9 @@ export async function POST(request: Request) {
                 updated_at = excluded.updated_at`
         );
 
-        // Deletes the item and everything beneath it. Done explicitly rather than
-        // relying on ON DELETE CASCADE, which needs a foreign_keys pragma.
+        // Deletes the item and everything beneath it. Kept explicit rather than
+        // leaning on ON DELETE CASCADE so a connection opened without the
+        // foreign_keys pragma still cannot orphan rows.
         const deleteSubtreeStmt = db.prepare(
             `WITH RECURSIVE subtree(id) AS (
                 SELECT id FROM component_library WHERE id = ?
@@ -149,7 +132,7 @@ export async function POST(request: Request) {
             saveLibrary(rows, deletedIds);
         } catch (dbError) {
             console.error('Database error during component/folder tree update:', dbError);
-            return NextResponse.json({ error: 'Failed to update component/folder tree in database' }, { status: 500 });
+            return errorResponse('Failed to update component/folder tree in database', 500);
         }
 
         // Return the saved library so the client can reconcile if it wants to.
@@ -164,9 +147,6 @@ export async function POST(request: Request) {
 
     } catch (error) {
         console.error('Error processing request for component/folder tree update:', error);
-        if (error instanceof SyntaxError) {
-            return NextResponse.json({ error: 'Invalid JSON format in request body' }, { status: 400 });
-        }
-        return NextResponse.json({ error: 'Failed to update component/folder tree' }, { status: 500 });
+        return errorResponse('Failed to update component/folder tree', 500);
     }
 }

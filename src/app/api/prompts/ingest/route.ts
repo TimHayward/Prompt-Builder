@@ -2,33 +2,24 @@ import { NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '@/lib/db';
 import { parsePromptMarkdown } from '@/utils/markdownParser';
-
-interface IngestRequestBody {
-  filename?: unknown;
-  content?: unknown;
-}
+import { ingestPromptRequestSchema } from '@/types/contracts';
+import { errorResponse, parseRequestBody } from '@/lib/apiValidation';
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as IngestRequestBody;
-    const { filename, content } = body;
+    const parsed = await parseRequestBody(request, ingestPromptRequestSchema);
+    if (!parsed.ok) return parsed.response;
 
-    if (typeof filename !== 'string' || filename.trim().length === 0) {
-      return NextResponse.json({ error: 'Filename is required' }, { status: 400 });
-    }
-
-    if (typeof content !== 'string' || content.trim().length === 0) {
-      return NextResponse.json({ error: 'Content is required' }, { status: 400 });
-    }
+    const { filename, content } = parsed.data;
 
     const { promptName, sections, variables } = parsePromptMarkdown(filename, content);
 
     if (!promptName) {
-      return NextResponse.json({ error: 'Invalid filename for prompt name derivation' }, { status: 400 });
+      return errorResponse('Invalid filename for prompt name derivation', 400);
     }
 
     if (sections.length === 0) {
-      return NextResponse.json({ error: 'No valid sections found in markdown' }, { status: 400 });
+      return errorResponse('No valid sections found in markdown', 400);
     }
 
     const now = new Date().toISOString();
@@ -121,7 +112,7 @@ export async function POST(request: Request) {
       .get(promptId) as any;
 
     if (!promptRaw) {
-      return NextResponse.json({ error: 'Failed to retrieve prompt after upsert' }, { status: 500 });
+      return errorResponse('Failed to retrieve prompt after upsert', 500);
     }
 
     return NextResponse.json(
@@ -135,10 +126,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error ingesting prompt:', error);
 
-    if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: 'Invalid JSON format in request body' }, { status: 400 });
-    }
 
-    return NextResponse.json({ error: 'Failed to ingest prompt' }, { status: 500 });
+    return errorResponse('Failed to ingest prompt', 500);
   }
 }

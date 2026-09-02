@@ -9,7 +9,9 @@ import { v4 as uuidv4 } from 'uuid';
 // import { supabase } from '../lib/supabaseClient'; // REMOVED
 // import { useAuth } from './AuthContext'; // REMOVED
 import { useAppContext } from './AppContext';
-import { parseLoadedData } from "../utils/fileUtils"; 
+import { useToast } from './ToastContext';
+import { apiRequest, apiSend, describeApiFailure } from "../lib/apiClient";
+import { parseLoadedData } from "../utils/fileUtils";
 
 import { 
   insertNode, 
@@ -90,8 +92,15 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
   const [isComponentModalOpen, setComponentModalOpen] = useState(false);
   const [componentBeingEdited, setComponentBeingEdited] = useState<ComponentType | null>(null);
   const { appInitialized } = useAppContext();
+  const { showToast } = useToast();
   // const { user } = useAuth(); // REMOVED
   const [isTreeLoading, setIsTreeLoading] = useState<boolean>(true);
+
+  // The debounced saver is built once, so it reaches the toast through a ref.
+  const showToastRef = React.useRef(showToast);
+  useEffect(() => {
+    showToastRef.current = showToast;
+  }, [showToast]);
 
   const treeDataRef = React.useRef(treeData);
   useEffect(() => {
@@ -216,21 +225,15 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
   const saveTreeToApi = useCallback(debounce(async (currentTreeData: FolderType[]) => {
     const deletedIds = Array.from(pendingDeletedIdsRef.current);
     try {
-      const response = await fetch('/api/components', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tree: currentTreeData, deletedIds }),
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Failed to save tree to API:', errorData.error || response.statusText);
-        // The deletions stay pending so the next save retries them.
-      } else {
-        // Only clear what this request carried; anything deleted meanwhile stays queued.
-        deletedIds.forEach(id => pendingDeletedIdsRef.current.delete(id));
-      }
+      await apiSend('/api/components', 'POST', { tree: currentTreeData, deletedIds });
+      // Only clear what this request carried; anything deleted meanwhile stays queued.
+      deletedIds.forEach(id => pendingDeletedIdsRef.current.delete(id));
     } catch (error) {
-      console.error('[TreeContext] Error saving tree to API:', error);
+      // The deletions stay pending so the next save retries them.
+      console.error('[TreeContext] Failed to save the component library:', error);
+      showToastRef.current(
+        describeApiFailure(error, 'Could not save the component library.')
+      );
     }
   }, 2500), []);
 
@@ -244,11 +247,19 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
       setIsTreeLoading(true);
 
       try {
-        const response = await fetch('/api/components');
-        if (response.ok) {
-          const apiItemsFlat = await response.json(); // Expecting flat list from API
-          
-          if (apiItemsFlat && Array.isArray(apiItemsFlat) && apiItemsFlat.length > 0) {
+        // The row shape is whatever buildTreeFromApiData accepts, so the two
+        // cannot drift apart.
+        type ApiLibraryItem = Parameters<typeof buildTreeFromApiData>[0][number];
+        let apiItemsFlat: ApiLibraryItem[] | null = null;
+        try {
+          apiItemsFlat = await apiRequest<ApiLibraryItem[]>('/api/components'); // Expecting flat list from API
+        } catch (error) {
+          console.error('[TreeContext] Error fetching the component library:', error);
+          showToast(describeApiFailure(error, 'Could not load the component library.'));
+        }
+
+        if (apiItemsFlat) {
+          if (Array.isArray(apiItemsFlat) && apiItemsFlat.length > 0) {
             const structuredTree = buildTreeFromApiData(apiItemsFlat);
             const normalizedTree = normalizeExpansionState(structuredTree, true) as FolderType[]; // Root is expanded
             setTreeData(normalizedTree);
@@ -265,7 +276,8 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
             }
           }
         } else {
-          console.error("[TreeContext|useEffect] Error fetching from API:", response.statusText);
+          // The fetch failed and was reported above; fall back to the starter kit
+          // rather than showing an empty sidebar.
           const starterKitTree = await fetchAndParseStarterKit();
           if (starterKitTree) {
             const normalizedStarterKit = normalizeExpansionState(starterKitTree, true) as FolderType[];
@@ -294,7 +306,7 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
     };
 
     loadInitialTreeData();
-  }, [appInitialized, fetchAndParseStarterKit, saveTreeToApi, normalizeExpansionState, buildTreeFromApiData, INITIAL_TREE_DATA_ROOT_ID]); 
+  }, [appInitialized, fetchAndParseStarterKit, saveTreeToApi, normalizeExpansionState, buildTreeFromApiData, INITIAL_TREE_DATA_ROOT_ID, showToast]);
 
   // Effect to save tree data to API when it changes
   useEffect(() => {

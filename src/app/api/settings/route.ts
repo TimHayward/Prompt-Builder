@@ -6,6 +6,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db'; // SQLite database instance
 import { Settings } from '@/types'; // Assuming Settings type is defined
+import { updateSettingsRequestSchema } from '@/types/contracts';
+import { errorResponse, parseRequestBody } from '@/lib/apiValidation';
 
 // Default settings - consider moving to a shared constants file if used elsewhere
 const DEFAULT_SETTINGS: Settings = {
@@ -36,7 +38,7 @@ export async function GET() {
         }
     } catch (error) {
         console.error('Error fetching settings:', error);
-        return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
+        return errorResponse('Failed to fetch settings', 500);
     }
 }
 
@@ -46,12 +48,10 @@ export async function GET() {
  */
 export async function POST(request: Request) {
     try {
-        const body = await request.json();
-        const { settings, activePromptId } = body;
+        const parsed = await parseRequestBody(request, updateSettingsRequestSchema);
+        if (!parsed.ok) return parsed.response;
 
-        if (typeof settings === 'undefined' && typeof activePromptId === 'undefined') {
-            return NextResponse.json({ error: 'Settings or activePromptId must be provided' }, { status: 400 });
-        }
+        const { settings, activePromptId } = parsed.data;
 
         const currentTimestamp = new Date().toISOString();
 
@@ -84,10 +84,6 @@ export async function POST(request: Request) {
 
     } catch (error) {
         console.error('Error updating settings:', error);
-        // Check if error is due to JSON parsing
-        if (error instanceof SyntaxError) {
-            return NextResponse.json({ error: 'Invalid JSON format in request body' }, { status: 400 });
-        }
-        return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 });
+        return errorResponse('Failed to update settings', 500);
     }
 }
