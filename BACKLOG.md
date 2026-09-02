@@ -89,123 +89,6 @@ New product capabilities.
 
 ---
 
-# D. P1 Compilation and Clipboard Workflow
-
-## D1. Create a single prompt compiler
-
-**Priority:** P1  
-**Size:** M
-
-### Problem
-
-More than one implementation currently determines what constitutes the compiled prompt.
-
-### Action
-
-Create:
-
-```text
-compilePrompt()
-```
-
-as a pure domain function.
-
-It should handle:
-
-- ordered sections
-- variable substitution
-- system prompting
-- formatting options
-- unresolved variables
-- section headings where applicable
-
-### Acceptance
-
-Every feature that needs resolved prompt text uses this compiler.
-
----
-
-## D2. Add first-class resolved prompt preview
-
-**Priority:** P1  
-**Size:** M
-
-Provide:
-
-```text
-Source | Preview
-```
-
-Preview must display exactly what Copy Prompt will place on the clipboard.
-
-### Example
-
-Source:
-
-```text
-Send the response using {{channel: email/Teams/WhatsApp}}
-in a {{tone: formal/casual}} tone.
-```
-
-Working values:
-
-```text
-channel = Teams
-tone = formal
-```
-
-Preview:
-
-```text
-Send the response using Teams
-in a formal tone.
-```
-
-### Acceptance
-
-Preview and clipboard output are byte-for-byte identical.
-
----
-
-## D4. Define unresolved variable behaviour
-
-**Priority:** P1  
-**Size:** S
-
-The compiler must have explicit behaviour for unpopulated variables.
-
-Current intended behaviour should be documented and tested.
-
-If empty variables are intended to resolve to empty text, ensure this behaviour is consistent.
-
-Consider warning users before copy when unresolved variables remain.
-
-### Acceptance
-
-Behaviour is consistent between preview and clipboard.
-
----
-
-## D5. Introduce save-state visibility
-
-**Priority:** P1  
-**Size:** M
-
-Expose application persistence state such as:
-
-```text
-Saved
-Saving
-Unsaved changes
-Save failed
-```
-
-### Acceptance
-
-Users can determine whether changes have been persisted locally.
-
----
-
 # E. P2 State and Architecture Refactoring
 
 ## E1. Reduce PromptContext responsibilities
@@ -344,25 +227,6 @@ No routine prompt persistence path relies on untyped `any`.
 
 # F. P2 Automated Testing
 
-## F3. Add compiler tests
-
-**Priority:** P2  
-**Size:** M
-
-Cover:
-
-- multiple sections
-- section order
-- system prompt
-- variable resolution
-- blank variables
-- choice variables
-- custom variable values
-- formatting
-- preview equality
-
----
-
 ## F4. Add persistence regression tests
 
 **Priority:** P2  
@@ -413,16 +277,6 @@ Initial scenarios:
 ---
 
 # G. P2 CI and Repository Quality
-
-## G1. Add typecheck script
-
-Add:
-
-```json
-"typecheck": "tsc --noEmit"
-```
-
----
 
 ## G2. Add GitHub Actions CI
 
