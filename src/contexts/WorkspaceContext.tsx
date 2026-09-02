@@ -12,6 +12,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { useAppContext } from './AppContext';
 import { useToast } from './ToastContext';
+import { useSaveState } from './SaveStateContext';
 import { apiRequest, apiSend, describeApiFailure } from '@/lib/apiClient';
 import { debounceKeyed } from '@/utils/debounce';
 import type { PromptWorkspace, UpdateWorkspaceRequest } from '@/types/contracts';
@@ -43,6 +44,7 @@ const EMPTY_VALUES: Record<string, string> = {};
 export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const { appInitialized } = useAppContext();
   const { showToast } = useToast();
+  const saveState = useSaveState();
 
   const [workspaces, setWorkspaces] = useState<Record<string, PromptWorkspace>>({});
   const [isWorkspacesLoading, setIsWorkspacesLoading] = useState(true);
@@ -51,6 +53,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   // on each other rather than on the pre-change state.
   const workspacesRef = useRef(workspaces);
   const showToastRef = useRef(showToast);
+  const saveStateRef = useRef(saveState);
 
   useEffect(() => {
     workspacesRef.current = workspaces;
@@ -59,6 +62,10 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     showToastRef.current = showToast;
   }, [showToast]);
+
+  useEffect(() => {
+    saveStateRef.current = saveState;
+  }, [saveState]);
 
   const commitWorkspace = useCallback((workspace: PromptWorkspace) => {
     const next = { ...workspacesRef.current, [workspace.promptId]: workspace };
@@ -72,13 +79,17 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     () =>
       debounceKeyed(
         async (workspace: PromptWorkspace) => {
+          const saveKey = `workspace:${workspace.promptId}`;
+          saveStateRef.current.markSaving(saveKey);
           try {
             const update: UpdateWorkspaceRequest = {
               values: workspace.values,
               sectionOverrides: workspace.sectionOverrides,
             };
             await apiSend(`/api/workspaces/${workspace.promptId}`, 'PUT', update);
+            saveStateRef.current.markSaved(saveKey);
           } catch (error) {
+            saveStateRef.current.markFailed(saveKey);
             console.error(`Failed to save working values for ${workspace.promptId}:`, error);
             showToastRef.current(describeApiFailure(error, 'Could not save your working values.'));
           }
@@ -135,9 +146,10 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       };
 
       commitWorkspace(updated);
+      saveState.markUnsaved(`workspace:${promptId}`);
       saveWorkspace(updated);
     },
-    [commitWorkspace, saveWorkspace]
+    [commitWorkspace, saveWorkspace, saveState]
   );
 
   const clearWorkingValues = useCallback(
@@ -145,6 +157,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       // Drop the queued save first: it would otherwise write the values back
       // moments after they were cleared.
       saveWorkspace.cancel(promptId);
+      // That queued save is gone, so it is no longer pending work.
+      saveState.markSaved(`workspace:${promptId}`);
       commitWorkspace({ promptId, values: {}, sectionOverrides: {} });
 
       try {
@@ -154,7 +168,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         showToast(describeApiFailure(error, 'Could not clear your working values.'));
       }
     },
-    [commitWorkspace, saveWorkspace, showToast]
+    [commitWorkspace, saveWorkspace, showToast, saveState]
   );
 
   const value = useMemo(

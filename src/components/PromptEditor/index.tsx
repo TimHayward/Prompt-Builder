@@ -13,6 +13,7 @@ import Section from "./Section";
 import PromptTabs from "./PromptTabs";
 import ActionBar from "./ActionBar";
 import ResolvedPreview from "./ResolvedPreview";
+import SaveStateIndicator from "./SaveStateIndicator";
 import "./PromptEditor.scss";
 import { ComponentType as ComponentNodeType, Section as SectionType } from "../../types";
 import { v4 as uuidv4 } from 'uuid'; // Import uuidv4 at the top of the file
@@ -291,6 +292,7 @@ const PromptEditor: React.FC = () => {
 
       {/* Source or the resolved text that Copy will produce */}
       <div className="editor-view-toggle">
+        <SaveStateIndicator />
         <button
           className={view === "source" ? "active" : ""}
           onClick={() => setView("source")}

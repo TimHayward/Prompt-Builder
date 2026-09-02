@@ -10,6 +10,7 @@ import { AppProvider, useAppContext } from "@/contexts/AppContext";
 import { TreeProvider, useTreeContext } from "@/contexts/TreeContext";
 import { PromptProvider } from "@/contexts/PromptContext";
 import { ToastProvider } from "@/contexts/ToastContext";
+import { SaveStateProvider } from "@/contexts/SaveStateContext";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import Sidebar from "@/components/Sidebar";
 import PromptEditor from "@/components/PromptEditor";
@@ -68,15 +69,17 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ToastProvider>
-      <AppProvider>
-        <TreeProvider>
-          <PromptProvider>
-            <WorkspaceProvider>
-              <AppContent />
-            </WorkspaceProvider>
-          </PromptProvider>
-        </TreeProvider>
-      </AppProvider>
+      <SaveStateProvider>
+        <AppProvider>
+          <TreeProvider>
+            <PromptProvider>
+              <WorkspaceProvider>
+                <AppContent />
+              </WorkspaceProvider>
+            </PromptProvider>
+          </TreeProvider>
+        </AppProvider>
+      </SaveStateProvider>
     </ToastProvider>
   );
 };

@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppProvider } from '@/contexts/AppContext';
 import { PromptProvider, usePromptContext } from '@/contexts/PromptContext';
 import { ToastProvider } from '@/contexts/ToastContext';
+import { SaveStateProvider } from '@/contexts/SaveStateContext';
 import type { Prompt } from '@/types';
 
 const DEBOUNCE_MS = 1000;
@@ -63,11 +64,13 @@ const renderApp = async () => {
 
   render(
     <ToastProvider>
-      <AppProvider>
+      <SaveStateProvider>
+        <AppProvider>
         <PromptProvider>
           <Probe />
         </PromptProvider>
-      </AppProvider>
+        </AppProvider>
+      </SaveStateProvider>
     </ToastProvider>
   );
 

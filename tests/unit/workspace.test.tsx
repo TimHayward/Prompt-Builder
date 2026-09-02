@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppProvider } from '@/contexts/AppContext';
 import { PromptProvider, usePromptContext } from '@/contexts/PromptContext';
 import { ToastProvider } from '@/contexts/ToastContext';
+import { SaveStateProvider } from '@/contexts/SaveStateContext';
 import { WorkspaceProvider, useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import { extractVariableSpecsFromSections } from '@/utils/variableUtils';
 import type { Prompt } from '@/types';
@@ -74,13 +75,15 @@ const renderApp = async () => {
 
   render(
     <ToastProvider>
-      <AppProvider>
+      <SaveStateProvider>
+        <AppProvider>
         <PromptProvider>
           <WorkspaceProvider>
             <Probe />
           </WorkspaceProvider>
         </PromptProvider>
-      </AppProvider>
+        </AppProvider>
+      </SaveStateProvider>
     </ToastProvider>
   );
 

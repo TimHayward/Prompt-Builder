@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Prompt, Section, ComponentType, Settings } from "@/types";
 import { useAppContext } from './AppContext';
 import { useToast } from './ToastContext';
+import { useSaveState } from './SaveStateContext';
 import { apiRequest, apiSend, describeApiFailure } from "@/lib/apiClient";
 import type { CreatePromptRequest, UpdatePromptRequest } from "@/types/contracts";
 import { toEditorSections, toStoredSections } from "@/utils/sectionState";
@@ -84,6 +85,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
   const [newlyAddedSectionIdForFocus, setNewlyAddedSectionIdForFocus] = useState<string | null>(null);
   const { settings, appInitialized } = useAppContext();
   const { showToast } = useToast();
+  const saveState = useSaveState();
   const [isPromptsLoading, setIsPromptsLoading] = useState<boolean>(true);
 
   // promptsRef is the read model for mutations. It is written synchronously by
@@ -96,6 +98,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
   const appInitializedRef = useRef(appInitialized);
   // Same reason: the savers are built once, so they reach the toast through a ref.
   const showToastRef = useRef(showToast);
+  const saveStateRef = useRef(saveState);
 
   // Catches state set outside commitPrompts (initial load, the exposed setPrompts).
   useEffect(() => {
@@ -113,6 +116,10 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
   useEffect(() => {
     showToastRef.current = showToast;
   }, [showToast]);
+
+  useEffect(() => {
+    saveStateRef.current = saveState;
+  }, [saveState]);
 
   /** Applies a new prompt list to both the ref and React state. */
   const commitPrompts = useCallback((nextPrompts: Prompt[]) => {
@@ -200,6 +207,8 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
   // of prompt A, which one shared timer used to do.
   const updatePromptInApi = useMemo(() => debounceKeyed(async (promptToUpdate: Prompt) => {
     if (!appInitializedRef.current) return;
+    const saveKey = `prompt:${promptToUpdate.id}`;
+    saveStateRef.current.markSaving(saveKey);
     try {
       // Strip the UI-only header editing state before it reaches the API.
       const { sections, name, num, variables } = promptToUpdate;
@@ -213,9 +222,11 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
         sections: toStoredSections(sections),
       };
       await apiSend(`/api/prompts/${promptToUpdate.id}`, 'PUT', update);
+      saveStateRef.current.markSaved(saveKey);
     } catch (error) {
       // An autosave that fails silently is the worst case: the editor looks
       // saved while the change exists only in this tab.
+      saveStateRef.current.markFailed(saveKey);
       console.error(`Failed to update prompt ${promptToUpdate.id}:`, error);
       showToastRef.current(
         describeApiFailure(error, `Could not save "${promptToUpdate.name}".`)
@@ -250,11 +261,14 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     commitPrompts(promptsRef.current.map(p => (p.id === promptId ? updatedPrompt : p)));
 
     if (options?.persist !== false) {
+      // Queued now, sent when the debounce elapses: the interface should say
+      // "unsaved" for that gap rather than implying the change is stored.
+      saveState.markUnsaved(`prompt:${promptId}`);
       updatePromptInApi(updatedPrompt);
     }
 
     return updatedPrompt;
-  }, [commitPrompts, updatePromptInApi]);
+  }, [commitPrompts, updatePromptInApi, saveState]);
 
   const addPrompt = useCallback(async (name?: string, options?: { sections?: Section[]; variables?: Record<string, string> }): Promise<Prompt> => {
     activePromptIdChangeIsFromAddPrompt.current = true;

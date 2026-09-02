@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ActionBar from '@/components/PromptEditor/ActionBar';
 import ResolvedPreview from '@/components/PromptEditor/ResolvedPreview';
 import { ToastProvider } from '@/contexts/ToastContext';
+import { SaveStateProvider } from '@/contexts/SaveStateContext';
 import { AppProvider } from '@/contexts/AppContext';
 import { PromptProvider } from '@/contexts/PromptContext';
 import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
@@ -73,7 +74,8 @@ const LoadProbe = () => {
 const renderEditorParts = async (markdownEnabled: boolean) => {
   render(
     <ToastProvider>
-      <AppProvider>
+      <SaveStateProvider>
+        <AppProvider>
         <PromptProvider>
           <WorkspaceProvider>
             <LoadProbe />
@@ -90,7 +92,8 @@ const renderEditorParts = async (markdownEnabled: boolean) => {
             />
           </WorkspaceProvider>
         </PromptProvider>
-      </AppProvider>
+        </AppProvider>
+      </SaveStateProvider>
     </ToastProvider>
   );
 

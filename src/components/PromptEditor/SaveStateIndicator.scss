@@ -1,0 +1,23 @@
+/**
+ * Save state indicator
+ * Quiet when everything is stored; only a failure asks for attention.
+ */
+
+.save-state {
+  font-size: typography.$font-size-sm;
+  color: colors.$light-gray;
+  white-space: nowrap;
+
+  &--saving {
+    color: colors.$info-color;
+  }
+
+  &--unsaved {
+    color: colors.$light-gray;
+  }
+
+  &--failed {
+    color: colors.$error-color;
+    font-weight: 500;
+  }
+}

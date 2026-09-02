@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 // import { useAuth } from './AuthContext'; // REMOVED
 import { useAppContext } from './AppContext';
 import { useToast } from './ToastContext';
+import { useSaveState } from './SaveStateContext';
 import { apiRequest, apiSend, describeApiFailure } from "../lib/apiClient";
 import type { SaveLibraryRequest } from "../types/contracts";
 import { parseLoadedData } from "../utils/fileUtils";
@@ -94,14 +95,20 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
   const [componentBeingEdited, setComponentBeingEdited] = useState<ComponentType | null>(null);
   const { appInitialized } = useAppContext();
   const { showToast } = useToast();
+  const saveState = useSaveState();
   // const { user } = useAuth(); // REMOVED
   const [isTreeLoading, setIsTreeLoading] = useState<boolean>(true);
 
   // The debounced saver is built once, so it reaches the toast through a ref.
   const showToastRef = React.useRef(showToast);
+  const saveStateRef = React.useRef(saveState);
   useEffect(() => {
     showToastRef.current = showToast;
   }, [showToast]);
+
+  useEffect(() => {
+    saveStateRef.current = saveState;
+  }, [saveState]);
 
   const treeDataRef = React.useRef(treeData);
   useEffect(() => {
@@ -225,6 +232,7 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
   // removes only the listed items.
   const saveTreeToApi = useCallback(debounce(async (currentTreeData: FolderType[]) => {
     const deletedIds = Array.from(pendingDeletedIdsRef.current);
+    saveStateRef.current.markSaving('library');
     try {
       // Typed as the API's contract so the payload cannot drift from what the
       // route accepts.
@@ -232,8 +240,10 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
       await apiSend('/api/components', 'POST', save);
       // Only clear what this request carried; anything deleted meanwhile stays queued.
       deletedIds.forEach(id => pendingDeletedIdsRef.current.delete(id));
+      saveStateRef.current.markSaved('library');
     } catch (error) {
       // The deletions stay pending so the next save retries them.
+      saveStateRef.current.markFailed('library');
       console.error('[TreeContext] Failed to save the component library:', error);
       showToastRef.current(
         describeApiFailure(error, 'Could not save the component library.')
@@ -323,10 +333,11 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
       // A better check might be if the treeData reference is different from the initial constant
       // or if it has more than the initial root folder with no children.
       if (!isEffectivelyInitialOrEmpty(treeData)) {
+          saveState.markUnsaved('library');
           saveTreeToApi(treeData);
       }
     }
-  }, [treeData, appInitialized, isTreeLoading, saveTreeToApi, isEffectivelyInitialOrEmpty]);
+  }, [treeData, appInitialized, isTreeLoading, saveTreeToApi, isEffectivelyInitialOrEmpty, saveState]);
 
   const handleAddFolder = (parentId: string, name: string) => {
     const newFolderId = uuidv4();

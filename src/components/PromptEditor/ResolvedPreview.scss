@@ -38,8 +38,13 @@
 // Source | Preview switch above the editor body
 .editor-view-toggle {
   display: flex;
+  align-items: center;
   gap: 0.25rem;
   padding: 0 1rem 0.5rem;
+
+  .save-state {
+    margin-right: auto;
+  }
 
   button {
     padding: 0.25rem 0.75rem;
