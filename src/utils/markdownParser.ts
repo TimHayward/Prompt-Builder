@@ -1,18 +1,16 @@
+/**
+ * Prompt Markdown parsing for the ingest route
+ *
+ * Section splitting itself lives in markdownSections.ts, which the interactive
+ * import uses too, so a document ingested through the API produces the same
+ * sections as the same document imported through the UI.
+ */
+
 import { v4 as uuidv4 } from 'uuid';
 import { Section } from '@/types';
+import { DEFAULT_TYPE } from '@/lib/sectionTypes';
 import { extractVariablesFromSections } from '@/utils/variableUtils';
-
-const SECTION_TYPE_MAP: Record<string, Section['type']> = {
-  role: 'role',
-  context: 'context',
-  task: 'instruction',
-  constraints: 'instruction',
-  constraint: 'instruction',
-  style: 'style',
-  'output format': 'format',
-  output: 'format',
-  format: 'format',
-};
+import { parseMarkdownSections as splitIntoSections } from '@/utils/markdownSections';
 
 export const derivePromptName = (filename: string): string => {
   return filename
@@ -21,46 +19,20 @@ export const derivePromptName = (filename: string): string => {
     .trim();
 };
 
-export const parseMarkdownSections = (content: string): Section[] => {
-  const lines = content.split(/\r?\n/);
-  const sections: Section[] = [];
-  const headingRegex = /^([A-Za-z][A-Za-z ]{0,30}):\s*(.*)$/;
-
-  let current: Section | null = null;
-
-  for (const line of lines) {
-    const match = line.match(headingRegex);
-
-    if (match) {
-      if (current) {
-        current.content = current.content.trim();
-        sections.push(current);
-      }
-
-      const heading = match[1].trim();
-      current = {
-        id: uuidv4(),
-        name: heading,
-        content: match[2].trim(),
-        type: SECTION_TYPE_MAP[heading.toLowerCase()] ?? 'instruction',
-        open: true,
-        dirty: false,
-      };
-      continue;
-    }
-
-    if (current) {
-      current.content = current.content ? `${current.content}\n${line}` : line;
-    }
-  }
-
-  if (current) {
-    current.content = current.content.trim();
-    sections.push(current);
-  }
-
-  return sections;
-};
+/**
+ * Parses a document into prompt sections
+ * @param content - The raw Markdown
+ * @returns Sections ready to store on a prompt
+ */
+export const parseMarkdownSections = (content: string): Section[] =>
+  splitIntoSections(content).map(section => ({
+    id: uuidv4(),
+    name: section.name,
+    content: section.content,
+    type: section.suggestedType ?? DEFAULT_TYPE,
+    open: true,
+    dirty: false,
+  }));
 
 export const buildVariablesObject = (sections: Section[]): Record<string, string> => {
   const variables = extractVariablesFromSections(sections);
