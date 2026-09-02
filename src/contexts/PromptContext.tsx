@@ -10,6 +10,7 @@ import { useAppContext } from './AppContext';
 import { useToast } from './ToastContext';
 import { apiRequest, apiSend, describeApiFailure } from "@/lib/apiClient";
 import type { CreatePromptRequest, UpdatePromptRequest } from "@/types/contracts";
+import { toEditorSections, toStoredSections } from "@/utils/sectionState";
 import { debounce, debounceKeyed } from "@/utils/debounce";
 import { extractVariablesFromSections, extractVariableSpecsFromSections, VariableSpec } from "@/utils/variableUtils";
 
@@ -37,8 +38,6 @@ type PromptContextType = {
   newlyAddedSectionIdForFocus: string | null;
   clearNewlyAddedSectionIdForFocus: () => void;
   updatePromptName: (promptId: string, newName: string) => void;
-  updatePromptVariables: (promptId: string, variables: Record<string, string>) => void;
-  getPromptVariables: (promptId: string) => Record<string, string>;
   getPromptVariableNames: (promptId: string) => string[];
   getPromptVariableSpecs: (promptId: string) => VariableSpec[];
   isPromptsLoading: boolean;
@@ -68,8 +67,6 @@ const PromptContext = createContext<PromptContextType>({
   newlyAddedSectionIdForFocus: null,
   clearNewlyAddedSectionIdForFocus: () => {},
   updatePromptName: () => {},
-  updatePromptVariables: () => {},
-  getPromptVariables: () => ({}),
   getPromptVariableNames: () => [],
   getPromptVariableSpecs: () => [],
   isPromptsLoading: true, // Default to true
@@ -133,7 +130,12 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
       const fetchInitialData = async () => {
         setIsPromptsLoading(true);
         try {
-          const fetchedPrompts = await apiRequest<Prompt[]>('/api/prompts');
+          const storedPrompts = await apiRequest<Prompt[]>('/api/prompts');
+          // Stored prompts carry no editor state, so it is added here.
+          const fetchedPrompts = storedPrompts.map(prompt => ({
+            ...prompt,
+            sections: toEditorSections(prompt.sections ?? []),
+          }));
           commitPrompts(fetchedPrompts);
 
           // The active prompt lives alongside the settings in app_config.
@@ -203,9 +205,15 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     try {
       // Strip the UI-only header editing state before it reaches the API.
       const { sections, name, num, variables } = promptToUpdate;
-      const sectionsForApi = sections.map(({ editingHeader, editingHeaderTempName, editingHeaderTempType, ...section }) => section);
 
-      const update: UpdatePromptRequest = { name, num, variables, sections: sectionsForApi };
+      // Editor state is dropped here, so what reaches the prompt is only what
+      // belongs to it.
+      const update: UpdatePromptRequest = {
+        name,
+        num,
+        variables,
+        sections: toStoredSections(sections),
+      };
       await apiSend(`/api/prompts/${promptToUpdate.id}`, 'PUT', update);
     } catch (error) {
       // An autosave that fails silently is the worst case: the editor looks
@@ -273,7 +281,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     // compile error here rather than a 400 at runtime.
     const promptDataForApi: CreatePromptRequest = {
       name: newPromptName,
-      sections: initialSections, // Sending full initial sections
+      sections: toStoredSections(initialSections),
       variables: initialVariables,
       num: promptsRef.current.length + 1, // Or other logic for 'num'
     };
@@ -343,7 +351,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
 
     const promptDataForApi: CreatePromptRequest = {
       name: newPromptName,
-      sections: newSections, // Send new sections
+      sections: toStoredSections(newSections),
       variables: promptToDuplicate.variables || {}, // Copy variables from original prompt
       num: promptsRef.current.length + 1, // Or determine num differently
     };
@@ -548,17 +556,9 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     setNewlyAddedSectionIdForFocus(null);
   }, [setNewlyAddedSectionIdForFocus]);
 
-  const updatePromptVariables = useCallback((promptId: string, variables: Record<string, string>) => {
-    mutatePrompt(promptId, prompt => ({
-      ...prompt,
-      variables: { ...prompt.variables, ...variables },
-    }));
-  }, [mutatePrompt]);
-
-  const getPromptVariables = useCallback((promptId: string): Record<string, string> => {
-    const prompt = promptsRef.current.find(p => p.id === promptId);
-    return prompt?.variables || {};
-  }, [promptsRef]);
+  // Working values are not kept here: they belong to WorkspaceContext, so that
+  // using a prompt cannot rewrite the prompt. What this context still exposes
+  // are the variable *definitions* the sections declare.
 
   const getPromptVariableNames = useCallback((promptId: string): string[] => {
     // Find the prompt from the prompts array (current render state, not stale ref)
@@ -603,8 +603,6 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
         newlyAddedSectionIdForFocus,
         clearNewlyAddedSectionIdForFocus,
         updatePromptName,
-        updatePromptVariables,
-        getPromptVariables,
         getPromptVariableNames,
         getPromptVariableSpecs,
         isPromptsLoading,

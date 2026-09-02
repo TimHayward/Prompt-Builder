@@ -17,7 +17,7 @@ import { useTreeContext } from "../../contexts/TreeContext";
 import { usePromptContext } from "../../contexts/PromptContext";
 import { ComponentType, Section } from "../../types";
 import { insertNode } from "../../utils/treeUtils";
-import { derivePromptName, buildVariablesObject } from "../../utils/markdownParser";
+import { derivePromptName } from "../../utils/markdownParser";
 import {
   parseMarkdownByHeaders,
   detectFramework,
@@ -188,10 +188,9 @@ const ImportPromptModal: React.FC = () => {
         dirty: false,
       }));
 
-      await addPrompt(title.trim(), {
-        sections,
-        variables: buildVariablesObject(sections),
-      });
+      // No variables are seeded: a prompt declares them in its text, and the
+      // values for a use live in its workspace.
+      await addPrompt(title.trim(), { sections });
 
       setImportPromptPayload(null);
     } catch (err) {

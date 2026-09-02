@@ -56,8 +56,18 @@ CREATE TABLE IF NOT EXISTS app_config (
 );
 `;
 
+const createPromptWorkspacesTable = `
+CREATE TABLE IF NOT EXISTS prompt_workspaces (
+    prompt_id TEXT PRIMARY KEY,
+    values_json TEXT NOT NULL DEFAULT '{}',
+    section_overrides_json TEXT NOT NULL DEFAULT '{}',
+    updated_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    FOREIGN KEY (prompt_id) REFERENCES prompts(id) ON DELETE CASCADE
+);
+`;
+
 /** Tables every migrated database must have. */
-export const REQUIRED_TABLES = ['component_library', 'prompts', 'app_config'];
+export const REQUIRED_TABLES = ['component_library', 'prompts', 'app_config', 'prompt_workspaces'];
 
 /**
  * Reports whether a table already has a column
@@ -80,6 +90,7 @@ export const MIGRATIONS = [
       database.exec(createComponentLibraryTable);
       database.exec(createPromptsTable);
       database.exec(createAppConfigTable);
+      database.exec(createPromptWorkspacesTable);
     },
   },
   {
@@ -91,6 +102,41 @@ export const MIGRATIONS = [
       if (!hasColumn(database, 'component_library', 'sort_order')) {
         database.exec('ALTER TABLE component_library ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0');
       }
+    },
+  },
+  {
+    version: 3,
+    name: 'working prompt state',
+    apply(database) {
+      // Working values used to live on the prompt itself, which made entering a
+      // value an edit to the source. They move to their own table; prompts.variables
+      // stays as the source's starting values for a fresh workspace.
+      database.exec(createPromptWorkspacesTable);
+
+      const promptsWithValues = database
+        .prepare("SELECT id, variables FROM prompts WHERE variables IS NOT NULL AND variables != '{}'")
+        .all();
+
+      const insert = database.prepare(
+        `INSERT INTO prompt_workspaces (prompt_id, values_json, section_overrides_json)
+         VALUES (?, ?, '{}')
+         ON CONFLICT(prompt_id) DO NOTHING`
+      );
+
+      promptsWithValues.forEach(prompt => insert.run(prompt.id, prompt.variables));
+    },
+  },
+  {
+    version: 4,
+    name: 'clear working values copied off the source prompt',
+    apply(database) {
+      // Version 3 copied these into prompt_workspaces. Leaving the originals on
+      // the prompt would mean clearing working values still left them behind in
+      // the source. The column stays for the source defaults J4 will add.
+      database.exec(
+        `UPDATE prompts SET variables = '{}'
+         WHERE id IN (SELECT prompt_id FROM prompt_workspaces)`
+      );
     },
   },
 ];

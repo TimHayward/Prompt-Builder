@@ -19,16 +19,15 @@ export const sectionTypeSchema = z.enum(
 );
 
 /**
- * A section as stored. The UI-only header editing fields are stripped before a
- * save, so they are not part of the contract.
+ * A section as stored. Editor state — open, dirty, the header-rename fields —
+ * is deliberately absent: zod strips unknown keys, so a client that sends it
+ * cannot get it written to the prompt.
  */
 export const sectionSchema = z.object({
   id: z.string().min(1),
   name: z.string(),
   content: z.string(),
   type: sectionTypeSchema,
-  open: z.boolean(),
-  dirty: z.boolean(),
   linkedComponentId: z.string().optional(),
   originalContent: z.string().optional(),
 });
@@ -104,6 +103,22 @@ export const saveLibraryRequestSchema = z.object({
   deletedIds: z.array(z.string().min(1)).default([]),
 });
 
+/**
+ * Working state for one prompt: the values entered for this use, and any
+ * temporary section edits. Separate from the prompt itself, so using a prompt
+ * never rewrites it.
+ */
+export const workspaceSchema = z.object({
+  promptId: z.string().min(1),
+  values: variablesSchema,
+  sectionOverrides: z.record(z.string(), z.string()),
+});
+
+export const updateWorkspaceRequestSchema = z.object({
+  values: variablesSchema.optional(),
+  sectionOverrides: z.record(z.string(), z.string()).optional(),
+});
+
 export const settingsSchema = z.object({
   autoSave: z.boolean(),
   defaultPromptName: z.string(),
@@ -123,6 +138,8 @@ export const updateSettingsRequestSchema = z
     message: 'Settings or activePromptId must be provided',
   });
 
+export type PromptWorkspace = z.infer<typeof workspaceSchema>;
+export type UpdateWorkspaceRequest = z.infer<typeof updateWorkspaceRequestSchema>;
 export type CreatePromptRequest = z.infer<typeof createPromptRequestSchema>;
 export type UpdatePromptRequest = z.infer<typeof updatePromptRequestSchema>;
 export type IngestPromptRequest = z.infer<typeof ingestPromptRequestSchema>;

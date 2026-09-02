@@ -27,20 +27,34 @@ export type FolderType = {
 // Union type for items in the tree
 export type TreeNode = FolderType | ComponentType;
 
-// Section type for prompt building
-export type Section = {
+/**
+ * A section as stored on a prompt. This is the whole of what persistence sees —
+ * nothing about how the editor is displaying it belongs here.
+ */
+export type StoredSection = {
   id: string; // Changed from number
   name: string;
   content: string;
   type: SectionTypeValue;
   linkedComponentId?: string; // Changed from number to string
+  /** The linked component's content when it was inserted, to detect drift. */
   originalContent?: string;
+};
+
+/**
+ * Editor state for a section. Lives only while the app is open: collapsing a
+ * section or starting to rename it is not a change to the prompt.
+ */
+export type SectionUiState = {
   open: boolean;
   dirty: boolean;
   editingHeader?: boolean;
   editingHeaderTempName?: string;
   editingHeaderTempType?: SectionTypeValue;
 };
+
+/** What the editor works with: the stored section plus its editor state. */
+export type Section = StoredSection & SectionUiState;
 
 // Prompt type containing sections
 export type Prompt = {

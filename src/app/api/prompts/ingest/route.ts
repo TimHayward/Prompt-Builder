@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 
     const { filename, content } = parsed.data;
 
-    const { promptName, sections, variables } = parsePromptMarkdown(filename, content);
+    const { promptName, sections } = parsePromptMarkdown(filename, content);
 
     if (!promptName) {
       return errorResponse('Invalid filename for prompt name derivation', 400);
@@ -33,9 +33,11 @@ export async function POST(request: Request) {
         .get(promptName) as { id: string } | undefined;
 
       if (existing) {
+        // variables stays empty: values entered for a use live in the prompt's
+        // workspace, not on the prompt.
         db.prepare('UPDATE prompts SET sections = ?, variables = ?, updated_at = ? WHERE id = ?').run(
           JSON.stringify(sections),
-          JSON.stringify(variables),
+          '{}',
           now,
           existing.id,
         );
@@ -52,7 +54,7 @@ export async function POST(request: Request) {
           newPromptId,
           promptName,
           JSON.stringify(sections),
-          JSON.stringify(variables),
+          '{}',
           nextNumRow.next_num,
           now,
           now,

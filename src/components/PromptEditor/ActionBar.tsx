@@ -7,6 +7,7 @@
 
 import React from "react";
 import { usePromptContext } from "@/contexts/PromptContext";
+import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 import { buildPromptText } from "@/utils/promptText";
 import { useClipboard } from "@/hooks/useClipboard";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -25,7 +26,8 @@ const ActionBar: React.FC<ActionBarProps> = ({
   systemPrompt,
   markdownEnabled
 }) => {
-  const { prompts, addNewSectionForEditing, getPromptVariables } = usePromptContext();
+  const { prompts, addNewSectionForEditing } = usePromptContext();
+  const { getWorkingValues } = useWorkspaceContext();
   const { copyToClipboard, status, isSupported } = useClipboard();
 
   // Copy prompt to clipboard
@@ -36,9 +38,10 @@ const ActionBar: React.FC<ActionBarProps> = ({
     const activePrompt = prompts.find(p => p.id === activePromptId);
     if (!activePrompt) return;
 
+    // The resolved prompt is the source with this use's working values applied.
     const promptText = buildPromptText({
       sections: activePrompt.sections,
-      variables: getPromptVariables(activePromptId),
+      variables: getWorkingValues(activePromptId),
       systemPrompt,
       markdownEnabled,
     });

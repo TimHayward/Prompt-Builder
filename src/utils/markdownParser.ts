@@ -7,7 +7,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { Section } from '@/types';
+import { StoredSection } from '@/types';
 import { DEFAULT_TYPE } from '@/lib/sectionTypes';
 import { extractVariablesFromSections } from '@/utils/variableUtils';
 import { parseMarkdownSections as splitIntoSections } from '@/utils/markdownSections';
@@ -22,19 +22,17 @@ export const derivePromptName = (filename: string): string => {
 /**
  * Parses a document into prompt sections
  * @param content - The raw Markdown
- * @returns Sections ready to store on a prompt
+ * @returns Sections ready to store on a prompt, with no editor state attached
  */
-export const parseMarkdownSections = (content: string): Section[] =>
+export const parseMarkdownSections = (content: string): StoredSection[] =>
   splitIntoSections(content).map(section => ({
     id: uuidv4(),
     name: section.name,
     content: section.content,
     type: section.suggestedType ?? DEFAULT_TYPE,
-    open: true,
-    dirty: false,
   }));
 
-export const buildVariablesObject = (sections: Section[]): Record<string, string> => {
+export const buildVariablesObject = (sections: StoredSection[]): Record<string, string> => {
   const variables = extractVariablesFromSections(sections);
   return variables.reduce<Record<string, string>>((acc, key) => {
     acc[key] = '';

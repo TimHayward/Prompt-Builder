@@ -27,8 +27,6 @@ const PromptEditor: React.FC = () => {
     clearNewlyAddedSectionIdForFocus,
     updatePromptName, // Added from context
     getPromptVariableNames,
-    getPromptVariables,
-    updatePromptVariables,
   } = usePromptContext();
   
   const { settings } = useAppContext();

@@ -10,6 +10,7 @@ import { AppProvider, useAppContext } from "@/contexts/AppContext";
 import { TreeProvider, useTreeContext } from "@/contexts/TreeContext";
 import { PromptProvider } from "@/contexts/PromptContext";
 import { ToastProvider } from "@/contexts/ToastContext";
+import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import Sidebar from "@/components/Sidebar";
 import PromptEditor from "@/components/PromptEditor";
 import VariablesPane from "@/components/VariablesPane";
@@ -70,7 +71,9 @@ const App: React.FC = () => {
       <AppProvider>
         <TreeProvider>
           <PromptProvider>
-            <AppContent />
+            <WorkspaceProvider>
+              <AppContent />
+            </WorkspaceProvider>
           </PromptProvider>
         </TreeProvider>
       </AppProvider>
