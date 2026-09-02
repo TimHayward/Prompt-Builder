@@ -45,7 +45,8 @@ export type Section = {
 // Prompt type containing sections
 export type Prompt = {
   id: string; // Changed from number
-  num: number;
+  /** Ordering position. Nullable in the database, so nullable here too. */
+  num: number | null;
   name: string;
   sections: Section[];
   variables?: Record<string, string>; // Variables mapping: {variableName: value}

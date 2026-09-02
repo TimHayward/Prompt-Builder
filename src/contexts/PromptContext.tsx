@@ -9,6 +9,7 @@ import { Prompt, Section, ComponentType, Settings } from "@/types";
 import { useAppContext } from './AppContext';
 import { useToast } from './ToastContext';
 import { apiRequest, apiSend, describeApiFailure } from "@/lib/apiClient";
+import type { CreatePromptRequest, UpdatePromptRequest } from "@/types/contracts";
 import { debounce, debounceKeyed } from "@/utils/debounce";
 import { extractVariablesFromSections, extractVariableSpecsFromSections, VariableSpec } from "@/utils/variableUtils";
 
@@ -201,13 +202,11 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     if (!appInitializedRef.current) return;
     try {
       // Strip the UI-only header editing state before it reaches the API.
-      const { sections, ...restOfPrompt } = promptToUpdate;
+      const { sections, name, num, variables } = promptToUpdate;
       const sectionsForApi = sections.map(({ editingHeader, editingHeaderTempName, editingHeaderTempType, ...section }) => section);
 
-      await apiSend(`/api/prompts/${promptToUpdate.id}`, 'PUT', {
-        ...restOfPrompt,
-        sections: sectionsForApi,
-      });
+      const update: UpdatePromptRequest = { name, num, variables, sections: sectionsForApi };
+      await apiSend(`/api/prompts/${promptToUpdate.id}`, 'PUT', update);
     } catch (error) {
       // An autosave that fails silently is the worst case: the editor looks
       // saved while the change exists only in this tab.
@@ -270,10 +269,9 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
         : [];
     const initialVariables: Record<string, string> = options?.variables ?? {};
 
-    // Data for the API - ensure it matches what the backend expects for a new prompt.
-    // 'open' and 'dirty' are primarily UI concerns but might be stored if desired.
-    // For now, let's assume the backend can handle the full Section object or ignore extra fields.
-    const promptDataForApi = {
+    // Typed as the API's own contract, so a payload the route would reject is a
+    // compile error here rather than a 400 at runtime.
+    const promptDataForApi: CreatePromptRequest = {
       name: newPromptName,
       sections: initialSections, // Sending full initial sections
       variables: initialVariables,
@@ -285,7 +283,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
       name: newPromptName,
       sections: initialSections,
       variables: initialVariables,
-      num: promptDataForApi.num,
+      num: promptDataForApi.num ?? null,
     };
 
     commitPrompts([...promptsRef.current, tempPrompt]);
@@ -343,7 +341,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     activePromptIdChangeIsFromAddPrompt.current = true; // Manage flag if it becomes active immediately
     const tempClientId = uuidv4();
 
-    const promptDataForApi = {
+    const promptDataForApi: CreatePromptRequest = {
       name: newPromptName,
       sections: newSections, // Send new sections
       variables: promptToDuplicate.variables || {}, // Copy variables from original prompt
@@ -355,7 +353,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
       name: newPromptName,
       sections: newSections,
       variables: promptToDuplicate.variables || {},
-      num: promptDataForApi.num,
+      num: promptDataForApi.num ?? null,
     };
     
     commitPrompts([...promptsRef.current, tempPrompt]);

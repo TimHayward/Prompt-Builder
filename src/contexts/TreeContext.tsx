@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useAppContext } from './AppContext';
 import { useToast } from './ToastContext';
 import { apiRequest, apiSend, describeApiFailure } from "../lib/apiClient";
+import type { SaveLibraryRequest } from "../types/contracts";
 import { parseLoadedData } from "../utils/fileUtils";
 
 import { 
@@ -225,7 +226,10 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
   const saveTreeToApi = useCallback(debounce(async (currentTreeData: FolderType[]) => {
     const deletedIds = Array.from(pendingDeletedIdsRef.current);
     try {
-      await apiSend('/api/components', 'POST', { tree: currentTreeData, deletedIds });
+      // Typed as the API's contract so the payload cannot drift from what the
+      // route accepts.
+      const save: SaveLibraryRequest = { tree: currentTreeData, deletedIds };
+      await apiSend('/api/components', 'POST', save);
       // Only clear what this request carried; anything deleted meanwhile stays queued.
       deletedIds.forEach(id => pendingDeletedIdsRef.current.delete(id));
     } catch (error) {

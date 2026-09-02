@@ -33,6 +33,56 @@ describe('parseVariableToken', () => {
   });
 });
 
+describe('whitespace and punctuation', () => {
+  it('keys a spaced choice list the same as an unspaced one', () => {
+    const spaced = parseVariableToken(' mail / teams ');
+    const tight = parseVariableToken('mail/teams');
+
+    expect(spaced).toEqual(tight);
+    expect(spaced?.key).toBe('mail/teams');
+  });
+
+  it('substitutes a spaced token', () => {
+    expect(replaceVariables('Send by {{ tone }}', { tone: 'email' })).toBe('Send by email');
+  });
+
+  it('treats a token whose name contains regex metacharacters as literal text', () => {
+    const text = 'Cost {{price (in $)}} today';
+
+    expect(parseVariableToken('price (in $)')?.key).toBe('price (in $)');
+    expect(replaceVariables(text, { 'price (in $)': '£4' })).toBe('Cost £4 today');
+  });
+
+  it('ignores reserved tokens such as component references', () => {
+    expect(parseVariableToken('> Component Name')).toBeNull();
+    expect(replaceVariables('Keep {{> Component}}', {})).toBe('Keep {{> Component}}');
+  });
+});
+
+describe('values', () => {
+  it('drops a known variable whose value is empty', () => {
+    expect(replaceVariables('Tone: {{tone}}!', { tone: '' })).toBe('Tone: !');
+  });
+
+  it('leaves an unknown variable in place', () => {
+    expect(replaceVariables('Hello {{name}}', { other: 'x' })).toBe('Hello {{name}}');
+  });
+
+  it('replaces every occurrence of the same variable', () => {
+    expect(replaceVariables('{{a}} and {{a}}', { a: 'x' })).toBe('x and x');
+  });
+
+  it('substitutes a choice variable by its key, not its chosen option', () => {
+    expect(replaceVariables('Use {{mail/teams}}', { 'mail/teams': 'teams' })).toBe('Use teams');
+  });
+
+  it('accepts a custom value that is not one of the choices', () => {
+    expect(replaceVariables('Use {{mail/teams}}', { 'mail/teams': 'carrier pigeon' })).toBe(
+      'Use carrier pigeon'
+    );
+  });
+});
+
 describe('extractVariableSpecs', () => {
   it('unions the choices of tokens sharing a key, without repeats', () => {
     const specs = extractVariableSpecs('{{channel: mail/teams}} then {{channel: teams/sms}}');

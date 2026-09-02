@@ -59,10 +59,12 @@ const mockFetch = (url: string, init?: RequestInit) => {
   }
 
   if (url.startsWith('/api/prompts/') && method === 'PUT') {
-    const body = JSON.parse(String(init?.body)) as Prompt;
-    savedPrompts.push(body);
-    promptsOnServer = promptsOnServer.map(p => (p.id === body.id ? body : p));
-    return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+    // The id lives in the URL; the body carries only updatable fields.
+    const id = url.slice('/api/prompts/'.length);
+    const saved = { ...JSON.parse(String(init?.body)), id } as Prompt;
+    savedPrompts.push(saved);
+    promptsOnServer = promptsOnServer.map(p => (p.id === id ? saved : p));
+    return Promise.resolve(new Response(JSON.stringify(saved), { status: 200 }));
   }
 
   return Promise.resolve(new Response('{}', { status: 200 }));
