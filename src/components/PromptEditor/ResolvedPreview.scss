@@ -1,0 +1,62 @@
+/**
+ * Resolved prompt preview
+ * Shows the compiled text exactly as it will be copied.
+ */
+
+.resolved-preview {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 1rem 1rem;
+  @include mixins.custom-scrollbar();
+
+  .resolved-preview-note {
+    margin: 0 0 0.75rem;
+    padding: 0.4rem 0.6rem;
+    border-left: 3px solid colors.$warning-color;
+    background-color: rgba(255, 255, 255, 0.04);
+    color: colors.$light-gray;
+    font-size: typography.$font-size-sm;
+  }
+
+  .resolved-preview-text {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: typography.$primary-font;
+    font-size: typography.$font-size-sm;
+    line-height: 1.5;
+    color: colors.$text-color;
+  }
+
+  .resolved-preview-empty {
+    color: colors.$light-gray;
+    font-size: typography.$font-size-sm;
+    font-style: italic;
+  }
+}
+
+// Source | Preview switch above the editor body
+.editor-view-toggle {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0 1rem 0.5rem;
+
+  button {
+    padding: 0.25rem 0.75rem;
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    color: colors.$light-gray;
+    cursor: pointer;
+    font-size: typography.$font-size-sm;
+
+    &:hover {
+      color: colors.$text-color;
+    }
+
+    &.active {
+      border-color: colors.$accent-color;
+      color: colors.$accent-color;
+    }
+  }
+}

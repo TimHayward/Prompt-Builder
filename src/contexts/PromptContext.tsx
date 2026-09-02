@@ -31,7 +31,6 @@ type PromptContextType = {
   toggleSectionOpen: (promptId: string, sectionId: string) => void;
   deletePrompt: (promptId: string) => void;
   updateSectionFromLinkedComponent: (promptId: string, sectionId: string, component: ComponentType) => void;
-  getCompiledPromptText: (promptId: string) => string;
   addSectionAtIndex: (promptId: string, section: Section, index: number) => void;
   addSectionFromComponent: (promptId: string, componentData: ComponentType, index: number) => void;
   addNewSectionForEditing: (promptId: string) => void;
@@ -60,7 +59,6 @@ const PromptContext = createContext<PromptContextType>({
   toggleSectionOpen: () => {},
   deletePrompt: () => {},
   updateSectionFromLinkedComponent: () => {},
-  getCompiledPromptText: () => "",
   addSectionAtIndex: () => {},
   addSectionFromComponent: () => {},
   addNewSectionForEditing: () => {},
@@ -516,13 +514,6 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     }));
   }, [mutatePrompt]);
 
-  const getCompiledPromptText = useCallback((promptId: string): string => {
-    const prompt = promptsRef.current.find(p => p.id === promptId);
-    if (!prompt) return "";
-    // Simple compilation for now, can be expanded
-    return prompt.sections.map(s => `# ${s.type}: ${s.name}\n${s.content}`).join('\n\n');
-  }, [promptsRef]);
-
   const addSectionAtIndex = useCallback((promptId: string, section: Section, index: number) => {
     mutatePrompt(promptId, prompt => {
       const newSections = [...prompt.sections];
@@ -599,7 +590,6 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
         toggleSectionOpen,
         deletePrompt,
         updateSectionFromLinkedComponent,
-        getCompiledPromptText,
         addSectionAtIndex,
         addSectionFromComponent,
         addNewSectionForEditing,

@@ -8,7 +8,8 @@
 import React from "react";
 import { usePromptContext } from "@/contexts/PromptContext";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
-import { buildPromptText } from "@/utils/promptText";
+import { compilePrompt } from "@/utils/compilePrompt";
+import { useToast } from "@/contexts/ToastContext";
 import { useClipboard } from "@/hooks/useClipboard";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -29,6 +30,7 @@ const ActionBar: React.FC<ActionBarProps> = ({
   const { prompts, addNewSectionForEditing } = usePromptContext();
   const { getWorkingValues } = useWorkspaceContext();
   const { copyToClipboard, status, isSupported } = useClipboard();
+  const { showToast } = useToast();
 
   // Copy prompt to clipboard
   const copyPrompt = async () => {
@@ -39,14 +41,23 @@ const ActionBar: React.FC<ActionBarProps> = ({
     if (!activePrompt) return;
 
     // The resolved prompt is the source with this use's working values applied.
-    const promptText = buildPromptText({
+    const { text, unresolved } = compilePrompt({
       sections: activePrompt.sections,
-      variables: getWorkingValues(activePromptId),
+      values: getWorkingValues(activePromptId),
       systemPrompt,
       markdownEnabled,
     });
 
-    await copyToClipboard(promptText);
+    const copied = await copyToClipboard(text);
+
+    // Said after the fact rather than blocking the copy: a prompt with blanks
+    // is often exactly what someone wants to paste and fill in elsewhere.
+    if (copied && unresolved.length > 0) {
+      showToast(
+        `Copied. ${unresolved.length === 1 ? 'One variable was' : `${unresolved.length} variables were`} left empty: ${unresolved.join(', ')}.`,
+        'success'
+      );
+    }
   };
 
   // Determine button content based on status

@@ -8,9 +8,11 @@
 import React, { useState, DragEvent, useRef, useEffect } from "react";
 import { usePromptContext } from "../../contexts/PromptContext";
 import { useAppContext } from "../../contexts/AppContext";
+import { useWorkspaceContext } from "../../contexts/WorkspaceContext";
 import Section from "./Section";
 import PromptTabs from "./PromptTabs";
 import ActionBar from "./ActionBar";
+import ResolvedPreview from "./ResolvedPreview";
 import "./PromptEditor.scss";
 import { ComponentType as ComponentNodeType, Section as SectionType } from "../../types";
 import { v4 as uuidv4 } from 'uuid'; // Import uuidv4 at the top of the file
@@ -30,6 +32,11 @@ const PromptEditor: React.FC = () => {
   } = usePromptContext();
   
   const { settings } = useAppContext();
+  const { getWorkingValues } = useWorkspaceContext();
+
+  // Which half of the editor is showing: the prompt as written, or as it will
+  // be copied.
+  const [view, setView] = useState<"source" | "preview">("source");
   const sectionNameInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const mainTitleInputRef = useRef<HTMLInputElement>(null);
   
@@ -282,6 +289,33 @@ const PromptEditor: React.FC = () => {
         </div>
       )}
 
+      {/* Source or the resolved text that Copy will produce */}
+      <div className="editor-view-toggle">
+        <button
+          className={view === "source" ? "active" : ""}
+          onClick={() => setView("source")}
+        >
+          Source
+        </button>
+        <button
+          className={view === "preview" ? "active" : ""}
+          onClick={() => setView("preview")}
+        >
+          Preview
+        </button>
+      </div>
+
+      {view === "preview" && activePrompt && (
+        <ResolvedPreview
+          sections={activePrompt.sections}
+          values={getWorkingValues(activePrompt.id)}
+          systemPrompt={settings.systemPrompt}
+          markdownEnabled={settings.markdownPromptingEnabled}
+        />
+      )}
+
+      {view === "source" && (
+      <>
       {/* Sections */}
       <div 
         className="sections-container"
@@ -327,6 +361,9 @@ const PromptEditor: React.FC = () => {
           />
         ))}
       </div>
+
+      </>
+      )}
 
     {/* Action bar with copy buttons */}
     <ActionBar 

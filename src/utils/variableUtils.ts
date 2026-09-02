@@ -157,24 +157,42 @@ export const extractVariablesFromSections = (
   sections: Array<{ content: string }> | undefined
 ): string[] => extractVariableSpecsFromSections(sections).map(spec => spec.key);
 
+export type ResolvedText = {
+  text: string;
+  /** Keys that had no value, in order of first appearance. */
+  unresolved: string[];
+};
+
 /**
- * Replaces variable values in text
+ * Substitutes variable values into text
  *
  * Scans the tokens rather than rebuilding them from the names, so variable names
  * containing regex metacharacters are inert and `{{ tone }}` substitutes just
  * like `{{tone}}`.
  *
+ * A variable with no value resolves to nothing, whether it was never given one
+ * or was given an empty one: the same intent should not produce two different
+ * outputs. The names are reported back so a caller can say what was left blank.
+ *
  * @param text - The text containing variables
- * @param variables - Object mapping variable names to their values
- * @returns Text with variables replaced with their values
+ * @param values - Working values, keyed by variable
  */
-export const replaceVariables = (
+export const resolveVariables = (
   text: string,
-  variables: Record<string, string>
-): string =>
-  text.replace(VARIABLE_TOKEN_REGEX, (match, inner: string) => {
+  values: Record<string, string>
+): ResolvedText => {
+  const unresolved: string[] = [];
+
+  const resolved = text.replace(VARIABLE_TOKEN_REGEX, (match, inner: string) => {
     const spec = parseVariableToken(inner);
     if (!spec) return match; // Reserved token, leave it alone
-    // An unknown variable stays as-is; a known but empty one drops out
-    return spec.key in variables ? (variables[spec.key] || '') : match;
+
+    const value = values[spec.key];
+    if (value) return value;
+
+    if (!unresolved.includes(spec.key)) unresolved.push(spec.key);
+    return '';
   });
+
+  return { text: resolved, unresolved };
+};

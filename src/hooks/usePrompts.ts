@@ -15,7 +15,6 @@ export const usePrompts = () => {
     activePromptId,
     addSectionToPrompt,
     updateSection,
-    getCompiledPromptText
   } = usePromptContext();
   
   const { findComponentById } = useTreeData();
@@ -56,32 +55,6 @@ export const usePrompts = () => {
       originalContent: component.content
     });
   }, [findComponentById, addSectionToPrompt, updateSection]);
-
-  /**
-   * Copy a prompt to the clipboard
-   * @param promptId ID of the prompt to copy
-   * @param includeSystemPrompt Whether to include the system prompt
-   * @param systemPrompt System prompt text to include
-   * @returns Promise resolving to true if successful, false otherwise
-   */
-  const copyPromptToClipboard = useCallback((
-    promptId: string, 
-    includeSystemPrompt = false,
-    systemPrompt = ""
-  ): Promise<boolean> => {
-    const promptText = getCompiledPromptText(promptId);
-    const finalText = includeSystemPrompt && systemPrompt
-      ? `${systemPrompt}
-
-${promptText}`
-      : promptText;
-      
-    if (!finalText) return Promise.resolve(false);
-    
-    return navigator.clipboard.writeText(finalText)
-      .then(() => true)
-      .catch(() => false);
-  }, [getCompiledPromptText]);
 
   /**
    * Check if a section needs to be updated from its linked component
@@ -156,7 +129,6 @@ ${promptText}`
   return {
     getActivePrompt,
     createSectionFromComponent,
-    copyPromptToClipboard,
     sectionNeedsUpdate,
     saveSectionToComponentLibrary,
   };

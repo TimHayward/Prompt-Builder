@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractVariableSpecs, parseVariableToken, replaceVariables } from '@/utils/variableUtils';
+import { extractVariableSpecs, parseVariableToken, resolveVariables } from '@/utils/variableUtils';
 
 describe('parseVariableToken', () => {
   it('reads a choice list', () => {
@@ -43,41 +43,59 @@ describe('whitespace and punctuation', () => {
   });
 
   it('substitutes a spaced token', () => {
-    expect(replaceVariables('Send by {{ tone }}', { tone: 'email' })).toBe('Send by email');
+    expect(resolveVariables('Send by {{ tone }}', { tone: 'email' }).text).toBe('Send by email');
   });
 
   it('treats a token whose name contains regex metacharacters as literal text', () => {
     const text = 'Cost {{price (in $)}} today';
 
     expect(parseVariableToken('price (in $)')?.key).toBe('price (in $)');
-    expect(replaceVariables(text, { 'price (in $)': '£4' })).toBe('Cost £4 today');
+    expect(resolveVariables(text, { 'price (in $)': '£4' }).text).toBe('Cost £4 today');
   });
 
   it('ignores reserved tokens such as component references', () => {
     expect(parseVariableToken('> Component Name')).toBeNull();
-    expect(replaceVariables('Keep {{> Component}}', {})).toBe('Keep {{> Component}}');
+    expect(resolveVariables('Keep {{> Component}}', {}).text).toBe('Keep {{> Component}}');
   });
 });
 
 describe('values', () => {
   it('drops a known variable whose value is empty', () => {
-    expect(replaceVariables('Tone: {{tone}}!', { tone: '' })).toBe('Tone: !');
+    expect(resolveVariables('Tone: {{tone}}!', { tone: '' }).text).toBe('Tone: !');
   });
 
-  it('leaves an unknown variable in place', () => {
-    expect(replaceVariables('Hello {{name}}', { other: 'x' })).toBe('Hello {{name}}');
+  it('resolves a variable with no value to nothing, and reports it', () => {
+    // Never given a value and given an empty one are the same intent, so they
+    // produce the same text rather than one leaving {{braces}} behind.
+    const never = resolveVariables('Hello {{name}}', { other: 'x' });
+    const emptied = resolveVariables('Hello {{name}}', { name: '' });
+
+    expect(never.text).toBe('Hello ');
+    expect(emptied.text).toBe('Hello ');
+    expect(never.unresolved).toEqual(['name']);
+    expect(emptied.unresolved).toEqual(['name']);
+  });
+
+  it('reports each blank variable once, in the order they appear', () => {
+    const { unresolved } = resolveVariables('{{b}} {{a}} {{b}}', {});
+
+    expect(unresolved).toEqual(['b', 'a']);
+  });
+
+  it('reports nothing when every variable has a value', () => {
+    expect(resolveVariables('Hi {{name}}', { name: 'Tim' }).unresolved).toEqual([]);
   });
 
   it('replaces every occurrence of the same variable', () => {
-    expect(replaceVariables('{{a}} and {{a}}', { a: 'x' })).toBe('x and x');
+    expect(resolveVariables('{{a}} and {{a}}', { a: 'x' }).text).toBe('x and x');
   });
 
   it('substitutes a choice variable by its key, not its chosen option', () => {
-    expect(replaceVariables('Use {{mail/teams}}', { 'mail/teams': 'teams' })).toBe('Use teams');
+    expect(resolveVariables('Use {{mail/teams}}', { 'mail/teams': 'teams' }).text).toBe('Use teams');
   });
 
   it('accepts a custom value that is not one of the choices', () => {
-    expect(replaceVariables('Use {{mail/teams}}', { 'mail/teams': 'carrier pigeon' })).toBe(
+    expect(resolveVariables('Use {{mail/teams}}', { 'mail/teams': 'carrier pigeon' }).text).toBe(
       'Use carrier pigeon'
     );
   });
@@ -92,10 +110,10 @@ describe('extractVariableSpecs', () => {
   });
 });
 
-describe('replaceVariables', () => {
+describe('resolveVariables', () => {
   it('substitutes a repeated-choice token by its key', () => {
     const text = 'Pick {{Variables: VariableOne/VariableTwo/VariableOne}}';
 
-    expect(replaceVariables(text, { Variables: 'VariableTwo' })).toBe('Pick VariableTwo');
+    expect(resolveVariables(text, { Variables: 'VariableTwo' }).text).toBe('Pick VariableTwo');
   });
 });
