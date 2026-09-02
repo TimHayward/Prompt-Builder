@@ -28,30 +28,22 @@ type AppContextType = {
   updateSettings: (newSettings: Partial<Settings>) => void;
   isSettingsModalOpen: boolean;
   setSettingsModalOpen: (open: boolean) => void;
-  isCommunityModalOpen: boolean;
-  setCommunityModalOpen: (open: boolean) => void;
   importPromptPayload: { filename: string; content: string } | null;
   setImportPromptPayload: (payload: { filename: string; content: string } | null) => void;
   appInitialized: boolean;
 };
 
-// Create context with default values
-const AppContext = createContext<AppContextType>({
-  appName: "Prompt Builder",
-  appVersion: "1.0.0",
-  settings: DEFAULT_SETTINGS,
-  updateSettings: () => {},
-  isSettingsModalOpen: false,
-  setSettingsModalOpen: () => {},
-  isCommunityModalOpen: false,
-  setCommunityModalOpen: () => {},
-  importPromptPayload: null,
-  setImportPromptPayload: () => {},
-  appInitialized: false,
-});
+// No default value: a component rendered outside the provider should say so,
+// rather than reading plausible-looking settings that are never saved.
+const AppContext = createContext<AppContextType | null>(null);
 
-// Hook for using this context
-export const useAppContext = () => useContext(AppContext);
+export const useAppContext = (): AppContextType => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useAppContext must be used within an AppProvider');
+  }
+  return context;
+};
 
 // Provider component
 type AppProviderProps = {
@@ -61,7 +53,6 @@ type AppProviderProps = {
 export const AppProvider = ({ children }: AppProviderProps) => {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
-  const [isCommunityModalOpen, setCommunityModalOpen] = useState(false);
   const [importPromptPayload, setImportPromptPayload] = useState<{ filename: string; content: string } | null>(null);
   const [appInitialized, setAppInitialized] = useState(false);
   const { showToast } = useToast();
@@ -138,8 +129,6 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         updateSettings,
         isSettingsModalOpen,
         setSettingsModalOpen,
-        isCommunityModalOpen,
-        setCommunityModalOpen,
         importPromptPayload,
         setImportPromptPayload,
         appInitialized,

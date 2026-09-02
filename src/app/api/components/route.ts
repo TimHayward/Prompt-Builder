@@ -3,7 +3,7 @@
  * Handles fetching all component/folder items and saving the client's tree.
  */
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db'; // SQLite database instance
+import { db } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { FolderType, ComponentType, TreeNode } from '@/types';
 import { saveLibraryRequestSchema } from '@/types/contracts';

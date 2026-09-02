@@ -16,7 +16,7 @@ import ResolvedPreview from "./ResolvedPreview";
 import SaveStateIndicator from "./SaveStateIndicator";
 import "./PromptEditor.scss";
 import { ComponentType as ComponentNodeType, Section as SectionType } from "../../types";
-import { v4 as uuidv4 } from 'uuid'; // Import uuidv4 at the top of the file
+import { v4 as uuidv4 } from 'uuid';
 
 const PromptEditor: React.FC = () => {
   const { 
@@ -25,10 +25,10 @@ const PromptEditor: React.FC = () => {
     setActivePromptId,
     addPrompt, 
     addSectionAtIndex,
-    moveSectionToIndex, // Added from context
+    moveSectionToIndex,
     newlyAddedSectionIdForFocus,
     clearNewlyAddedSectionIdForFocus,
-    updatePromptName, // Added from context
+    updatePromptName,
     getPromptVariableNames,
   } = usePromptContext();
   
@@ -46,7 +46,7 @@ const PromptEditor: React.FC = () => {
   const [activePromptTitleValue, setActivePromptTitleValue] = useState("");
 
   // Track editing state for prompt names (for tabs)
-  const [editingPromptName, setEditingPromptName] = useState<string | null>(null); // Ensure this is string | null
+  const [editingPromptName, setEditingPromptName] = useState<string | null>(null);
   const [editingPromptNameValue, setEditingPromptNameValue] = useState("");
 
   // State for drag and drop indicator

@@ -1,10 +1,10 @@
 # Prompt Builder 🧩
 The Modular Prompting Tool - Drag, drop, and assemble reusable prompt components to streamline your workflow!
 
-![Demo Video](Demo.gif)
+_A demo recording is attached to the [latest release](https://github.com/TimHayward/Prompt-Builder/releases); it lived in the repository as a 31 MB GIF until it was moved out._
 
-## Component Prompting Documenation
-https://docs.google.com/document/d/1eql1d57SB1DtiW8bkQswjnqmxsSl6Ken-96tjSLdG9k/edit?tab=t.0
+## Documentation
+https://github.com/TimHayward/Prompt-Builder
 
 ## Getting Started (Self-Hosted) 🚀
 

@@ -46,7 +46,7 @@ export const getAllComponentsFromFolder = (node: TreeNode): ComponentType[] => {
  */
 export const updateFolderInTree = (
   tree: FolderType[],
-  folderId: string, // Changed from number
+  folderId: string,
   newData: Partial<FolderType>
 ): FolderType[] => {
   return tree.map((node) => {
@@ -74,7 +74,7 @@ export const updateFolderInTree = (
  */
 export const insertNode = (
   tree: FolderType[],
-  parentId: string, // Changed from number
+  parentId: string,
   newNode: TreeNode
 ): FolderType[] => {
   return tree.map((node) => {
@@ -124,8 +124,8 @@ export const removeNode = (tree: FolderType[], nodeId: string): FolderType[] => 
  */
 export const moveNodeInTree = (
   tree: FolderType[],
-  draggedNodeId: string, // Changed from number
-  targetFolderId: string // Changed from number
+  draggedNodeId: string,
+  targetFolderId: string
 ): FolderType[] => {
   let nodeToMove: TreeNode | null = null;
   const updatedTree = JSON.parse(JSON.stringify(tree)); // Deep clone

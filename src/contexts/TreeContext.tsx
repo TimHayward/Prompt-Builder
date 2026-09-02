@@ -6,8 +6,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from "react";
 import { TreeNode, FolderType, ComponentType } from "../types";
 import { v4 as uuidv4 } from 'uuid';
-// import { supabase } from '../lib/supabaseClient'; // REMOVED
-// import { useAuth } from './AuthContext'; // REMOVED
 import { useAppContext } from './AppContext';
 import { useToast } from './ToastContext';
 import { useSaveState } from './SaveStateContext';
@@ -24,7 +22,7 @@ import {
   moveNodeDown,
   findNodeById as findNodeByIdUtil,
   updateNodeById,
-  normalizeExpansionState // Added
+  normalizeExpansionState
 } from "../utils/treeUtils";
 import { debounce } from "../utils/debounce";
 
@@ -61,28 +59,17 @@ type TreeContextType = {
   handleToggleFolderExpand: (folderId: string) => void;
 };
 
-// Create context with default values
-const TreeContext = createContext<TreeContextType>({
-  treeData: INITIAL_TREE_DATA, 
-  setTreeData: () => {},
-  selectedNode: null,
-  setSelectedNode: () => {},
-  isComponentModalOpen: false,
-  setComponentModalOpen: () => {},
-  componentBeingEdited: null,
-  setComponentBeingEdited: () => {},
-  handleAddFolder: () => {},
-  handleAddComponent: () => {},
-  handleUpdateComponent: () => {},
-  handleDeleteNode: () => {},
-  handleNodeDrop: () => {},
-  handleMoveNodeUp: () => {},
-  handleMoveNodeDown: () => {},
-  isTreeLoading: true,
-  handleToggleFolderExpand: () => {},
-});
+// No default value: the old one handed back an empty tree and silent no-ops,
+// which looks like an empty library rather than a missing provider.
+const TreeContext = createContext<TreeContextType | null>(null);
 
-export const useTreeContext = () => useContext(TreeContext);
+export const useTreeContext = (): TreeContextType => {
+  const context = useContext(TreeContext);
+  if (!context) {
+    throw new Error('useTreeContext must be used within a TreeProvider');
+  }
+  return context;
+};
 
 type TreeProviderProps = {
   children: ReactNode;
@@ -96,7 +83,6 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
   const { appInitialized } = useAppContext();
   const { showToast } = useToast();
   const saveState = useSaveState();
-  // const { user } = useAuth(); // REMOVED
   const [isTreeLoading, setIsTreeLoading] = useState<boolean>(true);
 
   // The debounced saver is built once, so it reaches the toast through a ref.

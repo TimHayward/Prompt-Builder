@@ -25,17 +25,17 @@ interface TreeNodeProps {
   level: number;
   selectedNode: TreeNode | null;
   setSelectedNode: (node: TreeNode) => void;
-  isAddingFolder: string | null; // Changed from number | null
+  isAddingFolder: string | null;
   newFolderName: string;
   setNewFolderName: (name: string) => void;
   newFolderInputRef: React.RefObject<HTMLInputElement>;
   handleKeyDown: (e: React.KeyboardEvent) => void;
   submitNewFolder: () => void;
-  startAddFolder: (folderId: string) => void; // Changed from number
-  openAddComponentModal: (folderId: string) => void; // Changed from number
+  startAddFolder: (folderId: string) => void;
+  openAddComponentModal: (folderId: string) => void;
   openEditComponentModal: (component: TreeNode) => void;
-  handleDeleteNode: (nodeId: string) => void; // Changed from number
-  handleToggleFolderExpand: (folderId: string) => void; // Added
+  handleDeleteNode: (nodeId: string) => void;
+  handleToggleFolderExpand: (folderId: string) => void;
   handleMoveNodeUp: (nodeId: string) => void;
   handleMoveNodeDown: (nodeId: string) => void;
 }
@@ -55,7 +55,7 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
   openAddComponentModal,
   openEditComponentModal,
   handleDeleteNode,
-  handleToggleFolderExpand, // Added
+  handleToggleFolderExpand,
   handleMoveNodeUp,
   handleMoveNodeDown,
 }) => {

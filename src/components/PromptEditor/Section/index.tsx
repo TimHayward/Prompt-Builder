@@ -11,7 +11,7 @@ import { usePromptContext } from "@/contexts/PromptContext";
 import { useTreeContext } from "@/contexts/TreeContext";
 import SectionHeader from "./SectionHeader";
 import HighlightedTextarea from "@/components/HighlightedTextarea";
-import { usePrompts } from "@/hooks/usePrompts"; // Added
+import { usePrompts } from "@/hooks/usePrompts";
 import { getTypeColor } from "@/lib/frameworks";
 
 interface SectionProps {

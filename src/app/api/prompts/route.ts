@@ -3,9 +3,10 @@
  * Handles fetching all prompts and creating new prompts.
  */
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db'; // SQLite database instance
+import { db } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { createPromptRequestSchema } from '@/types/contracts';
+import { toPrompt, type PromptRow } from '@/lib/promptRows';
 import { errorResponse, parseRequestBody } from '@/lib/apiValidation';
 
 /**
@@ -23,15 +24,9 @@ export async function GET() {
             FROM prompts
             ORDER BY num IS NULL, num, created_at, id
         `);
-        const promptsRaw = stmt.all() as any[];
+        const rows = stmt.all() as PromptRow[];
 
-        const prompts = promptsRaw.map(prompt => ({
-            ...prompt,
-            sections: prompt.sections ? JSON.parse(prompt.sections) : [],
-            variables: prompt.variables ? JSON.parse(prompt.variables) : {},
-        }));
-
-        return NextResponse.json(prompts);
+        return NextResponse.json(rows.map(toPrompt));
     } catch (error) {
         console.error('Error fetching prompts:', error);
         return errorResponse('Failed to fetch prompts', 500);
@@ -64,14 +59,10 @@ export async function POST(request: Request) {
             SELECT id, name, sections, COALESCE(variables, '{}') as variables, num, created_at, updated_at 
             FROM prompts WHERE id = ?
         `);
-        const newPrompt = newPromptStmt.get(newPromptId) as any;
+        const newPrompt = newPromptStmt.get(newPromptId) as PromptRow | undefined;
 
         if (newPrompt) {
-            return NextResponse.json({ 
-                ...newPrompt, 
-                sections: JSON.parse(newPrompt.sections),
-                variables: JSON.parse(newPrompt.variables),
-            }, { status: 201 });
+            return NextResponse.json(toPrompt(newPrompt), { status: 201 });
         } else {
             // Should not happen if insert was successful
             return errorResponse('Failed to create prompt or retrieve it after creation', 500);

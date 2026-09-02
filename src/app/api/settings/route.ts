@@ -3,8 +3,8 @@
  * Handles fetching and updating application settings and active prompt ID.
  */
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db'; // SQLite database instance
-import { Settings } from '@/types'; // Assuming Settings type is defined
+import { db } from '@/lib/db';
+import { Settings } from '@/types';
 import { updateSettingsRequestSchema } from '@/types/contracts';
 import { errorResponse, parseRequestBody } from '@/lib/apiValidation';
 

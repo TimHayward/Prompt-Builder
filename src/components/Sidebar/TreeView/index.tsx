@@ -13,18 +13,18 @@ interface TreeViewProps {
   treeData: FolderType[];
   selectedNode: TreeNode | null;
   setSelectedNode: (node: TreeNode) => void;
-  isAddingFolder: string | null; // Changed from number | null
+  isAddingFolder: string | null;
   newFolderName: string;
   setNewFolderName: (name: string) => void;
   // Use a more accurate type that matches what useRef returns
   newFolderInputRef: React.RefObject<HTMLInputElement>;
   handleKeyDown: (e: React.KeyboardEvent) => void;
   submitNewFolder: () => void;
-  startAddFolder: (folderId: string) => void; // Changed from number
-  openAddComponentModal: (folderId: string) => void; // Changed from number
+  startAddFolder: (folderId: string) => void;
+  openAddComponentModal: (folderId: string) => void;
   openEditComponentModal: (component: TreeNode) => void;
-  handleDeleteNode: (nodeId: string) => void; // Changed from number
-  handleToggleFolderExpand: (folderId: string) => void; // Added
+  handleDeleteNode: (nodeId: string) => void;
+  handleToggleFolderExpand: (folderId: string) => void;
   handleMoveNodeUp: (nodeId: string) => void;
   handleMoveNodeDown: (nodeId: string) => void;
 }
@@ -43,7 +43,7 @@ const TreeView: React.FC<TreeViewProps> = ({
   openAddComponentModal,
   openEditComponentModal,
   handleDeleteNode,
-  handleToggleFolderExpand, // Added
+  handleToggleFolderExpand,
   handleMoveNodeUp,
   handleMoveNodeDown,
 }) => {
@@ -66,7 +66,7 @@ const TreeView: React.FC<TreeViewProps> = ({
           openAddComponentModal={openAddComponentModal} // Propagating (folderId: string) => void
           openEditComponentModal={openEditComponentModal}
           handleDeleteNode={handleDeleteNode} // Propagating (nodeId: string) => void
-          handleToggleFolderExpand={handleToggleFolderExpand} // Added
+          handleToggleFolderExpand={handleToggleFolderExpand}
           handleMoveNodeUp={handleMoveNodeUp}
           handleMoveNodeDown={handleMoveNodeDown}
         />

@@ -3,8 +3,9 @@
  * Handles fetching, updating, and deleting a single prompt by its ID.
  */
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db'; // SQLite database instance
+import { db } from '@/lib/db';
 import { updatePromptRequestSchema } from '@/types/contracts';
+import { toPrompt, type PromptRow } from '@/lib/promptRows';
 import { errorResponse, parseRequestBody } from '@/lib/apiValidation';
 
 interface RouteParams {
@@ -25,15 +26,10 @@ export async function GET(request: Request, { params }: RouteParams) {
             SELECT id, name, sections, COALESCE(variables, '{}') as variables, num, created_at, updated_at 
             FROM prompts WHERE id = ?
         `);
-        const promptRaw = stmt.get(id) as any;
+        const row = stmt.get(id) as PromptRow | undefined;
 
-        if (promptRaw) {
-            const prompt = {
-                ...promptRaw,
-                sections: promptRaw.sections ? JSON.parse(promptRaw.sections) : [],
-                variables: promptRaw.variables ? JSON.parse(promptRaw.variables) : {},
-            };
-            return NextResponse.json(prompt);
+        if (row) {
+            return NextResponse.json(toPrompt(row));
         } else {
             return errorResponse('Prompt not found', 404);
         }
@@ -88,19 +84,15 @@ export async function PUT(request: Request, { params }: RouteParams) {
             SELECT id, name, sections, COALESCE(variables, '{}') as variables, num, created_at, updated_at 
             FROM prompts WHERE id = ?
         `);
-        const updatedPromptRaw = updatedPromptStmt.get(id) as any;
-        
+        const updatedPromptRaw = updatedPromptStmt.get(id) as PromptRow | undefined;
+
         if (!updatedPromptRaw) {
             // Should not happen if update was successful and ID is correct
             console.error(`Failed to retrieve updated prompt ${id} after update.`);
             return errorResponse('Failed to retrieve prompt after update', 500);
         }
         
-        return NextResponse.json({ 
-            ...updatedPromptRaw, 
-            sections: JSON.parse(updatedPromptRaw.sections),
-            variables: JSON.parse(updatedPromptRaw.variables),
-        });
+        return NextResponse.json(toPrompt(updatedPromptRaw));
 
     } catch (error) {
         console.error(`Error updating prompt ${id}:`, error);

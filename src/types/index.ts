@@ -8,7 +8,7 @@ export type { SectionTypeValue };
 
 // Component types for the sidebar tree
 export type ComponentType = {
-  id: string; // Changed from number
+  id: string;
   name: string;
   type: "component";
   content: string;
@@ -17,11 +17,11 @@ export type ComponentType = {
 
 // Folder type for the sidebar tree
 export type FolderType = {
-  id: string; // Changed from number
+  id: string;
   name: string;
   type: "folder";
   children: (FolderType | ComponentType)[];
-  expanded: boolean; // New property
+  expanded: boolean;
 };
 
 // Union type for items in the tree
@@ -32,7 +32,7 @@ export type TreeNode = FolderType | ComponentType;
  * nothing about how the editor is displaying it belongs here.
  */
 export type StoredSection = {
-  id: string; // Changed from number
+  id: string;
   name: string;
   content: string;
   type: SectionTypeValue;
@@ -65,7 +65,7 @@ export type Section = StoredSection & SectionUiState;
 
 // Prompt type containing sections
 export type Prompt = {
-  id: string; // Changed from number
+  id: string;
   /** Ordering position. Nullable in the database, so nullable here too. */
   num: number | null;
   name: string;

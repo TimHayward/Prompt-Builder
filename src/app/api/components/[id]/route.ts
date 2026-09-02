@@ -3,8 +3,9 @@
  * Handles fetching, updating, and deleting a single item from component_library by its ID.
  */
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db'; // SQLite database instance
+import { db } from '@/lib/db';
 import { FolderType, ComponentType } from '@/types';
+import { toComponentResponse, type ComponentRow } from '@/lib/promptRows';
 import { errorResponse } from '@/lib/apiValidation';
 
 interface RouteParams {
@@ -21,19 +22,10 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     try {
         const stmt = db.prepare('SELECT id, parent_id, name, item_type, content, component_type, is_expanded, created_at, updated_at FROM component_library WHERE id = ?');
-        const itemRaw = stmt.get(id) as any;
+        const row = stmt.get(id) as ComponentRow | undefined;
 
-        if (itemRaw) {
-            const item = {
-                ...itemRaw,
-                // Ensure is_expanded is boolean for folders, and not present/null for components
-                ...(itemRaw.item_type === 'folder' && {
-                    expanded: itemRaw.is_expanded === 1,
-                    // children: [] // GET by id doesn't typically fetch children unless specified
-                }),
-            };
-            delete item.is_expanded; // Remove the original is_expanded after processing
-            return NextResponse.json(item);
+        if (row) {
+            return NextResponse.json(toComponentResponse(row));
         } else {
             return errorResponse('Item not found', 404);
         }
@@ -141,17 +133,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
         // Retrieve the updated item to return it
         const updatedItemStmt = db.prepare('SELECT id, parent_id, name, item_type, content, component_type, is_expanded, created_at, updated_at FROM component_library WHERE id = ?');
-        const updatedItemRaw = updatedItemStmt.get(id) as any;
+        const updatedRow = updatedItemStmt.get(id) as ComponentRow | undefined;
 
-        if (updatedItemRaw) {
-            const responseItem = {
-                ...updatedItemRaw,
-                ...(updatedItemRaw.item_type === 'folder' && {
-                    expanded: updatedItemRaw.is_expanded === 1,
-                }),
-            };
-            delete responseItem.is_expanded;
-            return NextResponse.json(responseItem);
+        if (updatedRow) {
+            return NextResponse.json(toComponentResponse(updatedRow));
         } else {
             // Should not happen if update was successful and item existed
             return errorResponse('Failed to retrieve updated item', 500);

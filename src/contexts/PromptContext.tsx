@@ -18,7 +18,6 @@ import { extractVariablesFromSections, extractVariableSpecsFromSections, Variabl
 // Context type definition
 type PromptContextType = {
   prompts: Prompt[];
-  setPrompts: React.Dispatch<React.SetStateAction<Prompt[]>>;
   activePromptId: string | null;
   setActivePromptId: React.Dispatch<React.SetStateAction<string | null>>;
   addPrompt: (name?: string, options?: { sections?: Section[]; variables?: Record<string, string> }) => Promise<Prompt>;
@@ -43,36 +42,17 @@ type PromptContextType = {
   isPromptsLoading: boolean;
 };
 
-// Create context with default values
-const PromptContext = createContext<PromptContextType>({
-  prompts: [],
-  setPrompts: () => {},
-  activePromptId: null,
-  setActivePromptId: () => {},
-  addPrompt: () => Promise.resolve({ id: uuidv4(), num: 0, name: "", sections: [] }),
-  duplicatePrompt: () => Promise.resolve(null),
-  addSectionToPrompt: () => undefined,
-  updateSection: () => {},
-  deleteSection: () => {},
-  moveSectionUp: () => {},
-  moveSectionDown: () => {},
-  moveSectionToIndex: () => {},
-  toggleSectionOpen: () => {},
-  deletePrompt: () => {},
-  updateSectionFromLinkedComponent: () => {},
-  addSectionAtIndex: () => {},
-  addSectionFromComponent: () => {},
-  addNewSectionForEditing: () => {},
-  newlyAddedSectionIdForFocus: null,
-  clearNewlyAddedSectionIdForFocus: () => {},
-  updatePromptName: () => {},
-  getPromptVariableNames: () => [],
-  getPromptVariableSpecs: () => [],
-  isPromptsLoading: true, // Default to true
-});
+// No default value: the previous one answered every call with a no-op, so a
+// component outside the provider silently did nothing instead of failing.
+const PromptContext = createContext<PromptContextType | null>(null);
 
-// Hook for using this context
-export const usePromptContext = () => useContext(PromptContext);
+export const usePromptContext = (): PromptContextType => {
+  const context = useContext(PromptContext);
+  if (!context) {
+    throw new Error('usePromptContext must be used within a PromptProvider');
+  }
+  return context;
+};
 
 // Provider component
 type PromptProviderProps = {
@@ -100,7 +80,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
   const showToastRef = useRef(showToast);
   const saveStateRef = useRef(saveState);
 
-  // Catches state set outside commitPrompts (initial load, the exposed setPrompts).
+  // Catches state set outside commitPrompts, such as the initial load.
   useEffect(() => {
     promptsRef.current = prompts;
   }, [prompts]);
@@ -541,7 +521,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
       id: uuidv4(),
       name: componentData.name,
       content: componentData.content || '',
-      type: componentData.componentType || 'instruction', // Corrected: componentType
+      type: componentData.componentType || 'instruction',
       open: true,
       dirty: false,
       // Inserted as a copy: the origin is remembered, but later edits to the
@@ -590,7 +570,6 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     <PromptContext.Provider
       value={{
         prompts,
-        setPrompts,
         activePromptId,
         setActivePromptId,
         addPrompt,

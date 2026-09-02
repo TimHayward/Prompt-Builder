@@ -17,7 +17,7 @@ import ErrorIcon from '@mui/icons-material/Error';
 import AddIcon from '@mui/icons-material/Add';
 
 interface ActionBarProps {
-  activePromptId: string | null; // Changed from number
+  activePromptId: string | null;
   systemPrompt: string;
   markdownEnabled: boolean;
 }

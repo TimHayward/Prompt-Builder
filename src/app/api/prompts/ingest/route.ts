@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { db } from '@/lib/db';
 import { parsePromptMarkdown } from '@/utils/markdownParser';
 import { ingestPromptRequestSchema } from '@/types/contracts';
+import { toPrompt, type PromptRow } from '@/lib/promptRows';
 import { errorResponse, parseRequestBody } from '@/lib/apiValidation';
 
 export async function POST(request: Request) {
@@ -111,20 +112,13 @@ export async function POST(request: Request) {
         FROM prompts
         WHERE id = ?
       `)
-      .get(promptId) as any;
+      .get(promptId) as PromptRow | undefined;
 
     if (!promptRaw) {
       return errorResponse('Failed to retrieve prompt after upsert', 500);
     }
 
-    return NextResponse.json(
-      {
-        ...promptRaw,
-        sections: promptRaw.sections ? JSON.parse(promptRaw.sections) : [],
-        variables: promptRaw.variables ? JSON.parse(promptRaw.variables) : {},
-      },
-      { status: statusCode },
-    );
+    return NextResponse.json(toPrompt(promptRaw), { status: statusCode });
   } catch (error) {
     console.error('Error ingesting prompt:', error);
 

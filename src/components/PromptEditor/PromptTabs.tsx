@@ -10,17 +10,17 @@ import { Prompt } from "@/types";
 import { usePromptContext } from "@/contexts/PromptContext";
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy'; // Add this line
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 interface PromptTabsProps {
   prompts: Prompt[];
-  activePromptId: string | null; // Changed from number
-  setActivePromptId: (id: string) => void; // Changed from number
-  editingPromptName: string | null; // Changed from number
+  activePromptId: string | null;
+  setActivePromptId: (id: string) => void;
+  editingPromptName: string | null;
   editingPromptNameValue: string;
   setEditingPromptNameValue: (value: string) => void;
-  startEditingPromptName: (id: string, name: string) => void; // Changed from number
-  savePromptName: (id: string) => void; // Changed from number
+  startEditingPromptName: (id: string, name: string) => void;
+  savePromptName: (id: string) => void;
 }
 
 const PromptTabs: React.FC<PromptTabsProps> = ({
