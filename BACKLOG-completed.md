@@ -1053,3 +1053,65 @@ Add:
 
 
 **Completed:** 2026-09-02 · `eeb8b4f`
+
+---
+
+## F4. Add persistence regression tests
+
+**Priority:** P2  
+**Size:** M
+
+Cover:
+
+- reorder then reload
+- insert then reload
+- delete then reload
+- Prompt A and Prompt B edited inside debounce period
+
+**Completed:** 2026-09-02 · `0f3bfe6`
+
+---
+
+## F5. Add SQLite API integration tests
+
+**Priority:** P2  
+**Size:** M
+
+Use a temporary or isolated SQLite database.
+
+Cover prompt and component CRUD.
+
+
+**Completed:** 2026-09-02 · `0f3bfe6`
+
+---
+
+## G2. Add GitHub Actions CI
+
+Run:
+
+```text
+npm ci
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
+
+for every pull request.
+
+
+**Completed:** 2026-09-02 · `0f3bfe6`
+
+---
+
+## G6. Remove workstation-specific paths
+
+Remove comments containing local machine paths such as:
+
+```text
+C:\Users\...
+```
+
+
+**Completed:** 2026-09-02 · `0f3bfe6`

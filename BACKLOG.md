@@ -227,35 +227,6 @@ No routine prompt persistence path relies on untyped `any`.
 
 # F. P2 Automated Testing
 
-## F4. Add persistence regression tests
-
-**Priority:** P2  
-**Size:** M
-
-Cover:
-
-- reorder then reload
-- insert then reload
-- delete then reload
-- Prompt A and Prompt B edited inside debounce period
-
-### Remaining
-
-`tests/unit/promptPersistence.test.tsx` covers all four cases at the point of persistence — it asserts the payload each mutation sends, including two prompts edited inside one debounce window. What is left is the reload half: re-reading through the API and confirming the restored prompt matches, which needs the integration harness from [F5](#f5-add-sqlite-api-integration-tests).
-
----
-
-## F5. Add SQLite API integration tests
-
-**Priority:** P2  
-**Size:** M
-
-Use a temporary or isolated SQLite database.
-
-Cover prompt and component CRUD.
-
----
-
 ## F6. Add Playwright smoke tests
 
 **Priority:** P2  
@@ -277,22 +248,6 @@ Initial scenarios:
 ---
 
 # G. P2 CI and Repository Quality
-
-## G2. Add GitHub Actions CI
-
-Run:
-
-```text
-npm ci
-npm run lint
-npm run typecheck
-npm test
-npm run build
-```
-
-for every pull request.
-
----
 
 ## G3. Add dependency auditing
 
@@ -343,16 +298,6 @@ Removed
 Git history already records implementation changes.
 
 Comments should explain why behaviour exists.
-
----
-
-## G6. Remove workstation-specific paths
-
-Remove comments containing local machine paths such as:
-
-```text
-C:\Users\...
-```
 
 ---
 
