@@ -4,48 +4,16 @@
  *
  * Opens the better-sqlite3 connection on first use rather than at import, so
  * importing a route (as `next build` does when it collects page data) never
- * touches the database. The first query is what opens it, and a database that
- * is missing or unusable fails loudly there.
+ * touches the database. The first query is what opens it, migrates it, and
+ * fails loudly if it is missing or unusable.
  */
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import { assertSchema, migrate } from './migrations.mjs';
 
 const dbDirectory = path.resolve(process.cwd(), 'data');
 const dbPath = path.join(dbDirectory, 'prompt_builder.db');
-
-/**
- * Fails loudly when the database is unusable rather than letting the app serve
- * requests against a half-initialised file.
- */
-const assertSchema = (database: Database.Database) => {
-  const requiredTables = ['component_library', 'prompts', 'app_config'];
-  const presentTables = new Set(
-    database
-      .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
-      .all()
-      .map(row => (row as { name: string }).name)
-  );
-
-  const missingTables = requiredTables.filter(table => !presentTables.has(table));
-  if (missingTables.length > 0) {
-    throw new Error(
-      `Database at ${dbPath} is missing the ${missingTables.join(', ')} table(s). ` +
-      'Run "npm run db:init" before starting the application.'
-    );
-  }
-
-  // component_library.sort_order records sibling order. Older databases predate
-  // it, so add it here rather than forcing a manual re-initialisation.
-  const componentColumns = database
-    .prepare('PRAGMA table_info(component_library)')
-    .all()
-    .map(column => (column as { name: string }).name);
-
-  if (!componentColumns.includes('sort_order')) {
-    database.exec('ALTER TABLE component_library ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0');
-  }
-};
 
 let dbInstance: Database.Database | null = null;
 
@@ -61,7 +29,15 @@ const openDatabase = (): Database.Database => {
     const database = new Database(dbPath);
     // Enable WAL mode for better concurrency
     database.pragma('journal_mode = WAL');
-    assertSchema(database);
+    // Off by default in SQLite, so the cascades and SET NULL the schema declares
+    // would otherwise be inert. Must be set outside a transaction.
+    database.pragma('foreign_keys = ON');
+
+    const { applied } = migrate(database);
+    if (applied.length > 0) {
+      console.log(`Applied database migrations — ${applied.join('; ')}`);
+    }
+    assertSchema(database, dbPath);
 
     dbInstance = database;
     return database;

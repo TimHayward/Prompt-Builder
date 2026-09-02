@@ -1,12 +1,14 @@
-// c:\Users\falkt\Documents\Prompt-Builder\scripts\init-db.mjs
 /**
  * Database Initialization Script
- * This script creates the SQLite database file and defines the necessary tables
- * if they don't already exist. It should be run manually once or as part of a setup process.
+ *
+ * Creates the SQLite database file if it does not exist and runs any schema
+ * migrations it has not seen. Safe to run repeatedly — migrations that already
+ * ran are skipped. Run it before starting the application.
  */
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import { assertSchema, getSchemaVersion, LATEST_VERSION, migrate } from '../src/lib/migrations.mjs';
 
 const dbDirectory = path.resolve(process.cwd(), 'data');
 const dbPath = path.join(dbDirectory, 'prompt_builder.db');
@@ -25,50 +27,6 @@ console.log(`Database path: ${dbPath}`);
 // the same way as any other initialisation failure.
 let db;
 
-// Define table creation queries
-const createComponentLibraryTable = `
-CREATE TABLE IF NOT EXISTS component_library (
-    id TEXT PRIMARY KEY,
-    parent_id TEXT,
-    name TEXT NOT NULL,
-    item_type TEXT NOT NULL CHECK(item_type IN ('folder', 'component')),
-    content TEXT,
-    component_type TEXT,
-    is_expanded INTEGER DEFAULT 0,
-    sort_order INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    FOREIGN KEY (parent_id) REFERENCES component_library(id) ON DELETE CASCADE,
-    CONSTRAINT check_item_specific_fields CHECK (
-        (item_type = 'folder' AND content IS NULL AND component_type IS NULL) OR
-        (item_type = 'component' AND content IS NOT NULL AND component_type IS NOT NULL)
-    )
-);
-`;
-
-const createPromptsTable = `
-CREATE TABLE IF NOT EXISTS prompts (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    sections TEXT,
-    variables TEXT,
-    num INTEGER,
-    created_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now'))
-);
-`;
-
-const createAppConfigTable = `
-CREATE TABLE IF NOT EXISTS app_config (
-    id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
-    settings_json TEXT,
-    active_prompt_id TEXT,
-    updated_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    FOREIGN KEY (active_prompt_id) REFERENCES prompts(id) ON DELETE SET NULL
-);
-`;
-
-// Execute table creation
 try {
   db = new Database(dbPath);
 
@@ -76,24 +34,24 @@ try {
   db.pragma('journal_mode = WAL');
   console.log('WAL mode enabled.');
 
-  db.exec(createComponentLibraryTable);
-  console.log(`'component_library' table created or already exists.`);
+  db.pragma('foreign_keys = ON');
 
-  db.exec(createPromptsTable);
-  console.log(`'prompts' table created or already exists.`);
+  const { from, to, applied } = migrate(db);
 
-  db.exec(createAppConfigTable);
-  console.log(`'app_config' table created or already exists.`);
+  if (applied.length === 0) {
+    console.log(`Schema already at version ${to}; nothing to migrate.`);
+  } else {
+    console.log(`Migrated schema from version ${from} to ${to}:`);
+    applied.forEach(name => console.log(`  applied ${name}`));
+  }
 
-  // Databases created before sort_order existed still need the column.
-  const componentColumns = db
-    .prepare('PRAGMA table_info(component_library)')
-    .all()
-    .map(column => column.name);
+  assertSchema(db, dbPath);
 
-  if (!componentColumns.includes('sort_order')) {
-    db.exec('ALTER TABLE component_library ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0');
-    console.log(`'component_library.sort_order' column added.`);
+  const version = getSchemaVersion(db);
+  if (version !== LATEST_VERSION) {
+    // A database stamped ahead of this build belongs to a newer version of the
+    // app; say so rather than letting it fail later inside some query.
+    console.warn(`Warning: schema version is ${version}, but this build expects ${LATEST_VERSION}.`);
   }
 
   console.log('Database initialization complete.');

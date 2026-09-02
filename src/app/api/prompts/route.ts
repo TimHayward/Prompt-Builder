@@ -15,9 +15,13 @@ import { Prompt } from '@/types'; // Assuming Prompt type is defined
 export async function GET() {
     try {
         // Use COALESCE to handle NULL values for variables column (for backward compatibility with existing records)
+        // Ordered so tab order is the same on every load: by num where a prompt
+        // has one, then oldest first. num is nullable, and SQLite would otherwise
+        // sort those nulls to the front, so they are pushed last explicitly.
         const stmt = db.prepare(`
-            SELECT id, name, sections, COALESCE(variables, '{}') as variables, num, created_at, updated_at 
+            SELECT id, name, sections, COALESCE(variables, '{}') as variables, num, created_at, updated_at
             FROM prompts
+            ORDER BY num IS NULL, num, created_at, id
         `);
         const promptsRaw = stmt.all() as any[];
 
