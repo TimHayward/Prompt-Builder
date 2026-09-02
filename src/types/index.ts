@@ -36,8 +36,15 @@ export type StoredSection = {
   name: string;
   content: string;
   type: SectionTypeValue;
+  /** The component this section came from, whether copied or linked. */
   linkedComponentId?: string; // Changed from number to string
-  /** The linked component's content when it was inserted, to detect drift. */
+  /**
+   * Whether the section follows later edits to that component. Absent means a
+   * copy: inserting a component takes its text, and changing the component
+   * afterwards leaves prompts alone unless linking was asked for.
+   */
+  linked?: boolean;
+  /** The component's content when it was inserted, to detect drift. */
   originalContent?: string;
 };
 

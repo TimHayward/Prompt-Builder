@@ -539,8 +539,11 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
       type: componentData.componentType || 'instruction', // Corrected: componentType
       open: true,
       dirty: false,
-      linkedComponentId: componentData.id, // Set linkedComponentId
-      // isLinked removed
+      // Inserted as a copy: the origin is remembered, but later edits to the
+      // component do not reach this section unless the user links it.
+      linkedComponentId: componentData.id,
+      linked: false,
+      originalContent: componentData.content || '',
     };
     addSectionAtIndex(promptId, newSection, index);
   }, [addSectionAtIndex]);

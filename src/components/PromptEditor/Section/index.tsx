@@ -51,8 +51,10 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Only a section the user linked follows the component. A copied section keeps
+  // its origin for reference, but editing that component leaves it alone.
   useEffect(() => {
-    if (section.linkedComponentId) {
+    if (section.linked && section.linkedComponentId) {
       const linkedComponent = findComponentById(treeData, section.linkedComponentId);
 
       if (linkedComponent &&
@@ -62,10 +64,32 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
         updateSectionFromLinkedComponent(promptId, section.id, linkedComponent);
       }
     }
-  }, [treeData, section.linkedComponentId, section.originalContent, section.type, section.name, promptId, updateSectionFromLinkedComponent]);
+  }, [treeData, section.linked, section.linkedComponentId, section.originalContent, section.type, section.name, promptId, updateSectionFromLinkedComponent]);
+
+  /** The component this section came from, for the origin label. */
+  const originComponent = section.linkedComponentId
+    ? findComponentById(treeData, section.linkedComponentId)
+    : null;
+  const originComponentName = originComponent?.name ?? 'a deleted component';
+
+  /**
+   * Switches the section between following its component and standing alone.
+   * Linking re-reads the component, so the section starts from its current text.
+   */
+  const handleToggleLinked = () => {
+    if (section.linked) {
+      updateSection(promptId, section.id, { linked: false, dirty: false });
+      return;
+    }
+
+    if (originComponent) {
+      updateSectionFromLinkedComponent(promptId, section.id, originComponent);
+    }
+    updateSection(promptId, section.id, { linked: true, dirty: false });
+  };
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    updateSection(promptId, section.id, { 
+    updateSection(promptId, section.id, {
       content: e.target.value
     });
   };
@@ -106,6 +130,7 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
           type: firstComponent.componentType || 'instruction',
           name: firstComponent.name,
           linkedComponentId: firstComponent.id,
+          linked: false,
           originalContent: firstComponent.content,
         });
 
@@ -123,6 +148,7 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
           type: dragData.componentType,
           name: dragData.name,
           linkedComponentId: dragData.id,
+          linked: false,
           originalContent: dragData.content,
         });
       }
@@ -192,10 +218,25 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
           />
           
           {section.linkedComponentId && (
-            <div className="linked-component-indicator">
-              <span>Linked to component</span>
-              {section.dirty && (
-                <button 
+            <div className={`linked-component-indicator ${section.linked ? 'is-linked' : 'is-copy'}`}>
+              <span>
+                {section.linked
+                  ? `Linked to ${originComponentName} — follows changes to it`
+                  : `Copied from ${originComponentName}`}
+              </span>
+              <button
+                className="link-toggle-btn"
+                onClick={handleToggleLinked}
+                title={
+                  section.linked
+                    ? 'Keep the text as it is now and stop following the component'
+                    : 'Follow later changes to this component'
+                }
+              >
+                {section.linked ? 'Make a copy' : 'Link to component'}
+              </button>
+              {section.linked && section.dirty && (
+                <button
                   className="save-to-library-btn"
                   onClick={() => saveSectionToComponentLibrary(promptId, section.id)}
                 >

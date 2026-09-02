@@ -337,12 +337,37 @@
           justify-content: space-between;
           align-items: center;
           font-size: 0.75rem;
+          gap: 0.5rem;
 
           span{
             color: #aaa; // Lighter text color for the indicator
             border-top: 1px solid rgba(255, 255, 255, 0.1); // Separator line
             background-color: rgba(255, 255, 255, 0.05); // Subtle background for the indicator bar
             padding: 0.25rem 0.5rem;
+            flex: 1;
+          }
+
+          // A linked section follows its component; a copied one does not. The
+          // accent marks the one that can change on its own.
+          &.is-linked span {
+            color: colors.$accent-color;
+          }
+
+          .link-toggle-btn {
+            flex: none;
+            padding: 3px 8px;
+            background: none;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            color: #aaa;
+            cursor: pointer;
+            font-size: 0.7rem;
+            white-space: nowrap;
+
+            &:hover {
+              color: colors.$text-color;
+              border-color: rgba(255, 255, 255, 0.4);
+            }
           }
 
           .save-to-library-btn {

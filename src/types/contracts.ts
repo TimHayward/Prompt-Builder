@@ -29,6 +29,7 @@ export const sectionSchema = z.object({
   content: z.string(),
   type: sectionTypeSchema,
   linkedComponentId: z.string().optional(),
+  linked: z.boolean().optional(),
   originalContent: z.string().optional(),
 });
 

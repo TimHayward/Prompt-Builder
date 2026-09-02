@@ -33,6 +33,9 @@ export const toStoredSection = (section: Section): StoredSection => {
   if (section.linkedComponentId !== undefined) {
     stored.linkedComponentId = section.linkedComponentId;
   }
+  if (section.linked !== undefined) {
+    stored.linked = section.linked;
+  }
   if (section.originalContent !== undefined) {
     stored.originalContent = section.originalContent;
   }

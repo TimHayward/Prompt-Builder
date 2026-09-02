@@ -52,6 +52,7 @@ export const usePrompts = () => {
       content: component.content,
       type: component.componentType,
       linkedComponentId: component.id,
+      linked: false, // A copy by default; linking is an explicit choice
       originalContent: component.content
     });
   }, [findComponentById, addSectionToPrompt, updateSection]);
