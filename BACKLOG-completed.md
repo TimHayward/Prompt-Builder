@@ -279,3 +279,291 @@ Verified on 2026-08-28 with `docker compose up --build` against a clean `prompt_
 Three defects surfaced along the way and were fixed: `node:22` ships npm 10, which rejects the lockfile over vite’s optional `yaml` peer (base image is now `node:24-bookworm-slim`, npm 11); `next build` imported `lib/db` while collecting page data and hit the new schema check against the image’s empty data directory (the connection now opens lazily); and `chown -R` over `node_modules` added minutes to every build (only `/app/data` and `/app/.next` need the node user).
 
 **Completed:** 2026-08-28 · `ec8e55b`
+
+---
+
+## B1. Enable SQLite foreign keys
+
+**Priority:** P1  
+**Size:** S
+
+Enable:
+
+```sql
+PRAGMA foreign_keys = ON;
+```
+
+at database connection time.
+
+### Acceptance
+
+Configured cascades and `SET NULL` operations execute correctly.
+
+
+**Completed:** 2026-09-02 · `773872d`
+
+---
+
+## B3. Add runtime API validation
+
+**Priority:** P1  
+**Size:** M
+
+### Problem
+
+TypeScript casts currently provide compile-time convenience but no runtime protection.
+
+For example:
+
+```ts
+body as Partial<Prompt>
+```
+
+does not validate input.
+
+### Action
+
+Introduce Zod or an equivalent runtime schema library.
+
+Create schemas for:
+
+- prompts
+- sections
+- components
+- folders
+- settings
+- variable specifications
+- imports
+
+### Acceptance
+
+Malformed API payloads:
+
+- return HTTP 400
+- include a useful error
+- do not partially modify the database
+
+
+**Completed:** 2026-09-02 · `ae7b463`
+
+---
+
+## B4. Introduce explicit API request and response contracts
+
+**Priority:** P1  
+**Size:** M
+
+Define explicit models for:
+
+```text
+CreatePromptRequest
+UpdatePromptRequest
+PromptResponse
+ComponentResponse
+SettingsResponse
+ErrorResponse
+```
+
+Where practical, derive TypeScript types from runtime schemas.
+
+### Acceptance
+
+Frontend and API use the same contract definitions.
+
+
+**Completed:** 2026-09-02 · `570f0da`
+
+---
+
+## B5. Introduce consistent API failure handling
+
+**Priority:** P1  
+**Size:** M
+
+### Problem
+
+Many frontend `fetch()` calls only catch network exceptions.
+
+HTTP 400 and HTTP 500 responses can therefore appear successful to the UI.
+
+### Action
+
+Introduce a shared API client which:
+
+1. performs the request
+2. checks HTTP status
+3. parses the response
+4. throws a typed application error
+5. provides useful failure information to the UI
+
+### Acceptance
+
+API failures result in visible application feedback and do not silently mark failed changes as saved.
+
+
+**Completed:** 2026-09-02 · `ae7b463`
+
+---
+
+## B6. Correct optimistic deletion behaviour
+
+**Priority:** P1  
+**Size:** S
+
+Do not permanently remove a prompt from the UI before confirming server-side deletion unless rollback is implemented.
+
+For a local-first application, prefer pessimistic delete unless there is a material UX reason not to.
+
+### Acceptance
+
+If database deletion fails, the prompt remains visible and an error is shown.
+
+
+**Completed:** 2026-09-02 · `ae7b463`
+
+---
+
+## B7. Restore folder expansion state
+
+**Priority:** P1  
+**Size:** S
+
+Persist and restore component folder expanded/collapsed state consistently.
+
+### Acceptance
+
+Expand folders, reload Prompt Builder and confirm the same folders remain expanded.
+
+
+**Completed:** 2026-09-02 · `ae7b463`
+
+---
+
+## B8. Unify Markdown parsing
+
+**Priority:** P1  
+**Size:** L
+
+### Problem
+
+Different Markdown import paths currently apply different parsing behaviour.
+
+### Action
+
+Create one shared Markdown parser.
+
+It must:
+
+- understand the same heading rules everywhere
+- respect fenced code blocks
+- map section types through one registry
+- support prompt variable syntax consistently
+
+### Acceptance
+
+The same Markdown document produces the same prompt structure regardless of import path.
+
+
+**Completed:** 2026-09-02 · `c747649`
+
+---
+
+## B9. Make prompt ordering deterministic
+
+**Priority:** P1  
+**Size:** S
+
+Add explicit ordering when loading prompts.
+
+Use a deterministic field such as:
+
+```text
+num
+created_at
+```
+
+### Acceptance
+
+Prompt tab order is stable across restarts.
+
+
+**Completed:** 2026-09-02 · `773872d`
+
+---
+
+## B10. Add versioned database migrations
+
+**Priority:** P1  
+**Size:** M
+
+### Problem
+
+`CREATE TABLE IF NOT EXISTS` is insufficient once existing installations need schema changes.
+
+### Action
+
+Introduce schema migrations using:
+
+```sql
+PRAGMA user_version
+```
+
+or an equivalent small migration system.
+
+### Acceptance
+
+- new installations reach the current schema
+- old installations migrate automatically
+- migrations run exactly once
+- database schema version can be inspected
+
+
+**Completed:** 2026-09-02 · `773872d`
+
+---
+
+## F1. Add test infrastructure
+
+**Priority:** P2  
+**Size:** M
+
+Introduce:
+
+- Vitest
+- React Testing Library
+- jsdom where required
+
+Add:
+
+```text
+npm test
+```
+
+### Acceptance
+
+Tests run locally with one command.
+
+
+**Completed:** 2026-09-02 · `ae7b463`
+
+---
+
+## F2. Add variable parser tests
+
+**Priority:** P2  
+**Size:** S
+
+Cover:
+
+```text
+{{tone}}
+{{ mail / teams }}
+{{channel: formal/casual}}
+custom choices
+regex metacharacters
+empty values
+unknown variables
+```
+
+
+**Completed:** 2026-09-02 · `570f0da`
