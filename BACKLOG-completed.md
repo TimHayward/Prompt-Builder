@@ -1115,3 +1115,150 @@ C:\Users\...
 
 
 **Completed:** 2026-09-02 · `0f3bfe6`
+
+---
+
+## E2. Remove direct `setPrompts` exposure
+
+**Priority:** P2  
+**Size:** S
+
+Consumers should not mutate the prompt collection directly.
+
+Use intent-based methods:
+
+```text
+createPrompt
+renamePrompt
+deletePrompt
+moveSection
+updateSection
+```
+
+### Acceptance
+
+No component outside the state implementation calls `setPrompts`.
+
+
+**Completed:** 2026-09-02 · `b7d1ed4`
+
+---
+
+## E3. Use fail-fast React contexts
+
+**Priority:** P2  
+**Size:** S
+
+Contexts should default to:
+
+```ts
+undefined
+```
+
+rather than large collections of no-op methods.
+
+Hooks should throw when used outside the appropriate provider.
+
+### Acceptance
+
+Incorrect provider usage fails immediately during development.
+
+
+**Completed:** 2026-09-02 · `b7d1ed4`
+
+---
+
+## E5. Add typed database row mappers
+
+**Priority:** P2  
+**Size:** S
+
+Replace broad `any` usage around SQLite results.
+
+Create mappings such as:
+
+```text
+PromptRow → Prompt
+ComponentRow → Component
+```
+
+### Acceptance
+
+No routine prompt persistence path relies on untyped `any`.
+
+
+**Completed:** 2026-09-02 · `b7d1ed4`
+
+---
+
+## G3. Add dependency auditing
+
+Review and remove unused dependencies including historical hosted-service dependencies where confirmed unused.
+
+Candidate areas include:
+
+```text
+Supabase
+PostHog
+MySQL
+SSH tunnel
+bcrypt
+dotenv
+```
+
+Do not remove dependencies until usage has been verified.
+
+Consider using `knip`.
+
+
+**Completed:** 2026-09-02 · `b7d1ed4`
+
+---
+
+## G5. Remove historical implementation comments
+
+Remove comments such as:
+
+```text
+Changed from number
+Corrected
+New property
+Removed
+```
+
+Git history already records implementation changes.
+
+Comments should explain why behaviour exists.
+
+
+**Completed:** 2026-09-02 · `b7d1ed4`
+
+---
+
+## G7. Remove dead files and dead code
+
+Audit:
+
+- unused hooks
+- unused functions
+- unused imports
+- no-op UI buttons
+- abandoned configuration fields
+
+Remove only after confirming no references remain.
+
+
+**Completed:** 2026-09-02 · `b7d1ed4`
+
+---
+
+## G8. Remove large repository demo asset
+
+Replace the approximately 30 MB animated GIF with a more appropriate mechanism such as:
+
+- compressed WebM
+- GitHub release asset
+- externally hosted demo
+
+
+**Completed:** 2026-09-02 · `b7d1ed4`

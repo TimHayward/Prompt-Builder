@@ -138,50 +138,6 @@ PromptContext becomes an orchestration layer rather than the primary business lo
 
 ---
 
-## E2. Remove direct `setPrompts` exposure
-
-**Priority:** P2  
-**Size:** S
-
-Consumers should not mutate the prompt collection directly.
-
-Use intent-based methods:
-
-```text
-createPrompt
-renamePrompt
-deletePrompt
-moveSection
-updateSection
-```
-
-### Acceptance
-
-No component outside the state implementation calls `setPrompts`.
-
----
-
-## E3. Use fail-fast React contexts
-
-**Priority:** P2  
-**Size:** S
-
-Contexts should default to:
-
-```ts
-undefined
-```
-
-rather than large collections of no-op methods.
-
-Hooks should throw when used outside the appropriate provider.
-
-### Acceptance
-
-Incorrect provider usage fails immediately during development.
-
----
-
 ## E4. Introduce repository abstractions
 
 **Priority:** P2  
@@ -202,26 +158,6 @@ React should not depend upon database implementation details.
 ### Acceptance
 
 API routes delegate database operations to repositories.
-
----
-
-## E5. Add typed database row mappers
-
-**Priority:** P2  
-**Size:** S
-
-Replace broad `any` usage around SQLite results.
-
-Create mappings such as:
-
-```text
-PromptRow → Prompt
-ComponentRow → Component
-```
-
-### Acceptance
-
-No routine prompt persistence path relies on untyped `any`.
 
 ---
 
@@ -249,27 +185,6 @@ Initial scenarios:
 
 # G. P2 CI and Repository Quality
 
-## G3. Add dependency auditing
-
-Review and remove unused dependencies including historical hosted-service dependencies where confirmed unused.
-
-Candidate areas include:
-
-```text
-Supabase
-PostHog
-MySQL
-SSH tunnel
-bcrypt
-dotenv
-```
-
-Do not remove dependencies until usage has been verified.
-
-Consider using `knip`.
-
----
-
 ## G4. Standardise formatting
 
 Add Prettier and repository-wide formatting rules.
@@ -281,47 +196,6 @@ Standardise:
 - trailing commas
 - line wrapping
 - import ordering where appropriate
-
----
-
-## G5. Remove historical implementation comments
-
-Remove comments such as:
-
-```text
-Changed from number
-Corrected
-New property
-Removed
-```
-
-Git history already records implementation changes.
-
-Comments should explain why behaviour exists.
-
----
-
-## G7. Remove dead files and dead code
-
-Audit:
-
-- unused hooks
-- unused functions
-- unused imports
-- no-op UI buttons
-- abandoned configuration fields
-
-Remove only after confirming no references remain.
-
----
-
-## G8. Remove large repository demo asset
-
-Replace the approximately 30 MB animated GIF with a more appropriate mechanism such as:
-
-- compressed WebM
-- GitHub release asset
-- externally hosted demo
 
 ---
 
