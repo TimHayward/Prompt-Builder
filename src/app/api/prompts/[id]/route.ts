@@ -1,4 +1,3 @@
-// c:\Users\falkt\Documents\Prompt-Builder\src\app\api\prompts\[id]\route.ts
 /**
  * API Route for Single Prompt (Read, Update, Delete)
  * Handles fetching, updating, and deleting a single prompt by its ID.

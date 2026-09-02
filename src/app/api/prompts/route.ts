@@ -1,4 +1,3 @@
-// c:\Users\falkt\Documents\Prompt-Builder\src\app\api\prompts\route.ts
 /**
  * API Route for Prompts (List and Create)
  * Handles fetching all prompts and creating new prompts.

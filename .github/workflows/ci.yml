@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 24 for npm 11: the lockfile records the peer resolutions npm 10
+      # rejects, which is why the Docker image moved off node:22 too.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # better-sqlite3 falls back to compiling from source when no prebuild
+      # matches, so this step is the slow one on a cold cache.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Unit tests plus the integration suite, which builds its own SQLite
+      # database in a temp directory — nothing to provision here.
+      - name: Test
+        run: npm test
+
+      # Routes open the database lazily, so a build needs no database at all.
+      - name: Build
+        run: npm run build

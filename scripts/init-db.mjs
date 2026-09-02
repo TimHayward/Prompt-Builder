@@ -10,7 +10,9 @@ import path from 'path';
 import fs from 'fs';
 import { assertSchema, getSchemaVersion, LATEST_VERSION, migrate } from '../src/lib/migrations.mjs';
 
-const dbDirectory = path.resolve(process.cwd(), 'data');
+// Matches the application's own resolution, so a deployment or a test can put
+// the database somewhere other than ./data and initialise it the same way.
+const dbDirectory = path.resolve(process.env.PROMPT_BUILDER_DATA_DIR || path.join(process.cwd(), 'data'));
 const dbPath = path.join(dbDirectory, 'prompt_builder.db');
 
 // Ensure the data directory exists

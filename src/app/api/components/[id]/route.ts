@@ -1,4 +1,3 @@
-// c:\Users\falkt\Documents\Prompt-Builder\src\app\api\components\[id]\route.ts
 /**
  * API Route for Single Component/Folder (Read, Update, Delete)
  * Handles fetching, updating, and deleting a single item from component_library by its ID.

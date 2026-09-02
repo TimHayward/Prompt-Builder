@@ -12,13 +12,22 @@ import path from 'path';
 import fs from 'fs';
 import { assertSchema, migrate } from './migrations.mjs';
 
-const dbDirectory = path.resolve(process.cwd(), 'data');
-const dbPath = path.join(dbDirectory, 'prompt_builder.db');
+/**
+ * Where the database lives. Resolved on first use rather than at import so a
+ * caller — a test, or a deployment that keeps its data elsewhere — can point
+ * PROMPT_BUILDER_DATA_DIR somewhere else without racing module loading.
+ */
+export const resolveDatabasePath = (): { directory: string; file: string } => {
+  const directory = path.resolve(process.env.PROMPT_BUILDER_DATA_DIR || path.join(process.cwd(), 'data'));
+  return { directory, file: path.join(directory, 'prompt_builder.db') };
+};
 
 let dbInstance: Database.Database | null = null;
 
 const openDatabase = (): Database.Database => {
   if (dbInstance) return dbInstance;
+
+  const { directory: dbDirectory, file: dbPath } = resolveDatabasePath();
 
   try {
     // The init script normally creates this; recreate it for robustness.
@@ -47,6 +56,12 @@ const openDatabase = (): Database.Database => {
     console.error(`Failed to open the SQLite database at ${dbPath}:`, error);
     throw error;
   }
+};
+
+/** Closes the connection so the next query opens the database afresh. */
+export const closeDatabase = (): void => {
+  dbInstance?.close();
+  dbInstance = null;
 };
 
 /**

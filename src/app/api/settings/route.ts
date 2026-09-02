@@ -1,4 +1,3 @@
-// c:\Users\falkt\Documents\Prompt-Builder\src\app\api\settings\route.ts
 /**
  * API Route for Settings (app_config)
  * Handles fetching and updating application settings and active prompt ID.
