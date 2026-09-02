@@ -47,6 +47,15 @@ const headingFor = (section: CompilableSection): string =>
   `# ${SECTION_TYPE_LABELS[section.type] ?? section.type}: ${section.name}`;
 
 /**
+ * Whether the section's text already opens with its own heading.
+ *
+ * Sections imported from Markdown keep their heading line, so adding one would
+ * print two headings back to back.
+ */
+const startsWithOwnHeading = (content: string): boolean =>
+  /^\s*#(?!#)/.test(content);
+
+/**
  * Compiles a prompt into the text a user copies
  * @param options - Sections, working values and formatting settings
  * @returns The resolved text and any variables left blank
@@ -70,7 +79,9 @@ export const compilePrompt = ({
 
       // Headings are what makes the system prompt's description of the format
       // true; without markdown prompting the sections run together as prose.
-      return markdownEnabled
+      // A section that already carries its own heading keeps it rather than
+      // gaining a second one.
+      return markdownEnabled && !startsWithOwnHeading(resolved.text)
         ? `${headingFor(section)}${SECTION_SEPARATOR}${resolved.text}`
         : resolved.text;
     });

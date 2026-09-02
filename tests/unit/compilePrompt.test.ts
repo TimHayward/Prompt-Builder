@@ -64,6 +64,25 @@ describe('markdown prompting', () => {
     expect(lines(text)).toEqual(['System guide', '', '# Instruction: Task', '', 'Do the thing.']);
   });
 
+  it('does not add a second heading to a section that already has one', () => {
+    // Sections imported from Markdown keep their own heading line.
+    const { text } = compilePrompt({
+      sections: [section('Senior Reviewer', '# Role: Senior Reviewer\nBe careful.', 'role')],
+      markdownEnabled: true,
+    });
+
+    expect(lines(text)).toEqual(['# Role: Senior Reviewer', 'Be careful.']);
+  });
+
+  it('still adds a heading when the content only has a sub-heading', () => {
+    const { text } = compilePrompt({
+      sections: [section('Task', '## Details\nDo the thing.')],
+      markdownEnabled: true,
+    });
+
+    expect(lines(text)).toEqual(['# Instruction: Task', '', '## Details', 'Do the thing.']);
+  });
+
   it('omits headings and system prompt when it is off', () => {
     const { text } = compilePrompt({
       sections: [section('Senior Reviewer', 'Be careful.', 'role')],
