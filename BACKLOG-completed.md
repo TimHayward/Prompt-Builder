@@ -1441,3 +1441,26 @@ This should remain intentionally lightweight.
 
 
 **Completed:** 2026-09-03 · `d2f51c1`
+
+---
+
+## F6. Add Playwright smoke tests
+
+**Priority:** P2  
+**Size:** L
+
+Initial scenarios:
+
+1. create prompt
+2. edit prompt
+3. reload
+4. verify persistence
+5. populate variable
+6. preview result
+7. copy prompt
+8. compare clipboard output
+9. clear values
+10. verify source options remain
+
+
+**Completed:** 2026-09-03 · `87501cc`

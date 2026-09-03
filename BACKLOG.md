@@ -89,28 +89,6 @@ New product capabilities.
 
 ---
 
-# F. P2 Automated Testing
-
-## F6. Add Playwright smoke tests
-
-**Priority:** P2  
-**Size:** L
-
-Initial scenarios:
-
-1. create prompt
-2. edit prompt
-3. reload
-4. verify persistence
-5. populate variable
-6. preview result
-7. copy prompt
-8. compare clipboard output
-9. clear values
-10. verify source options remain
-
----
-
 # G. P2 CI and Repository Quality
 
 ## G4. Standardise formatting
