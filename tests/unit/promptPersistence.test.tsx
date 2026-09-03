@@ -12,6 +12,7 @@ import { PromptProvider, usePromptContext } from '@/contexts/PromptContext';
 import { ToastProvider } from '@/contexts/ToastContext';
 import { SaveStateProvider } from '@/contexts/SaveStateContext';
 import type { Prompt, Section } from '@/types';
+import { buildPrompt } from '../support/buildPrompt';
 
 const DEBOUNCE_MS = 1000;
 
@@ -24,17 +25,8 @@ const section = (id: string, content = id): Section => ({
   dirty: false,
 });
 
-const promptFixture = (): Prompt => ({
-  id: 'prompt-1',
-  num: 1,
-  name: 'Prompt One',
-  description: '',
-  isFavourite: false,
-  tags: [],
-  lastUsedAt: null,
-  sections: [section('s1'), section('s2'), section('s3')],
-  variables: {},
-});
+const promptFixture = (): Prompt =>
+  buildPrompt({ name: 'Prompt One', sections: [section('s1'), section('s2'), section('s3')] });
 
 type ContextValue = ReturnType<typeof usePromptContext>;
 

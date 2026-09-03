@@ -16,37 +16,32 @@ import { PromptProvider } from '@/contexts/PromptContext';
 import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
 import { usePromptContext } from '@/contexts/PromptContext';
 import type { Prompt } from '@/types';
+import { buildPrompt } from '../support/buildPrompt';
 
 const SYSTEM_PROMPT = 'System guide line one.';
 
-const promptFixture = (): Prompt => ({
-  id: 'prompt-1',
-  num: 1,
-  name: 'Assessment',
-  description: '',
-  isFavourite: false,
-  tags: [],
-  lastUsedAt: null,
-  sections: [
-    {
-      id: 's1',
-      name: 'Senior Reviewer',
-      content: 'You are {{role}}.',
-      type: 'role',
-      open: true,
-      dirty: false,
-    },
-    {
-      id: 's2',
-      name: 'Task',
-      content: 'Review the {{technology}} estate for {{customer}}.',
-      type: 'instruction',
-      open: true,
-      dirty: false,
-    },
-  ],
-  variables: {},
-});
+const promptFixture = (): Prompt =>
+  buildPrompt({
+    name: 'Assessment',
+    sections: [
+      {
+        id: 's1',
+        name: 'Senior Reviewer',
+        content: 'You are {{role}}.',
+        type: 'role',
+        open: true,
+        dirty: false,
+      },
+      {
+        id: 's2',
+        name: 'Task',
+        content: 'Review the {{technology}} estate for {{customer}}.',
+        type: 'instruction',
+        open: true,
+        dirty: false,
+      },
+    ],
+  });
 
 const WORKING_VALUES = { role: 'a careful reviewer', technology: 'Intune' };
 

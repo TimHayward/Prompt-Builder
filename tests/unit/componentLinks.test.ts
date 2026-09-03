@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { Prompt, Section } from '@/types';
+import { buildPrompt } from '../support/buildPrompt';
 import { describeComponentUsage, findComponentUsage } from '@/domain/componentLinks';
 
 const section = (id: string, overrides: Partial<Section> = {}): Section => ({
@@ -17,17 +18,8 @@ const section = (id: string, overrides: Partial<Section> = {}): Section => ({
   ...overrides,
 });
 
-const promptWith = (name: string, sections: Section[]): Prompt => ({
-  id: `prompt-${name}`,
-  num: 1,
-  name,
-  description: '',
-  isFavourite: false,
-  tags: [],
-  lastUsedAt: null,
-  sections,
-  variables: {},
-});
+const promptWith = (name: string, sections: Section[]): Prompt =>
+  buildPrompt({ id: `prompt-${name}`, name, sections });
 
 const linked = (id: string) => section(id, { linkedComponentId: 'component-1', linked: true });
 const copied = (id: string) => section(id, { linkedComponentId: 'component-1', linked: false });

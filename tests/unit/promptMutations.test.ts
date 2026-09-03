@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { ComponentType, Prompt, Section } from '@/types';
+import { buildPrompt } from '../support/buildPrompt';
 import {
   appendSection,
   applyComponentToSection,
@@ -30,17 +31,8 @@ const section = (id: string, overrides: Partial<Section> = {}): Section => ({
   ...overrides,
 });
 
-const promptWith = (...ids: string[]): Prompt => ({
-  id: 'prompt-1',
-  num: 1,
-  name: 'A prompt',
-  description: '',
-  isFavourite: false,
-  tags: [],
-  lastUsedAt: null,
-  sections: ids.map(id => section(id)),
-  variables: {},
-});
+const promptWith = (...ids: string[]): Prompt =>
+  buildPrompt({ name: 'A prompt', sections: ids.map(id => section(id)) });
 
 const ids = (prompt: Prompt) => prompt.sections.map(s => s.id);
 

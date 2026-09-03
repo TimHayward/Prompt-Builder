@@ -14,30 +14,25 @@ import { SaveStateProvider } from '@/contexts/SaveStateContext';
 import { WorkspaceProvider, useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import { extractVariableSpecsFromSections } from '@/utils/variableUtils';
 import type { Prompt } from '@/types';
+import { buildPrompt } from '../support/buildPrompt';
 
 const DEBOUNCE_MS = 1000;
 const SOURCE_TEXT = 'Send the update via {{channel: email/Teams/WhatsApp}}.';
 
-const promptFixture = (): Prompt => ({
-  id: 'prompt-1',
-  num: 1,
-  name: 'Announcement',
-  description: '',
-  isFavourite: false,
-  tags: [],
-  lastUsedAt: null,
-  sections: [
-    {
-      id: 's1',
-      name: 'Instruction',
-      content: SOURCE_TEXT,
-      type: 'instruction',
-      open: true,
-      dirty: false,
-    },
-  ],
-  variables: {},
-});
+const promptFixture = (): Prompt =>
+  buildPrompt({
+    name: 'Announcement',
+    sections: [
+      {
+        id: 's1',
+        name: 'Instruction',
+        content: SOURCE_TEXT,
+        type: 'instruction',
+        open: true,
+        dirty: false,
+      },
+    ],
+  });
 
 /** Everything the fake server was asked to change. */
 let promptWrites: { url: string; method: string; body: unknown }[];

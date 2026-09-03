@@ -16,29 +16,24 @@ import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
 import ActionBar from '@/components/PromptEditor/ActionBar';
 import PromptMetadata from '@/components/PromptEditor/PromptMetadata';
 import type { Prompt } from '@/types';
+import { buildPrompt } from '../support/buildPrompt';
 
 const DEBOUNCE_MS = 1000;
 
-const promptFixture = (): Prompt => ({
-  id: 'prompt-1',
-  num: 1,
-  name: 'Announcement',
-  description: '',
-  isFavourite: false,
-  tags: [],
-  lastUsedAt: null,
-  sections: [
-    {
-      id: 's1',
-      name: 'Instruction',
-      content: 'Write something.',
-      type: 'instruction',
-      open: true,
-      dirty: false,
-    },
-  ],
-  variables: {},
-});
+const promptFixture = (): Prompt =>
+  buildPrompt({
+    name: 'Announcement',
+    sections: [
+      {
+        id: 's1',
+        name: 'Instruction',
+        content: 'Write something.',
+        type: 'instruction',
+        open: true,
+        dirty: false,
+      },
+    ],
+  });
 
 /** Every PUT the fake server received. */
 let promptWrites: { url: string; body: Record<string, unknown> }[];

@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { Prompt, Section } from '@/types';
+import { buildPrompt } from '../support/buildPrompt';
 import { RECENT_DAYS, addTag, collectTags, isRecent, searchPrompts } from '@/domain/promptSearch';
 
 const section = (overrides: Partial<Section> = {}): Section => ({
@@ -18,18 +19,8 @@ const section = (overrides: Partial<Section> = {}): Section => ({
   ...overrides,
 });
 
-const prompt = (overrides: Partial<Prompt> = {}): Prompt => ({
-  id: 'prompt-1',
-  num: 1,
-  name: 'Announcement',
-  description: '',
-  isFavourite: false,
-  tags: [],
-  lastUsedAt: null,
-  sections: [section()],
-  variables: {},
-  ...overrides,
-});
+const prompt = (overrides: Partial<Prompt> = {}): Prompt =>
+  buildPrompt({ name: 'Announcement', sections: [section()], ...overrides });
 
 /** Days before now, as the column stores it. */
 const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();

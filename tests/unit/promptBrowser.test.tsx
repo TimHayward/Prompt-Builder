@@ -15,30 +15,25 @@ import { ToastProvider } from '@/contexts/ToastContext';
 import PromptBrowser from '@/components/PromptEditor/PromptBrowser';
 import PromptTags from '@/components/PromptEditor/PromptTags';
 import type { Prompt } from '@/types';
+import { buildPrompt } from '../support/buildPrompt';
 
 const DEBOUNCE_MS = 1000;
 
-const promptFixture = (overrides: Partial<Prompt> = {}): Prompt => ({
-  id: 'prompt-1',
-  num: 1,
-  name: 'Announcement',
-  description: '',
-  isFavourite: false,
-  tags: [],
-  lastUsedAt: null,
-  sections: [
-    {
-      id: 's1',
-      name: 'Instruction',
-      content: 'Write something.',
-      type: 'instruction',
-      open: true,
-      dirty: false,
-    },
-  ],
-  variables: {},
-  ...overrides,
-});
+const promptFixture = (overrides: Partial<Prompt> = {}): Prompt =>
+  buildPrompt({
+    name: 'Announcement',
+    sections: [
+      {
+        id: 's1',
+        name: 'Instruction',
+        content: 'Write something.',
+        type: 'instruction',
+        open: true,
+        dirty: false,
+      },
+    ],
+    ...overrides,
+  });
 
 const library = [
   promptFixture({ id: 'prompt-1', name: 'Announcement', tags: ['Writing'] }),
