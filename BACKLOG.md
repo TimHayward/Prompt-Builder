@@ -89,22 +89,6 @@ New product capabilities.
 
 ---
 
-# G. P2 CI and Repository Quality
-
-## G4. Standardise formatting
-
-Add Prettier and repository-wide formatting rules.
-
-Standardise:
-
-- quotes
-- indentation
-- trailing commas
-- line wrapping
-- import ordering where appropriate
-
----
-
 # I. P3 Prompt Library Features
 
 ## I1. Complete prompt duplication

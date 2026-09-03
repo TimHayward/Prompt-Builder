@@ -1464,3 +1464,20 @@ Initial scenarios:
 
 
 **Completed:** 2026-09-03 · `87501cc`
+
+---
+
+## G4. Standardise formatting
+
+Add Prettier and repository-wide formatting rules.
+
+Standardise:
+
+- quotes
+- indentation
+- trailing commas
+- line wrapping
+- import ordering where appropriate
+
+
+**Completed:** 2026-09-03 · `2ca7c34`
