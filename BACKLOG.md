@@ -89,50 +89,6 @@ New product capabilities.
 
 ---
 
-# P. P2 Test Maintenance
-
-## P1. Share one prompt fixture across the tests
-
-**Priority:** P2 · **Model:** Sonnet 5 · **Size:** S
-
-Nine test files build a `Prompt` by hand:
-
-```text
-tests/unit/componentLinks.test.ts
-tests/unit/previewMatchesClipboard.test.tsx
-tests/unit/promptBrowser.test.tsx
-tests/unit/promptMetadata.test.tsx
-tests/unit/promptMutations.test.ts
-tests/unit/promptPersistence.test.tsx
-tests/unit/saveFailureFeedback.test.tsx
-tests/unit/saveState.test.tsx
-tests/unit/workspace.test.tsx
-```
-
-Adding a field to `Prompt` therefore breaks all of them at once, with the same
-mechanical edit in each. This happened twice while I2/I4 and then I3/I5/I6 were
-built, adding `description`, `isFavourite`, `tags` and `lastUsedAt`.
-
-Provide one factory — `buildPrompt(overrides?: Partial<Prompt>): Prompt` — in a
-shared test-support module, and have each file call it with only the fields that
-test actually cares about.
-
-### Acceptance
-
-- A new required field on `Prompt` needs a change in one place for the fixtures
-  to compile again.
-- Each test still states the values it depends on; the factory supplies only
-  defaults, so no test's meaning moves into the shared file.
-- The suite passes unchanged, with no test rewritten beyond its fixture.
-
-### Notes
-
-`tests/unit/promptSearch.test.ts` already has a local `prompt(overrides)` helper
-of exactly this shape. It is the model to follow, and should adopt the shared
-one rather than keep its own.
-
----
-
 # J. P3 Variable Improvements
 
 ## J2. Add required variables
