@@ -1338,3 +1338,106 @@ API routes delegate database operations to repositories.
 
 
 **Completed:** 2026-09-03 · `fae69ab`
+
+---
+
+## H1. Rewrite README for the current architecture
+
+The README should accurately describe:
+
+```text
+Next.js
+React
+TypeScript
+SCSS
+SQLite
+local-first operation
+```
+
+Remove references to historical Vite or Chrome extension architecture unless genuinely current.
+
+
+**Completed:** 2026-09-03 · `d2f51c1`
+
+---
+
+## H2. Correct database documentation
+
+Document the actual database location:
+
+```text
+data/prompt_builder.db
+```
+
+and its backup implications.
+
+
+**Completed:** 2026-09-03 · `d2f51c1`
+
+---
+
+## H3. Document the source/working/resolved model
+
+Explain:
+
+### Source Prompt
+
+Persistent reusable template.
+
+### Working Prompt
+
+Current values and temporary preparation state.
+
+### Resolved Prompt
+
+Exact clipboard output.
+
+
+**Completed:** 2026-09-03 · `d2f51c1`
+
+---
+
+## H4. Document variable grammar
+
+Document all supported forms:
+
+```text
+{{tone}}
+
+{{mail/teams/calendar}}
+
+{{channel: mail/teams/calendar}}
+```
+
+Include:
+
+- whitespace rules
+- Custom option behaviour
+- repeated variables
+- empty values
+
+
+**Completed:** 2026-09-03 · `d2f51c1`
+
+---
+
+## H5. Add architecture documentation
+
+Describe:
+
+```text
+UI
+ ↓
+domain/state
+ ↓
+API
+ ↓
+repository
+ ↓
+SQLite
+```
+
+This should remain intentionally lightweight.
+
+
+**Completed:** 2026-09-03 · `d2f51c1`
