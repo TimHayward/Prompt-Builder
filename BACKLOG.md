@@ -89,40 +89,6 @@ New product capabilities.
 
 ---
 
-# O. P3 History and Recovery
-
-## O1. Prompt revision history
-
-Lower priority than working-state separation.
-
-Allow deliberate source changes to create recoverable revisions.
-
-Possible actions:
-
-```text
-View
-Compare
-Restore
-```
-
----
-
-## O2. Restore previous source prompt
-
-Allow a previous source revision to become current.
-
-Working values must not form part of revision history.
-
----
-
-## O3. Component revision history
-
-Only consider this if components become sufficiently important that accidental changes create significant user impact.
-
-Do not implement before the component copy/link model is stable.
-
----
-
 # Explicitly Out of Scope
 
 The following should not influence near-term architecture.

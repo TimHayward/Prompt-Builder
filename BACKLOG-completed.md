@@ -2069,3 +2069,56 @@ Estimated tokens
 The Check view shows characters, words, sections, variables and estimated tokens, all measured on the resolved prompt. Empty sections are not counted, and a repeated variable counts once.
 
 **Completed:** 2026-09-03 · `6f1dd8d`
+
+---
+
+## O1. Prompt revision history
+
+Lower priority than working-state separation.
+
+Allow deliberate source changes to create recoverable revisions.
+
+Possible actions:
+
+```text
+View
+Compare
+Restore
+```
+
+
+### How it was met
+
+Schema version 7 adds prompt_revisions, written when a save changes the source — sections or name. Metadata does not create history. Because saving is automatic, two rules keep the list worth reading: a revision records what the prompt looked like before an editing session, with saves inside five minutes adding nothing, and only the newest twenty are kept (the JSON export is the archive). The History button under the prompt title lists versions, shows what a chosen one said, and compares it with the current prompt section by section — section-level rather than character-level, because a prompt is a list of named sections and "Task changed, Format removed" says more than highlighted words would.
+
+**Completed:** 2026-09-03 · `fed9479`
+
+---
+
+## O2. Restore previous source prompt
+
+Allow a previous source revision to become current.
+
+Working values must not form part of revision history.
+
+
+### How it was met
+
+Restore makes a chosen revision current. It is itself a change to the source, so it records what it replaced and can be undone from the same list; the client drops any save still queued for that prompt so the text just replaced cannot be written back. The constraint that working values must not form part of history holds by construction — a revision stores only the name and sections — and there is a test asserting exactly which keys a revision has.
+
+**Completed:** 2026-09-03 · `fed9479`
+
+---
+
+## O3. Component revision history
+
+Only consider this if components become sufficiently important that accidental changes create significant user impact.
+
+Do not implement before the component copy/link model is stable.
+
+
+### How it was met
+
+Both preconditions the item sets are now met: the component copy/link model is stable (L1–L5), and accidental component changes do matter, since an edit reaches every linked section. component_revisions uses the same mechanism, recorded when a component’s text or name changes but not when an item is moved or a folder expanded, and reachable from the History button in the component editor. Folders have no history: they hold nothing that can be lost.
+
+**Completed:** 2026-09-03 · `fed9479`
