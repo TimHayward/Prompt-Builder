@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
 /**
  * ModalBase component
  * Reusable modal dialog with overlay
  */
 
-import React, { useEffect, useRef } from "react";
-import "./Modal.scss";
+import React, { useEffect, useRef } from 'react';
+import './Modal.scss';
 
 interface ModalBaseProps {
   isOpen: boolean;
@@ -16,26 +16,26 @@ interface ModalBaseProps {
   className?: string;
 }
 
-const ModalBase: React.FC<ModalBaseProps> = ({ 
-  isOpen, 
-  onClose, 
-  title, 
+const ModalBase: React.FC<ModalBaseProps> = ({
+  isOpen,
+  onClose,
+  title,
   children,
-  className = "" 
+  className = '',
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Handle escape key to close modal
   useEffect(() => {
     const handleEscapeKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
+      if (e.key === 'Escape' && isOpen) {
         onClose();
       }
     };
 
-    document.addEventListener("keydown", handleEscapeKey);
+    document.addEventListener('keydown', handleEscapeKey);
     return () => {
-      document.removeEventListener("keydown", handleEscapeKey);
+      document.removeEventListener('keydown', handleEscapeKey);
     };
   }, [isOpen, onClose]);
 
@@ -47,9 +47,9 @@ const ModalBase: React.FC<ModalBaseProps> = ({
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen, onClose]);
 
@@ -64,9 +64,7 @@ const ModalBase: React.FC<ModalBaseProps> = ({
             &times;
           </button>
         </div>
-        <div className="modal-body">
-          {children}
-        </div>
+        <div className="modal-body">{children}</div>
       </div>
     </div>
   );

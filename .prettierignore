@@ -1,0 +1,16 @@
+node_modules
+.next
+.next-e2e
+data
+playwright-report
+test-results
+package-lock.json
+LICENSE
+
+# Seed data shipped as-is; reformatting it would obscure any real change.
+public/starter-kit.json
+
+# Maintained by hand and by the archiving scripts, whose string surgery relies
+# on the exact heading and rule spacing.
+BACKLOG.md
+BACKLOG-completed.md

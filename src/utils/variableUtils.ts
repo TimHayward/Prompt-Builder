@@ -177,10 +177,7 @@ export type ResolvedText = {
  * @param text - The text containing variables
  * @param values - Working values, keyed by variable
  */
-export const resolveVariables = (
-  text: string,
-  values: Record<string, string>
-): ResolvedText => {
+export const resolveVariables = (text: string, values: Record<string, string>): ResolvedText => {
   const unresolved: string[] = [];
 
   const resolved = text.replace(VARIABLE_TOKEN_REGEX, (match, inner: string) => {

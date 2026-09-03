@@ -12,12 +12,12 @@ import {
   Framework,
   FrameworkId,
   SectionTypeValue,
-} from "@/lib/frameworks";
-import { parseMarkdownSections, type ParsedSection } from "@/utils/markdownSections";
+} from '@/lib/frameworks';
+import { parseMarkdownSections, type ParsedSection } from '@/utils/markdownSections';
 
 export type ParsedHeaderSection = ParsedSection;
 
-export { suggestSectionType } from "@/lib/sectionTypes";
+export { suggestSectionType } from '@/lib/sectionTypes';
 
 /**
  * Split markdown content into sections. See markdownSections.ts for the rules;
@@ -29,21 +29,21 @@ export const parseMarkdownByHeaders = (content: string): ParsedHeaderSection[] =
 // Cross-framework type equivalences, used to map a suggested type onto the
 // closest available type within a chosen framework.
 const EQUIVALENTS: Partial<Record<SectionTypeValue, SectionTypeValue[]>> = {
-  task: ["instruction", "instructions"],
-  instruction: ["task", "instructions"],
-  instructions: ["task", "instruction"],
-  format: ["output"],
-  output: ["format"],
-  goal: ["end-goal", "expectations", "expectation"],
-  "end-goal": ["goal"],
-  expectations: ["expectation", "goal"],
-  expectation: ["expectations", "goal"],
-  constraints: ["narrowing"],
-  narrowing: ["constraints"],
-  context: ["input", "source"],
-  input: ["context"],
-  source: ["context"],
-  steps: ["instructions", "instruction"],
+  task: ['instruction', 'instructions'],
+  instruction: ['task', 'instructions'],
+  instructions: ['task', 'instruction'],
+  format: ['output'],
+  output: ['format'],
+  goal: ['end-goal', 'expectations', 'expectation'],
+  'end-goal': ['goal'],
+  expectations: ['expectation', 'goal'],
+  expectation: ['expectations', 'goal'],
+  constraints: ['narrowing'],
+  narrowing: ['constraints'],
+  context: ['input', 'source'],
+  input: ['context'],
+  source: ['context'],
+  steps: ['instructions', 'instruction'],
 };
 
 export interface ResolvedType {

@@ -5,12 +5,12 @@
  * Copy buttons and actions for prompt output
  */
 
-import React from "react";
-import { usePromptContext } from "@/contexts/PromptContext";
-import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
-import { compilePrompt } from "@/utils/compilePrompt";
-import { useToast } from "@/contexts/ToastContext";
-import { useClipboard } from "@/hooks/useClipboard";
+import React from 'react';
+import { usePromptContext } from '@/contexts/PromptContext';
+import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
+import { compilePrompt } from '@/utils/compilePrompt';
+import { useToast } from '@/contexts/ToastContext';
+import { useClipboard } from '@/hooks/useClipboard';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
@@ -22,11 +22,7 @@ interface ActionBarProps {
   markdownEnabled: boolean;
 }
 
-const ActionBar: React.FC<ActionBarProps> = ({
-  activePromptId,
-  systemPrompt,
-  markdownEnabled
-}) => {
+const ActionBar: React.FC<ActionBarProps> = ({ activePromptId, systemPrompt, markdownEnabled }) => {
   const { prompts, addNewSectionForEditing } = usePromptContext();
   const { getWorkingValues } = useWorkspaceContext();
   const { copyToClipboard, status, isSupported } = useClipboard();
@@ -95,22 +91,21 @@ const ActionBar: React.FC<ActionBarProps> = ({
   };
 
   return (
-    <div className="action-bar-container"> {/* Added a container div */}
-      <div className="action-bar-buttons"> {/* Group buttons for styling if needed */}
+    <div className="action-bar-container">
+      {' '}
+      {/* Added a container div */}
+      <div className="action-bar-buttons">
+        {' '}
+        {/* Group buttons for styling if needed */}
         <button
           className={`copy-btn ${status === 'success' ? 'success' : ''} ${status === 'error' ? 'error' : ''}`}
           onClick={copyPrompt}
-          title={!isSupported ? "Clipboard not supported" : "Copy Prompt"}
+          title={!isSupported ? 'Clipboard not supported' : 'Copy Prompt'}
           disabled={!isSupported || !activePromptId}
         >
           {getCopyButtonContent()}
         </button>
-
-        <button
-          className="new-section-btn"
-          onClick={handleAddNewSection}
-          title="Add New Section"
-        >
+        <button className="new-section-btn" onClick={handleAddNewSection} title="Add New Section">
           <AddIcon />
           <span>New Section</span>
         </button>

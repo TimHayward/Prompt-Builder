@@ -5,9 +5,9 @@
  * Displays the folder/component hierarchy
  */
 
-import React from "react";
-import { FolderType, TreeNode } from "@/types";
-import TreeNodeComponent from "./TreeNode"; // Corrected import path
+import React from 'react';
+import { FolderType, TreeNode } from '@/types';
+import TreeNodeComponent from './TreeNode'; // Corrected import path
 
 interface TreeViewProps {
   treeData: FolderType[];
@@ -49,7 +49,7 @@ const TreeView: React.FC<TreeViewProps> = ({
 }) => {
   return (
     <div className="tree-view">
-      {treeData.map((node) => (
+      {treeData.map(node => (
         <TreeNodeComponent
           key={node.id} // id is already string from FolderType
           node={node}

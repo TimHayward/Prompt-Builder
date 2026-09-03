@@ -2,11 +2,11 @@
  * SCSS mixins for common patterns
  */
 
-@use "sass:color";
-@use "sass:math";
+@use 'sass:color';
+@use 'sass:math';
 
 // Import color variables for use in mixins
-@use "./colors" as colors;
+@use './colors' as colors;
 
 /**
  * Flexbox mixin for consistent layout
@@ -37,16 +37,19 @@
   font-size: inherit;
   line-height: 1;
   text-align: center;
-  transition: background-color 0.2s ease, color 0.2s ease, transform 0.1s ease;
-  
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.1s ease;
+
   &:active {
     transform: translateY(1px);
   }
-  
+
   &:focus {
     outline: none;
   }
-  
+
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
@@ -63,21 +66,21 @@
     width: $width;
     height: $width;
   }
-  
+
   &::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.1);
     border-radius: math.div($width, 2);
   }
-  
+
   &::-webkit-scrollbar-thumb {
     background-color: $thumb-color;
     border-radius: math.div($width, 2);
-    
+
     &:hover {
       background-color: color.adjust($thumb-color, $lightness: -10%);
     }
   }
-  
+
   /* Firefox */
   scrollbar-width: thin;
   scrollbar-color: $thumb-color rgba(0, 0, 0, 0.1);
@@ -98,12 +101,20 @@
  */
 @mixin shadow($level: 1) {
   @if $level == 1 {
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.12),
+      0 1px 2px rgba(0, 0, 0, 0.24);
   } @else if $level == 2 {
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+    box-shadow:
+      0 3px 6px rgba(0, 0, 0, 0.16),
+      0 3px 6px rgba(0, 0, 0, 0.23);
   } @else if $level == 3 {
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+    box-shadow:
+      0 10px 20px rgba(0, 0, 0, 0.19),
+      0 6px 6px rgba(0, 0, 0, 0.23);
   } @else if $level == 4 {
-    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25), 0 10px 10px rgba(0, 0, 0, 0.22);
+    box-shadow:
+      0 14px 28px rgba(0, 0, 0, 0.25),
+      0 10px 10px rgba(0, 0, 0, 0.22);
   }
 }

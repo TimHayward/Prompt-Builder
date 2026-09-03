@@ -44,9 +44,10 @@ export const getLibraryItem = (id: string): ComponentResponse | undefined => {
 };
 
 export const getItemType = (id: string): string | undefined =>
-  (db.prepare('SELECT item_type FROM component_library WHERE id = ?').get(id) as
-    | { item_type: string }
-    | undefined)?.item_type;
+  (
+    db.prepare('SELECT item_type FROM component_library WHERE id = ?').get(id) as
+      { item_type: string } | undefined
+  )?.item_type;
 
 export const libraryItemExists = (id: string): boolean =>
   db.prepare('SELECT id FROM component_library WHERE id = ?').get(id) !== undefined;
@@ -167,7 +168,9 @@ export const deleteLibraryItem = (id: string): boolean =>
 /** The root folder of that name, for the ingest route's upsert-by-name. */
 export const findRootFolderByName = (name: string): { id: string } | undefined =>
   db
-    .prepare("SELECT id FROM component_library WHERE name = ? AND item_type = 'folder' AND parent_id IS NULL")
+    .prepare(
+      "SELECT id FROM component_library WHERE name = ? AND item_type = 'folder' AND parent_id IS NULL"
+    )
     .get(name) as { id: string } | undefined;
 
 /**
@@ -200,6 +203,15 @@ export const replaceIngestedFolder = (
   );
 
   components.forEach(component => {
-    insertComponent.run(uuidv4(), folderId, component.name, 'component', component.content, component.type, now, now);
+    insertComponent.run(
+      uuidv4(),
+      folderId,
+      component.name,
+      'component',
+      component.content,
+      component.type,
+      now,
+      now
+    );
   });
 };

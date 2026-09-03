@@ -10,24 +10,24 @@
 
 export const SECTION_TYPE_LABELS = {
   // Legacy values — stored in existing DBs, must not be renamed
-  instruction: "Instruction",
-  role: "Role",
-  context: "Context",
-  format: "Format",
-  style: "Style",
+  instruction: 'Instruction',
+  role: 'Role',
+  context: 'Context',
+  format: 'Format',
+  style: 'Style',
   // Framework-specific values
-  task: "Task",
-  constraints: "Constraints",
-  output: "Output",
-  goal: "Goal",
-  source: "Source",
-  expectations: "Expectations",
-  input: "Input",
-  steps: "Steps",
-  expectation: "Expectation",
-  instructions: "Instructions",
-  "end-goal": "End Goal",
-  narrowing: "Narrowing",
+  task: 'Task',
+  constraints: 'Constraints',
+  output: 'Output',
+  goal: 'Goal',
+  source: 'Source',
+  expectations: 'Expectations',
+  input: 'Input',
+  steps: 'Steps',
+  expectation: 'Expectation',
+  instructions: 'Instructions',
+  'end-goal': 'End Goal',
+  narrowing: 'Narrowing',
 } as const;
 
 export type SectionTypeValue = keyof typeof SECTION_TYPE_LABELS;
@@ -47,11 +47,23 @@ export interface FrameworkDefinition {
 }
 
 export const FRAMEWORK_DEFINITIONS = [
-  { id: 'standard', label: 'Standard', types: ['instruction', 'role', 'context', 'format', 'style'] },
-  { id: 'rctcso', label: 'R-C-T-C-S-O', types: ['role', 'context', 'task', 'constraints', 'style', 'output'] },
+  {
+    id: 'standard',
+    label: 'Standard',
+    types: ['instruction', 'role', 'context', 'format', 'style'],
+  },
+  {
+    id: 'rctcso',
+    label: 'R-C-T-C-S-O',
+    types: ['role', 'context', 'task', 'constraints', 'style', 'output'],
+  },
   { id: 'gcse', label: 'GCSE', types: ['goal', 'context', 'source', 'expectations'] },
   { id: 'rise', label: 'RISE', types: ['role', 'input', 'steps', 'expectation'] },
-  { id: 'risen', label: 'RISEN', types: ['role', 'instructions', 'steps', 'end-goal', 'narrowing'] },
+  {
+    id: 'risen',
+    label: 'RISEN',
+    types: ['role', 'instructions', 'steps', 'end-goal', 'narrowing'],
+  },
 ] as const satisfies readonly FrameworkDefinition[];
 
 export type FrameworkId = (typeof FRAMEWORK_DEFINITIONS)[number]['id'];

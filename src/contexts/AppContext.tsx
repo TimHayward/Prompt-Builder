@@ -3,21 +3,22 @@
  * Manages global application state and settings
  */
 
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { Settings } from "@/types";
-import { useToast } from "./ToastContext";
-import { apiRequest, apiSend, describeApiFailure } from "@/lib/apiClient";
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { Settings } from '@/types';
+import { useToast } from './ToastContext';
+import { apiRequest, apiSend, describeApiFailure } from '@/lib/apiClient';
 
 const LOCAL_STORAGE_SETTINGS_KEY = 'promptBuilderSettings'; // May still be used for temporary or non-critical settings
 
 // Default settings
 const DEFAULT_SETTINGS: Settings = {
   autoSave: true,
-  defaultPromptName: "New Prompt",
-  defaultSectionType: "instruction",
-  theme: "dark",
+  defaultPromptName: 'New Prompt',
+  defaultSectionType: 'instruction',
+  theme: 'dark',
   markdownPromptingEnabled: false,
-  systemPrompt: "# Prompt Structure/System Guide\n\nThis document outlines a structured request format for the following prompt. Each section of the prompt is clearly marked with a markdown heading that indicates both the section type and title.\n\n## Section Types\n\n### **Role** \nDefines the expertise, perspective, or character you will adopt. You will embody this role completely while processing and responding to the prompt.\n\n### **Context** \nProvides essential background information and situational details needed for you to understand the task. All context is critical for generating an appropriate response.\n\n### **Instructions** \nSpecifies the exact deliverables and actions required. This section defines success criteria and should be followed precisely.\n\n### **Style** \nEstablishes guidelines for your style in formulating a response. Your response should consistently adhere to these stylistic guidelines.\n\n### **Format** \nDetails the structural requirements for the output, including organization, layout, and presentation specifications.\n\n## Implementation\n\n- Each section begins with a level-1 markdown heading: `# [Type]: [Title]`\n- You will thoroughly process all sections before producing a response\n- You must prioritize following instructions precisely while maintaining the specified role, context awareness, style, and format\n\nWhat follows is the prompt using the outlined system and formatting.",
+  systemPrompt:
+    '# Prompt Structure/System Guide\n\nThis document outlines a structured request format for the following prompt. Each section of the prompt is clearly marked with a markdown heading that indicates both the section type and title.\n\n## Section Types\n\n### **Role** \nDefines the expertise, perspective, or character you will adopt. You will embody this role completely while processing and responding to the prompt.\n\n### **Context** \nProvides essential background information and situational details needed for you to understand the task. All context is critical for generating an appropriate response.\n\n### **Instructions** \nSpecifies the exact deliverables and actions required. This section defines success criteria and should be followed precisely.\n\n### **Style** \nEstablishes guidelines for your style in formulating a response. Your response should consistently adhere to these stylistic guidelines.\n\n### **Format** \nDetails the structural requirements for the output, including organization, layout, and presentation specifications.\n\n## Implementation\n\n- Each section begins with a level-1 markdown heading: `# [Type]: [Title]`\n- You will thoroughly process all sections before producing a response\n- You must prioritize following instructions precisely while maintaining the specified role, context awareness, style, and format\n\nWhat follows is the prompt using the outlined system and formatting.',
 };
 
 // Context type definition
@@ -53,7 +54,10 @@ type AppProviderProps = {
 export const AppProvider = ({ children }: AppProviderProps) => {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
-  const [importPromptPayload, setImportPromptPayload] = useState<{ filename: string; content: string } | null>(null);
+  const [importPromptPayload, setImportPromptPayload] = useState<{
+    filename: string;
+    content: string;
+  } | null>(null);
   const [appInitialized, setAppInitialized] = useState(false);
   const { showToast } = useToast();
 
@@ -109,12 +113,11 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     // Debounce saving to avoid rapid writes
     const debounceSave = setTimeout(saveSettings, 1000);
     return () => clearTimeout(debounceSave);
-
   }, [settings, appInitialized, showToast]);
 
   // Function to update settings
   const updateSettings = (newSettings: Partial<Settings>) => {
-    setSettings((prevSettings) => ({
+    setSettings(prevSettings => ({
       ...prevSettings,
       ...newSettings,
     }));
@@ -123,8 +126,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   return (
     <AppContext.Provider
       value={{
-        appName: "Prompt Builder",
-        appVersion: "1.0.0",
+        appName: 'Prompt Builder',
+        appVersion: '1.0.0',
         settings,
         updateSettings,
         isSettingsModalOpen,

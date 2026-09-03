@@ -76,22 +76,22 @@ const renderEditorParts = async (markdownEnabled: boolean) => {
     <ToastProvider>
       <SaveStateProvider>
         <AppProvider>
-        <PromptProvider>
-          <WorkspaceProvider>
-            <LoadProbe />
-            <ResolvedPreview
-              sections={promptFixture().sections}
-              values={WORKING_VALUES}
-              systemPrompt={SYSTEM_PROMPT}
-              markdownEnabled={markdownEnabled}
-            />
-            <ActionBar
-              activePromptId="prompt-1"
-              systemPrompt={SYSTEM_PROMPT}
-              markdownEnabled={markdownEnabled}
-            />
-          </WorkspaceProvider>
-        </PromptProvider>
+          <PromptProvider>
+            <WorkspaceProvider>
+              <LoadProbe />
+              <ResolvedPreview
+                sections={promptFixture().sections}
+                values={WORKING_VALUES}
+                systemPrompt={SYSTEM_PROMPT}
+                markdownEnabled={markdownEnabled}
+              />
+              <ActionBar
+                activePromptId="prompt-1"
+                systemPrompt={SYSTEM_PROMPT}
+                markdownEnabled={markdownEnabled}
+              />
+            </WorkspaceProvider>
+          </PromptProvider>
         </AppProvider>
       </SaveStateProvider>
     </ToastProvider>
@@ -113,9 +113,10 @@ const clickCopy = async () => {
 
 beforeEach(() => {
   clipboardText = null;
-  vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
-    mockFetch(String(input), init)
-  ));
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => mockFetch(String(input), init))
+  );
   // useClipboard takes the modern path only in a secure context; jsdom is not
   // one by default.
   Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });

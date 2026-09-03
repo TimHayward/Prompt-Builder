@@ -11,7 +11,8 @@
   align-items: center;
   position: relative; // Needed for absolute positioning of profile menu
 
-  .menu-button { // Updated class name
+  .menu-button {
+    // Updated class name
     background-color: transparent;
     border: none;
     color: colors.$text-color;
@@ -29,10 +30,10 @@
     transition: background-color 0.2s ease;
     box-sizing: border-box; // ADD THIS LINE
 
-    img{
-        width: 20px; // Adjust icon size
-        height: 20px; // Adjust icon size
-        transition: transform 0.2s ease;
+    img {
+      width: 20px; // Adjust icon size
+      height: 20px; // Adjust icon size
+      transition: transform 0.2s ease;
     }
 
     &:hover {

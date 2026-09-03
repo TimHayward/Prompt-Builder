@@ -12,8 +12,7 @@ import type { ErrorResponse } from '@/types/contracts';
 
 /** A validated body, or the response to return instead. */
 export type ParseResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; response: NextResponse<ErrorResponse> };
+  { ok: true; data: T } | { ok: false; response: NextResponse<ErrorResponse> };
 
 /** Builds the error body every route returns on failure. */
 export const errorResponse = (

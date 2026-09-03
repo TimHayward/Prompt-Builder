@@ -2,7 +2,7 @@
  * Type definitions for Prompt Builder
  */
 
-import type { SectionTypeValue } from "../lib/frameworks";
+import type { SectionTypeValue } from '../lib/frameworks';
 
 export type { SectionTypeValue };
 
@@ -10,7 +10,7 @@ export type { SectionTypeValue };
 export type ComponentType = {
   id: string;
   name: string;
-  type: "component";
+  type: 'component';
   content: string;
   componentType: SectionTypeValue;
 };
@@ -19,7 +19,7 @@ export type ComponentType = {
 export type FolderType = {
   id: string;
   name: string;
-  type: "folder";
+  type: 'folder';
   children: (FolderType | ComponentType)[];
   expanded: boolean;
 };
@@ -78,7 +78,7 @@ export type Settings = {
   autoSave: boolean;
   defaultPromptName: string;
   defaultSectionType: SectionTypeValue;
-  theme: "dark" | "light";
+  theme: 'dark' | 'light';
   markdownPromptingEnabled: boolean;
   systemPrompt: string;
 };

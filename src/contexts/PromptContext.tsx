@@ -9,34 +9,60 @@
  * is sent and what the user is told if it fails.
  */
 
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+  useCallback,
+  useRef,
+} from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Prompt, Section, ComponentType, Settings } from "@/types";
+import { Prompt, Section, ComponentType, Settings } from '@/types';
 import { useAppContext } from './AppContext';
 import { useToast } from './ToastContext';
-import { describeApiFailure } from "@/lib/apiClient";
-import * as promptsApi from "@/api/promptsApi";
-import * as mutations from "@/domain/promptMutations";
-import { usePromptPersistence } from "@/hooks/usePromptPersistence";
-import { extractVariablesFromSections, extractVariableSpecsFromSections, VariableSpec } from "@/utils/variableUtils";
-import type { CreatePromptRequest } from "@/types/contracts";
+import { describeApiFailure } from '@/lib/apiClient';
+import * as promptsApi from '@/api/promptsApi';
+import * as mutations from '@/domain/promptMutations';
+import { usePromptPersistence } from '@/hooks/usePromptPersistence';
+import {
+  extractVariablesFromSections,
+  extractVariableSpecsFromSections,
+  VariableSpec,
+} from '@/utils/variableUtils';
+import type { CreatePromptRequest } from '@/types/contracts';
 
 // Context type definition
 type PromptContextType = {
   prompts: Prompt[];
   activePromptId: string | null;
   setActivePromptId: React.Dispatch<React.SetStateAction<string | null>>;
-  addPrompt: (name?: string, options?: { sections?: Section[]; variables?: Record<string, string> }) => Promise<Prompt>;
+  addPrompt: (
+    name?: string,
+    options?: { sections?: Section[]; variables?: Record<string, string> }
+  ) => Promise<Prompt>;
   duplicatePrompt: (promptIdToDuplicate: string) => Promise<Prompt | null>;
-  addSectionToPrompt: (promptId: string, type?: Settings['defaultSectionType']) => string | undefined;
-  updateSection: (promptId: string, sectionId: string, updates: Partial<Omit<Section, "id">>) => void;
+  addSectionToPrompt: (
+    promptId: string,
+    type?: Settings['defaultSectionType']
+  ) => string | undefined;
+  updateSection: (
+    promptId: string,
+    sectionId: string,
+    updates: Partial<Omit<Section, 'id'>>
+  ) => void;
   deleteSection: (promptId: string, sectionId: string) => void;
   moveSectionUp: (promptId: string, sectionId: string) => void;
   moveSectionDown: (promptId: string, sectionId: string) => void;
   moveSectionToIndex: (promptId: string, sectionId: string, newIndex: number) => void;
   toggleSectionOpen: (promptId: string, sectionId: string) => void;
   deletePrompt: (promptId: string) => void;
-  updateSectionFromLinkedComponent: (promptId: string, sectionId: string, component: ComponentType) => void;
+  updateSectionFromLinkedComponent: (
+    promptId: string,
+    sectionId: string,
+    component: ComponentType
+  ) => void;
   addSectionAtIndex: (promptId: string, section: Section, index: number) => void;
   addSectionFromComponent: (promptId: string, componentData: ComponentType, index: number) => void;
   addNewSectionForEditing: (promptId: string) => void;
@@ -67,7 +93,9 @@ type PromptProviderProps = {
 export const PromptProvider = ({ children }: PromptProviderProps) => {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [activePromptId, setActivePromptId] = useState<string | null>(null);
-  const [newlyAddedSectionIdForFocus, setNewlyAddedSectionIdForFocus] = useState<string | null>(null);
+  const [newlyAddedSectionIdForFocus, setNewlyAddedSectionIdForFocus] = useState<string | null>(
+    null
+  );
   const [isPromptsLoading, setIsPromptsLoading] = useState<boolean>(true);
 
   const { settings, appInitialized } = useAppContext();
@@ -128,11 +156,14 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
           setActivePromptId(stillExists ? storedActivePromptId : firstPromptId);
         } catch (error) {
           // Not fatal: fall back to the first prompt rather than losing the library.
-          console.warn('Failed to fetch the active prompt ID; defaulting to the first prompt.', error);
+          console.warn(
+            'Failed to fetch the active prompt ID; defaulting to the first prompt.',
+            error
+          );
           setActivePromptId(firstPromptId);
         }
       } catch (error) {
-        console.error("Error loading initial data:", error);
+        console.error('Error loading initial data:', error);
         showToast(describeApiFailure(error, 'Could not load your prompts.'));
         commitPrompts([]);
         setActivePromptId(null);
@@ -173,200 +204,266 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
    * @param options - Set persist to false for editor-only changes
    * @returns The updated prompt, or undefined if the prompt is unknown
    */
-  const mutatePrompt = useCallback((
-    promptId: string,
-    mutate: (prompt: Prompt) => Prompt,
-    options?: { persist?: boolean }
-  ): Prompt | undefined => {
-    const currentPrompt = promptsRef.current.find(prompt => prompt.id === promptId);
-    if (!currentPrompt) return undefined;
+  const mutatePrompt = useCallback(
+    (
+      promptId: string,
+      mutate: (prompt: Prompt) => Prompt,
+      options?: { persist?: boolean }
+    ): Prompt | undefined => {
+      const currentPrompt = promptsRef.current.find(prompt => prompt.id === promptId);
+      if (!currentPrompt) return undefined;
 
-    const updatedPrompt = mutate(currentPrompt);
-    commitPrompts(promptsRef.current.map(prompt => (prompt.id === promptId ? updatedPrompt : prompt)));
+      const updatedPrompt = mutate(currentPrompt);
+      commitPrompts(
+        promptsRef.current.map(prompt => (prompt.id === promptId ? updatedPrompt : prompt))
+      );
 
-    if (options?.persist !== false) {
-      persistence.queueSave(updatedPrompt);
-    }
+      if (options?.persist !== false) {
+        persistence.queueSave(updatedPrompt);
+      }
 
-    return updatedPrompt;
-  }, [commitPrompts, persistence]);
+      return updatedPrompt;
+    },
+    [commitPrompts, persistence]
+  );
 
   /**
    * Adds a prompt to the UI before the server confirms it, and takes it back
    * out if the create fails — a tab for a prompt that does not exist is worse
    * than a slower create.
    */
-  const createOptimistically = useCallback(async (
-    request: CreatePromptRequest,
-    sections: Section[],
-    failureMessage: string
-  ): Promise<Prompt> => {
-    isCreatingPrompt.current = true;
-    const tempClientId = uuidv4();
+  const createOptimistically = useCallback(
+    async (
+      request: CreatePromptRequest,
+      sections: Section[],
+      failureMessage: string
+    ): Promise<Prompt> => {
+      isCreatingPrompt.current = true;
+      const tempClientId = uuidv4();
 
-    const tempPrompt: Prompt = {
-      id: tempClientId,
-      name: request.name,
-      sections,
-      variables: request.variables ?? {},
-      num: request.num ?? null,
-    };
+      const tempPrompt: Prompt = {
+        id: tempClientId,
+        name: request.name,
+        sections,
+        variables: request.variables ?? {},
+        num: request.num ?? null,
+      };
 
-    commitPrompts([...promptsRef.current, tempPrompt]);
-    setActivePromptId(tempClientId);
+      commitPrompts([...promptsRef.current, tempPrompt]);
+      setActivePromptId(tempClientId);
 
-    try {
-      const createdPrompt = await promptsApi.createPrompt(request);
-      commitPrompts(promptsRef.current.map(prompt => (prompt.id === tempClientId ? createdPrompt : prompt)));
-      setActivePromptId(createdPrompt.id);
-      return createdPrompt;
-    } catch (error) {
-      const remaining = promptsRef.current.filter(prompt => prompt.id !== tempClientId);
+      try {
+        const createdPrompt = await promptsApi.createPrompt(request);
+        commitPrompts(
+          promptsRef.current.map(prompt => (prompt.id === tempClientId ? createdPrompt : prompt))
+        );
+        setActivePromptId(createdPrompt.id);
+        return createdPrompt;
+      } catch (error) {
+        const remaining = promptsRef.current.filter(prompt => prompt.id !== tempClientId);
+        commitPrompts(remaining);
+        if (activePromptIdRef.current === tempClientId) {
+          setActivePromptId(remaining.length > 0 ? remaining[0].id : null);
+        }
+        showToast(describeApiFailure(error, failureMessage));
+        throw error;
+      } finally {
+        isCreatingPrompt.current = false;
+      }
+    },
+    [commitPrompts, showToast]
+  );
+
+  const addPrompt = useCallback(
+    async (
+      name?: string,
+      options?: { sections?: Section[]; variables?: Record<string, string> }
+    ): Promise<Prompt> => {
+      const promptName =
+        name || settings.defaultPromptName || `Prompt ${promptsRef.current.length + 1}`;
+      const sections =
+        options?.sections ??
+        (settings.defaultSectionType
+          ? [mutations.newSection(settings.defaultSectionType, 'Section 1')]
+          : []);
+
+      return createOptimistically(
+        {
+          name: promptName,
+          sections: sections.map(
+            ({
+              open,
+              dirty,
+              editingHeader,
+              editingHeaderTempName,
+              editingHeaderTempType,
+              ...stored
+            }) => stored
+          ),
+          variables: options?.variables ?? {},
+          num: promptsRef.current.length + 1,
+        },
+        sections,
+        'Could not create the prompt.'
+      );
+    },
+    [settings.defaultPromptName, settings.defaultSectionType, createOptimistically]
+  );
+
+  const duplicatePrompt = useCallback(
+    async (promptIdToDuplicate: string): Promise<Prompt | null> => {
+      const original = promptsRef.current.find(prompt => prompt.id === promptIdToDuplicate);
+      if (!original) {
+        console.error('Prompt to duplicate not found');
+        return null;
+      }
+
+      const sections = mutations.copySectionsForDuplicate(original.sections);
+
+      return createOptimistically(
+        {
+          name: `${original.name} (Copy)`,
+          sections: sections.map(
+            ({
+              open,
+              dirty,
+              editingHeader,
+              editingHeaderTempName,
+              editingHeaderTempType,
+              ...stored
+            }) => stored
+          ),
+          variables: original.variables || {},
+          num: promptsRef.current.length + 1,
+        },
+        sections,
+        'Could not duplicate the prompt.'
+      );
+    },
+    [createOptimistically]
+  );
+
+  const deletePrompt = useCallback(
+    async (promptId: string) => {
+      // Drop any save still queued for this prompt so it cannot recreate it. A
+      // pending edit to a prompt the user is deleting is not worth keeping, and
+      // the tab still holds it if the delete fails.
+      persistence.cancelSave(promptId);
+
+      try {
+        // Deleted on the server first: a prompt that vanishes from the tabs while
+        // it still exists in the database is the harder failure to notice.
+        await promptsApi.deletePrompt(promptId);
+      } catch (error) {
+        console.error(`Failed to delete prompt ${promptId}:`, error);
+        showToast(describeApiFailure(error, 'Could not delete the prompt.'));
+        return;
+      }
+
+      const remaining = promptsRef.current.filter(prompt => prompt.id !== promptId);
       commitPrompts(remaining);
-      if (activePromptIdRef.current === tempClientId) {
+      if (activePromptIdRef.current === promptId) {
+        // Reads the list the deletion produced, not the one before it.
         setActivePromptId(remaining.length > 0 ? remaining[0].id : null);
       }
-      showToast(describeApiFailure(error, failureMessage));
-      throw error;
-    } finally {
-      isCreatingPrompt.current = false;
-    }
-  }, [commitPrompts, showToast]);
+    },
+    [commitPrompts, persistence, showToast]
+  );
 
-  const addPrompt = useCallback(async (
-    name?: string,
-    options?: { sections?: Section[]; variables?: Record<string, string> }
-  ): Promise<Prompt> => {
-    const promptName = name || settings.defaultPromptName || `Prompt ${promptsRef.current.length + 1}`;
-    const sections = options?.sections
-      ?? (settings.defaultSectionType ? [mutations.newSection(settings.defaultSectionType, 'Section 1')] : []);
+  const updatePromptName = useCallback(
+    (promptId: string, newName: string) => {
+      mutatePrompt(promptId, prompt => mutations.renamePrompt(prompt, newName));
+    },
+    [mutatePrompt]
+  );
 
-    return createOptimistically(
-      {
-        name: promptName,
-        sections: sections.map(({ open, dirty, editingHeader, editingHeaderTempName, editingHeaderTempType, ...stored }) => stored),
-        variables: options?.variables ?? {},
-        num: promptsRef.current.length + 1,
-      },
-      sections,
-      'Could not create the prompt.'
-    );
-  }, [settings.defaultPromptName, settings.defaultSectionType, createOptimistically]);
+  const addSectionToPrompt = useCallback(
+    (promptId: string, type?: Settings['defaultSectionType']): string | undefined => {
+      const section = mutations.newSection(type || settings.defaultSectionType || 'instruction');
+      const updated = mutatePrompt(promptId, prompt => mutations.appendSection(prompt, section));
 
-  const duplicatePrompt = useCallback(async (promptIdToDuplicate: string): Promise<Prompt | null> => {
-    const original = promptsRef.current.find(prompt => prompt.id === promptIdToDuplicate);
-    if (!original) {
-      console.error("Prompt to duplicate not found");
-      return null;
-    }
+      return updated ? section.id : undefined;
+    },
+    [mutatePrompt, settings.defaultSectionType]
+  );
 
-    const sections = mutations.copySectionsForDuplicate(original.sections);
+  const updateSection = useCallback(
+    (promptId: string, sectionId: string, updates: Partial<Omit<Section, 'id'>>) => {
+      mutatePrompt(promptId, prompt => mutations.updateSectionIn(prompt, sectionId, updates));
+    },
+    [mutatePrompt]
+  );
 
-    return createOptimistically(
-      {
-        name: `${original.name} (Copy)`,
-        sections: sections.map(({ open, dirty, editingHeader, editingHeaderTempName, editingHeaderTempType, ...stored }) => stored),
-        variables: original.variables || {},
-        num: promptsRef.current.length + 1,
-      },
-      sections,
-      'Could not duplicate the prompt.'
-    );
-  }, [createOptimistically]);
+  const deleteSection = useCallback(
+    (promptId: string, sectionId: string) => {
+      mutatePrompt(promptId, prompt => mutations.removeSection(prompt, sectionId));
+    },
+    [mutatePrompt]
+  );
 
-  const deletePrompt = useCallback(async (promptId: string) => {
-    // Drop any save still queued for this prompt so it cannot recreate it. A
-    // pending edit to a prompt the user is deleting is not worth keeping, and
-    // the tab still holds it if the delete fails.
-    persistence.cancelSave(promptId);
+  const moveSectionUp = useCallback(
+    (promptId: string, sectionId: string) => {
+      mutatePrompt(promptId, prompt => mutations.moveSection(prompt, sectionId, 'up'));
+    },
+    [mutatePrompt]
+  );
 
-    try {
-      // Deleted on the server first: a prompt that vanishes from the tabs while
-      // it still exists in the database is the harder failure to notice.
-      await promptsApi.deletePrompt(promptId);
-    } catch (error) {
-      console.error(`Failed to delete prompt ${promptId}:`, error);
-      showToast(describeApiFailure(error, 'Could not delete the prompt.'));
-      return;
-    }
+  const moveSectionDown = useCallback(
+    (promptId: string, sectionId: string) => {
+      mutatePrompt(promptId, prompt => mutations.moveSection(prompt, sectionId, 'down'));
+    },
+    [mutatePrompt]
+  );
 
-    const remaining = promptsRef.current.filter(prompt => prompt.id !== promptId);
-    commitPrompts(remaining);
-    if (activePromptIdRef.current === promptId) {
-      // Reads the list the deletion produced, not the one before it.
-      setActivePromptId(remaining.length > 0 ? remaining[0].id : null);
-    }
-  }, [commitPrompts, persistence, showToast]);
+  const moveSectionToIndex = useCallback(
+    (promptId: string, sectionId: string, newIndex: number) => {
+      mutatePrompt(promptId, prompt => mutations.moveSectionToIndex(prompt, sectionId, newIndex));
+    },
+    [mutatePrompt]
+  );
 
-  const updatePromptName = useCallback((promptId: string, newName: string) => {
-    mutatePrompt(promptId, prompt => mutations.renamePrompt(prompt, newName));
-  }, [mutatePrompt]);
+  const toggleSectionOpen = useCallback(
+    (promptId: string, sectionId: string) => {
+      // Open/closed is editor state, so this one deliberately does not persist.
+      mutatePrompt(promptId, prompt => mutations.toggleSection(prompt, sectionId), {
+        persist: false,
+      });
+    },
+    [mutatePrompt]
+  );
 
-  const addSectionToPrompt = useCallback((
-    promptId: string,
-    type?: Settings['defaultSectionType']
-  ): string | undefined => {
-    const section = mutations.newSection(type || settings.defaultSectionType || 'instruction');
-    const updated = mutatePrompt(promptId, prompt => mutations.appendSection(prompt, section));
+  const updateSectionFromLinkedComponent = useCallback(
+    (promptId: string, sectionId: string, component: ComponentType) => {
+      mutatePrompt(promptId, prompt =>
+        mutations.applyComponentToSection(prompt, sectionId, component)
+      );
+    },
+    [mutatePrompt]
+  );
 
-    return updated ? section.id : undefined;
-  }, [mutatePrompt, settings.defaultSectionType]);
+  const addSectionAtIndex = useCallback(
+    (promptId: string, section: Section, index: number) => {
+      mutatePrompt(promptId, prompt => mutations.insertSectionAt(prompt, section, index));
+    },
+    [mutatePrompt]
+  );
 
-  const updateSection = useCallback((
-    promptId: string,
-    sectionId: string,
-    updates: Partial<Omit<Section, "id">>
-  ) => {
-    mutatePrompt(promptId, prompt => mutations.updateSectionIn(prompt, sectionId, updates));
-  }, [mutatePrompt]);
+  const addSectionFromComponent = useCallback(
+    (promptId: string, componentData: ComponentType, index: number) => {
+      addSectionAtIndex(promptId, mutations.sectionFromComponent(componentData), index);
+    },
+    [addSectionAtIndex]
+  );
 
-  const deleteSection = useCallback((promptId: string, sectionId: string) => {
-    mutatePrompt(promptId, prompt => mutations.removeSection(prompt, sectionId));
-  }, [mutatePrompt]);
-
-  const moveSectionUp = useCallback((promptId: string, sectionId: string) => {
-    mutatePrompt(promptId, prompt => mutations.moveSection(prompt, sectionId, 'up'));
-  }, [mutatePrompt]);
-
-  const moveSectionDown = useCallback((promptId: string, sectionId: string) => {
-    mutatePrompt(promptId, prompt => mutations.moveSection(prompt, sectionId, 'down'));
-  }, [mutatePrompt]);
-
-  const moveSectionToIndex = useCallback((promptId: string, sectionId: string, newIndex: number) => {
-    mutatePrompt(promptId, prompt => mutations.moveSectionToIndex(prompt, sectionId, newIndex));
-  }, [mutatePrompt]);
-
-  const toggleSectionOpen = useCallback((promptId: string, sectionId: string) => {
-    // Open/closed is editor state, so this one deliberately does not persist.
-    mutatePrompt(promptId, prompt => mutations.toggleSection(prompt, sectionId), { persist: false });
-  }, [mutatePrompt]);
-
-  const updateSectionFromLinkedComponent = useCallback((
-    promptId: string,
-    sectionId: string,
-    component: ComponentType
-  ) => {
-    mutatePrompt(promptId, prompt => mutations.applyComponentToSection(prompt, sectionId, component));
-  }, [mutatePrompt]);
-
-  const addSectionAtIndex = useCallback((promptId: string, section: Section, index: number) => {
-    mutatePrompt(promptId, prompt => mutations.insertSectionAt(prompt, section, index));
-  }, [mutatePrompt]);
-
-  const addSectionFromComponent = useCallback((
-    promptId: string,
-    componentData: ComponentType,
-    index: number
-  ) => {
-    addSectionAtIndex(promptId, mutations.sectionFromComponent(componentData), index);
-  }, [addSectionAtIndex]);
-
-  const addNewSectionForEditing = useCallback((promptId: string) => {
-    const newSectionId = addSectionToPrompt(promptId);
-    if (newSectionId) {
-      setNewlyAddedSectionIdForFocus(newSectionId);
-    }
-  }, [addSectionToPrompt]);
+  const addNewSectionForEditing = useCallback(
+    (promptId: string) => {
+      const newSectionId = addSectionToPrompt(promptId);
+      if (newSectionId) {
+        setNewlyAddedSectionIdForFocus(newSectionId);
+      }
+    },
+    [addSectionToPrompt]
+  );
 
   const clearNewlyAddedSectionIdForFocus = useCallback(() => {
     setNewlyAddedSectionIdForFocus(null);
@@ -376,15 +473,21 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
   // using a prompt cannot rewrite the prompt. What this context still exposes
   // are the variable *definitions* the sections declare.
 
-  const getPromptVariableNames = useCallback((promptId: string): string[] => {
-    const prompt = prompts.find(p => p.id === promptId);
-    return prompt ? extractVariablesFromSections(prompt.sections) : [];
-  }, [prompts]);
+  const getPromptVariableNames = useCallback(
+    (promptId: string): string[] => {
+      const prompt = prompts.find(p => p.id === promptId);
+      return prompt ? extractVariablesFromSections(prompt.sections) : [];
+    },
+    [prompts]
+  );
 
-  const getPromptVariableSpecs = useCallback((promptId: string): VariableSpec[] => {
-    const prompt = prompts.find(p => p.id === promptId);
-    return prompt ? extractVariableSpecsFromSections(prompt.sections) : [];
-  }, [prompts]);
+  const getPromptVariableSpecs = useCallback(
+    (promptId: string): VariableSpec[] => {
+      const prompt = prompts.find(p => p.id === promptId);
+      return prompt ? extractVariableSpecsFromSections(prompt.sections) : [];
+    },
+    [prompts]
+  );
 
   return (
     <PromptContext.Provider

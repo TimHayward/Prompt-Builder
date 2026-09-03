@@ -5,7 +5,12 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { Section } from '@/types';
-import { toEditorSection, toEditorSections, toStoredSection, toStoredSections } from '@/utils/sectionState';
+import {
+  toEditorSection,
+  toEditorSections,
+  toStoredSection,
+  toStoredSections,
+} from '@/utils/sectionState';
 import { sectionSchema } from '@/types/contracts';
 
 const editorSection = (overrides: Partial<Section> = {}): Section => ({
@@ -41,7 +46,12 @@ describe('toStoredSection', () => {
   });
 
   it('omits optional fields rather than storing undefined', () => {
-    expect(Object.keys(toStoredSection(editorSection()))).toEqual(['id', 'name', 'content', 'type']);
+    expect(Object.keys(toStoredSection(editorSection()))).toEqual([
+      'id',
+      'name',
+      'content',
+      'type',
+    ]);
   });
 
   it('produces sections the API contract accepts', () => {
@@ -80,7 +90,14 @@ describe('toEditorSection', () => {
 
   it('drops editor state left over on a section read back from the API', () => {
     // Prompts saved before the split still have open/dirty in their JSON.
-    const legacy = { id: 's1', name: 'Role', content: 'body', type: 'role', open: false, dirty: true } as Section;
+    const legacy = {
+      id: 's1',
+      name: 'Role',
+      content: 'body',
+      type: 'role',
+      open: false,
+      dirty: true,
+    } as Section;
 
     expect(toEditorSection(legacy)).toEqual({
       id: 's1',
@@ -93,7 +110,10 @@ describe('toEditorSection', () => {
   });
 
   it('round-trips the sections of a prompt through both directions', () => {
-    const sections = [editorSection(), editorSection({ id: 's2', name: 'Context', type: 'context' })];
+    const sections = [
+      editorSection(),
+      editorSection({ id: 's2', name: 'Context', type: 'context' }),
+    ];
 
     const restored = toEditorSections(toStoredSections(sections));
 

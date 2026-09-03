@@ -34,7 +34,7 @@ tone        = technical
 ```
 
 Stored in `prompt_workspaces`, keyed by prompt id, and owned on the client by
-`WorkspaceContext`. Filling in a variable is *using* a prompt, not editing it,
+`WorkspaceContext`. Filling in a variable is _using_ a prompt, not editing it,
 so nothing here writes to the source. That is what lets **Clear values** empty
 the pane while the choice list stays exactly as written.
 

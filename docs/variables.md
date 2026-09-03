@@ -6,11 +6,11 @@ a token means the same thing everywhere.
 
 ## Forms
 
-| Written | Key | Pane |
-| --- | --- | --- |
-| `{{tone}}` | `tone` | Free-text box |
-| `{{mail/teams/calendar}}` | `mail/teams/calendar` | Dropdown of the three, plus `Custom…` |
-| `{{channel: mail/teams/calendar}}` | `channel` | The same dropdown, labelled `channel` |
+| Written                            | Key                   | Pane                                  |
+| ---------------------------------- | --------------------- | ------------------------------------- |
+| `{{tone}}`                         | `tone`                | Free-text box                         |
+| `{{mail/teams/calendar}}`          | `mail/teams/calendar` | Dropdown of the three, plus `Custom…` |
+| `{{channel: mail/teams/calendar}}` | `channel`             | The same dropdown, labelled `channel` |
 
 ## Rules
 
@@ -45,8 +45,8 @@ unchanged. These are held for future syntax.
 ## Empty values
 
 A variable with no value and one explicitly emptied resolve the same way: to
-nothing. Copying then reports which were blank — *"Copied. One variable was left
-empty: customer."* — without blocking, since a prompt with gaps is often exactly
+nothing. Copying then reports which were blank — _"Copied. One variable was left
+empty: customer."_ — without blocking, since a prompt with gaps is often exactly
 what you want to paste elsewhere.
 
 An unknown variable is not left as `{{braces}}` in the output. Whatever the

@@ -9,7 +9,15 @@
  * tell the user whether their work is stored.
  */
 
-import React, { createContext, useCallback, useContext, useMemo, useRef, useState, ReactNode } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+  ReactNode,
+} from 'react';
 
 /** What the user is told, worst state first. */
 export type SaveState = 'saved' | 'unsaved' | 'saving' | 'failed';
@@ -53,14 +61,17 @@ export const SaveStateProvider = ({ children }: { children: ReactNode }) => {
     return setSaveState('saved');
   }, []);
 
-  const setKey = useCallback((key: string, state: KeyState | null) => {
-    if (state === null) {
-      keyStates.current.delete(key);
-    } else {
-      keyStates.current.set(key, state);
-    }
-    recompute();
-  }, [recompute]);
+  const setKey = useCallback(
+    (key: string, state: KeyState | null) => {
+      if (state === null) {
+        keyStates.current.delete(key);
+      } else {
+        keyStates.current.set(key, state);
+      }
+      recompute();
+    },
+    [recompute]
+  );
 
   const value = useMemo(
     () => ({

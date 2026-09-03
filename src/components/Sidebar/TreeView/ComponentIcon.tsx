@@ -3,8 +3,8 @@
  * Renders the appropriate icon based on component type with the correct styling
  */
 
-import React from "react";
-import { getTypeMeta, SectionTypeValue } from "@/lib/frameworks";
+import React from 'react';
+import { getTypeMeta, SectionTypeValue } from '@/lib/frameworks';
 
 interface ComponentIconProps {
   componentType: SectionTypeValue;

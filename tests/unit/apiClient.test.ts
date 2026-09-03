@@ -15,13 +15,19 @@ afterEach(() => {
 
 describe('apiRequest', () => {
   it('returns the parsed body on success', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse([{ id: 'p1' }])));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse([{ id: 'p1' }]))
+    );
 
     await expect(apiRequest('/api/prompts')).resolves.toEqual([{ id: 'p1' }]);
   });
 
   it('throws an ApiError carrying the status and the server message', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ error: 'Prompt not found' }, 404)));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ error: 'Prompt not found' }, 404))
+    );
 
     const error = await apiRequest('/api/prompts/missing').catch(caught => caught);
 
@@ -35,7 +41,10 @@ describe('apiRequest', () => {
       'fetch',
       vi.fn(async () =>
         jsonResponse(
-          { error: 'Prompt name is required', details: [{ path: 'name', message: 'Prompt name is required' }] },
+          {
+            error: 'Prompt name is required',
+            details: [{ path: 'name', message: 'Prompt name is required' }],
+          },
           400
         )
       )
@@ -48,7 +57,12 @@ describe('apiRequest', () => {
   });
 
   it('throws a NetworkError when the request never completes', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch'); }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('Failed to fetch');
+      })
+    );
 
     const error = await apiRequest('/api/prompts').catch(caught => caught);
 
@@ -57,7 +71,10 @@ describe('apiRequest', () => {
   });
 
   it('does not choke on an error response with no body', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 500 })));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('', { status: 500 }))
+    );
 
     const error = (await apiRequest('/api/prompts').catch(caught => caught)) as ApiError;
 
@@ -67,7 +84,7 @@ describe('apiRequest', () => {
 });
 
 describe('describeApiFailure', () => {
-  it('falls back to the caller\'s message for an unknown throw', () => {
+  it("falls back to the caller's message for an unknown throw", () => {
     expect(describeApiFailure({}, 'Could not save.')).toBe('Could not save.');
   });
 });

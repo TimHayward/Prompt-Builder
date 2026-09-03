@@ -18,7 +18,9 @@ import { assertSchema, migrate } from './migrations.mjs';
  * PROMPT_BUILDER_DATA_DIR somewhere else without racing module loading.
  */
 export const resolveDatabasePath = (): { directory: string; file: string } => {
-  const directory = path.resolve(process.env.PROMPT_BUILDER_DATA_DIR || path.join(process.cwd(), 'data'));
+  const directory = path.resolve(
+    process.env.PROMPT_BUILDER_DATA_DIR || path.join(process.cwd(), 'data')
+  );
   return { directory, file: path.join(directory, 'prompt_builder.db') };
 };
 

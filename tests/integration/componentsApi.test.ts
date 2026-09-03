@@ -60,7 +60,9 @@ const idsInLibrary = async () => (await readLibrary()).body.map(row => row.id);
 
 describe('saving the library', () => {
   it('stores a tree and reads it back with its structure', async () => {
-    await saveLibrary([folder('root', [folder('child', [componentNode('c1')]), componentNode('c2')])]);
+    await saveLibrary([
+      folder('root', [folder('child', [componentNode('c1')]), componentNode('c2')]),
+    ]);
 
     const rows = (await readLibrary()).body;
     const byId = new Map(rows.map(row => [row.id, row]));
@@ -72,7 +74,9 @@ describe('saving the library', () => {
   });
 
   it('keeps sibling order across a save', async () => {
-    await saveLibrary([folder('root', [componentNode('a'), componentNode('b'), componentNode('c')])]);
+    await saveLibrary([
+      folder('root', [componentNode('a'), componentNode('b'), componentNode('c')]),
+    ]);
 
     const rows = (await readLibrary()).body;
     // Relative order only: a save upserts rather than replaces, so items stored
@@ -83,7 +87,9 @@ describe('saving the library', () => {
   });
 
   it('keeps folder expansion across a save', async () => {
-    await saveLibrary([folder('root', [folder('open-one', [], true), folder('shut-one', [], false)])]);
+    await saveLibrary([
+      folder('root', [folder('open-one', [], true), folder('shut-one', [], false)]),
+    ]);
 
     const rows = (await readLibrary()).body;
     const byId = new Map(rows.map(row => [row.id, row]));
@@ -121,7 +127,10 @@ describe('a save from a stale client snapshot', () => {
 
   it('removes only what the client says it deleted, and its descendants', async () => {
     await saveLibrary([
-      folder('root', [folder('doomed', [componentNode('child-of-doomed')]), componentNode('survivor')]),
+      folder('root', [
+        folder('doomed', [componentNode('child-of-doomed')]),
+        componentNode('survivor'),
+      ]),
     ]);
 
     await saveLibrary([folder('root', [componentNode('survivor')])], ['doomed']);

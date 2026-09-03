@@ -10,7 +10,8 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 
-const SECTION_TEXT = 'Review the {{technology}} estate for {{customer}} in a {{tone: formal/casual}} tone.';
+const SECTION_TEXT =
+  'Review the {{technology}} estate for {{customer}} in a {{tone: formal/casual}} tone.';
 
 /** The editor's content area is a contenteditable div, not a textarea. */
 const sectionEditor = (page: Page) => page.locator('.editable-content').first();
@@ -81,7 +82,9 @@ test.describe('the prompt workflow', () => {
 
     // ── preview the result ────────────────────────────────────────────────
     await page.getByRole('button', { name: 'Preview' }).click();
-    await expect(previewText(page)).toContainText('Review the Intune estate for Contoso in a formal tone.');
+    await expect(previewText(page)).toContainText(
+      'Review the Intune estate for Contoso in a formal tone.'
+    );
 
     const shown = (await previewText(page).textContent()) ?? '';
 
@@ -104,7 +107,9 @@ test.describe('the prompt workflow', () => {
     expect(toneOptions).toContain('casual');
   });
 
-  test('a variable left empty resolves to nothing, in preview and clipboard alike', async ({ page }) => {
+  test('a variable left empty resolves to nothing, in preview and clipboard alike', async ({
+    page,
+  }) => {
     await page.goto('/');
 
     await createPrompt(page);

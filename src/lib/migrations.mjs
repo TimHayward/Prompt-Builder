@@ -100,7 +100,9 @@ export const MIGRATIONS = [
       // Databases created before the column exists get it here; the baseline
       // above already includes it, so this is a no-op on a fresh install.
       if (!hasColumn(database, 'component_library', 'sort_order')) {
-        database.exec('ALTER TABLE component_library ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0');
+        database.exec(
+          'ALTER TABLE component_library ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0'
+        );
       }
     },
   },
@@ -114,7 +116,9 @@ export const MIGRATIONS = [
       database.exec(createPromptWorkspacesTable);
 
       const promptsWithValues = database
-        .prepare("SELECT id, variables FROM prompts WHERE variables IS NOT NULL AND variables != '{}'")
+        .prepare(
+          "SELECT id, variables FROM prompts WHERE variables IS NOT NULL AND variables != '{}'"
+        )
         .all();
 
       const insert = database.prepare(
@@ -193,7 +197,7 @@ export const assertSchema = (database, databasePath) => {
   if (missingTables.length > 0) {
     throw new Error(
       `Database at ${databasePath} is missing the ${missingTables.join(', ')} table(s). ` +
-      'Run "npm run db:init" before starting the application.'
+        'Run "npm run db:init" before starting the application.'
     );
   }
 };

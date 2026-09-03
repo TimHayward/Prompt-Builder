@@ -21,228 +21,237 @@ interface HighlightedTextareaProps {
   isOpen?: boolean;
 }
 
-const HighlightedTextarea = forwardRef<HTMLTextAreaElement, HighlightedTextareaProps>(({
-  value,
-  onChange,
-  placeholder = '',
-  className = '',
-  onDrop,
-  onDragOver,
-  autosize = false,
-  isOpen = true,
-}, ref) => {
-  const editorRef = useRef<HTMLDivElement>(null);
-  const isComposing = useRef(false);
+const HighlightedTextarea = forwardRef<HTMLTextAreaElement, HighlightedTextareaProps>(
+  (
+    {
+      value,
+      onChange,
+      placeholder = '',
+      className = '',
+      onDrop,
+      onDragOver,
+      autosize = false,
+      isOpen = true,
+    },
+    ref
+  ) => {
+    const editorRef = useRef<HTMLDivElement>(null);
+    const isComposing = useRef(false);
 
-  // Create a fake textarea ref for compatibility
-  useImperativeHandle(ref, () => {
-    // Return a partial HTMLTextAreaElement interface
-    return {
-      focus: () => editorRef.current?.focus(),
-      blur: () => editorRef.current?.blur(),
-      value: value,
-      scrollHeight: editorRef.current?.scrollHeight || 0,
-      style: editorRef.current?.style || {},
-    } as HTMLTextAreaElement;
-  });
-
-  // Get plain text from the contenteditable
-  const getPlainText = useCallback((element: HTMLElement): string => {
-    let text = '';
-    element.childNodes.forEach((node) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        text += node.textContent;
-      } else if (node.nodeType === Node.ELEMENT_NODE) {
-        const el = node as HTMLElement;
-        if (el.tagName === 'BR') {
-          text += '\n';
-        } else if (el.tagName === 'DIV' || el.tagName === 'P') {
-          if (text.length > 0 && !text.endsWith('\n')) {
-            text += '\n';
-          }
-          text += getPlainText(el);
-        } else {
-          text += getPlainText(el);
-        }
-      }
+    // Create a fake textarea ref for compatibility
+    useImperativeHandle(ref, () => {
+      // Return a partial HTMLTextAreaElement interface
+      return {
+        focus: () => editorRef.current?.focus(),
+        blur: () => editorRef.current?.blur(),
+        value: value,
+        scrollHeight: editorRef.current?.scrollHeight || 0,
+        style: editorRef.current?.style || {},
+      } as HTMLTextAreaElement;
     });
-    return text;
-  }, []);
 
-  // Save and restore cursor position
-  const saveCursorPosition = useCallback((): { start: number; end: number } | null => {
-    const selection = window.getSelection();
-    if (!selection || !editorRef.current || selection.rangeCount === 0) return null;
-
-    const range = selection.getRangeAt(0);
-    const preCaretRange = range.cloneRange();
-    preCaretRange.selectNodeContents(editorRef.current);
-    preCaretRange.setEnd(range.startContainer, range.startOffset);
-    const start = preCaretRange.toString().length;
-
-    preCaretRange.setEnd(range.endContainer, range.endOffset);
-    const end = preCaretRange.toString().length;
-
-    return { start, end };
-  }, []);
-
-  const restoreCursorPosition = useCallback((position: { start: number; end: number } | null) => {
-    if (!position || !editorRef.current) return;
-
-    const selection = window.getSelection();
-    if (!selection) return;
-
-    let charIndex = 0;
-    const range = document.createRange();
-    range.setStart(editorRef.current, 0);
-    range.collapse(true);
-
-    const nodeStack: Node[] = [editorRef.current];
-    let node: Node | undefined;
-    let foundStart = false;
-    let foundEnd = false;
-
-    while (!foundEnd && (node = nodeStack.pop())) {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const textLength = node.textContent?.length || 0;
-        const nextCharIndex = charIndex + textLength;
-
-        if (!foundStart && position.start >= charIndex && position.start <= nextCharIndex) {
-          range.setStart(node, position.start - charIndex);
-          foundStart = true;
+    // Get plain text from the contenteditable
+    const getPlainText = useCallback((element: HTMLElement): string => {
+      let text = '';
+      element.childNodes.forEach(node => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          text += node.textContent;
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+          const el = node as HTMLElement;
+          if (el.tagName === 'BR') {
+            text += '\n';
+          } else if (el.tagName === 'DIV' || el.tagName === 'P') {
+            if (text.length > 0 && !text.endsWith('\n')) {
+              text += '\n';
+            }
+            text += getPlainText(el);
+          } else {
+            text += getPlainText(el);
+          }
         }
+      });
+      return text;
+    }, []);
 
-        if (foundStart && position.end >= charIndex && position.end <= nextCharIndex) {
-          range.setEnd(node, position.end - charIndex);
-          foundEnd = true;
-        }
+    // Save and restore cursor position
+    const saveCursorPosition = useCallback((): { start: number; end: number } | null => {
+      const selection = window.getSelection();
+      if (!selection || !editorRef.current || selection.rangeCount === 0) return null;
 
-        charIndex = nextCharIndex;
-      } else {
-        let i = node.childNodes.length;
-        while (i--) {
-          nodeStack.push(node.childNodes[i]);
+      const range = selection.getRangeAt(0);
+      const preCaretRange = range.cloneRange();
+      preCaretRange.selectNodeContents(editorRef.current);
+      preCaretRange.setEnd(range.startContainer, range.startOffset);
+      const start = preCaretRange.toString().length;
+
+      preCaretRange.setEnd(range.endContainer, range.endOffset);
+      const end = preCaretRange.toString().length;
+
+      return { start, end };
+    }, []);
+
+    const restoreCursorPosition = useCallback((position: { start: number; end: number } | null) => {
+      if (!position || !editorRef.current) return;
+
+      const selection = window.getSelection();
+      if (!selection) return;
+
+      let charIndex = 0;
+      const range = document.createRange();
+      range.setStart(editorRef.current, 0);
+      range.collapse(true);
+
+      const nodeStack: Node[] = [editorRef.current];
+      let node: Node | undefined;
+      let foundStart = false;
+      let foundEnd = false;
+
+      while (!foundEnd && (node = nodeStack.pop())) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          const textLength = node.textContent?.length || 0;
+          const nextCharIndex = charIndex + textLength;
+
+          if (!foundStart && position.start >= charIndex && position.start <= nextCharIndex) {
+            range.setStart(node, position.start - charIndex);
+            foundStart = true;
+          }
+
+          if (foundStart && position.end >= charIndex && position.end <= nextCharIndex) {
+            range.setEnd(node, position.end - charIndex);
+            foundEnd = true;
+          }
+
+          charIndex = nextCharIndex;
+        } else {
+          let i = node.childNodes.length;
+          while (i--) {
+            nodeStack.push(node.childNodes[i]);
+          }
         }
       }
-    }
 
-    selection.removeAllRanges();
-    selection.addRange(range);
-  }, []);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }, []);
 
-  // Create highlighted HTML from plain text
-  const createHighlightedHTML = useCallback((text: string): string => {
-    if (!text) return '';
+    // Create highlighted HTML from plain text
+    const createHighlightedHTML = useCallback((text: string): string => {
+      if (!text) return '';
 
-    // Escape per segment rather than up front: escaping first would turn a
-    // reserved token like {{> Component}} into {{&gt; Component}} and hide the
-    // sigil from the parser.
-    const escape = (value: string): string => value
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+      // Escape per segment rather than up front: escaping first would turn a
+      // reserved token like {{> Component}} into {{&gt; Component}} and hide the
+      // sigil from the parser.
+      const escape = (value: string): string =>
+        value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-    // Wrap {{variables}} in highlighted spans, flagging choice lists separately
-    let highlighted = '';
-    let cursor = 0;
+      // Wrap {{variables}} in highlighted spans, flagging choice lists separately
+      let highlighted = '';
+      let cursor = 0;
 
-    for (const match of text.matchAll(VARIABLE_TOKEN_REGEX)) {
-      const spec = parseVariableToken(match[1]);
-      const token = escape(match[0]);
+      for (const match of text.matchAll(VARIABLE_TOKEN_REGEX)) {
+        const spec = parseVariableToken(match[1]);
+        const token = escape(match[0]);
 
-      highlighted += escape(text.slice(cursor, match.index));
-      highlighted += spec
-        ? `<span class="highlighted-variable${spec.options.length > 0 ? ' highlighted-variable--choice' : ''}">${token}</span>`
-        : token;
+        highlighted += escape(text.slice(cursor, match.index));
+        highlighted += spec
+          ? `<span class="highlighted-variable${spec.options.length > 0 ? ' highlighted-variable--choice' : ''}">${token}</span>`
+          : token;
 
-      cursor = match.index + match[0].length;
-    }
-
-    highlighted += escape(text.slice(cursor));
-
-    // Convert newlines to br tags
-    return highlighted.replace(/\n/g, '<br>');
-  }, []);
-
-  // Handle input
-  const handleInput = useCallback(() => {
-    if (isComposing.current || !editorRef.current) return;
-
-    const plainText = getPlainText(editorRef.current);
-    onChange(plainText);
-  }, [getPlainText, onChange]);
-
-  // Handle paste - ensure plain text only
-  const handlePaste = useCallback((e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const text = e.clipboardData.getData('text/plain');
-    document.execCommand('insertText', false, text);
-  }, []);
-
-  // Handle composition (for IME input)
-  const handleCompositionStart = useCallback(() => {
-    isComposing.current = true;
-  }, []);
-
-  const handleCompositionEnd = useCallback(() => {
-    isComposing.current = false;
-    handleInput();
-  }, [handleInput]);
-
-  // Handle drop events - adapt for div element
-  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    if (onDrop) {
-      // Create a synthetic event that looks like a textarea event
-      onDrop(e as unknown as React.DragEvent<HTMLTextAreaElement>);
-    }
-  }, [onDrop]);
-
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    if (onDragOver) {
-      onDragOver(e as unknown as React.DragEvent<HTMLTextAreaElement>);
-    }
-  }, [onDragOver]);
-
-  // Update the content when value changes from outside
-  useEffect(() => {
-    if (!editorRef.current) return;
-
-    const currentText = getPlainText(editorRef.current);
-    if (currentText !== value) {
-      const cursorPos = saveCursorPosition();
-      editorRef.current.innerHTML = createHighlightedHTML(value);
-      if (document.activeElement === editorRef.current) {
-        restoreCursorPosition(cursorPos);
+        cursor = match.index + match[0].length;
       }
-    }
-  }, [value, getPlainText, createHighlightedHTML, saveCursorPosition, restoreCursorPosition]);
 
-  // Initial render
-  useEffect(() => {
-    if (editorRef.current && !editorRef.current.innerHTML) {
-      editorRef.current.innerHTML = createHighlightedHTML(value);
-    }
-  }, []);
+      highlighted += escape(text.slice(cursor));
 
-  return (
-    <div className={`highlighted-textarea-wrapper ${className}`}>
-      <div
-        ref={editorRef}
-        className="editable-content"
-        contentEditable
-        onInput={handleInput}
-        onPaste={handlePaste}
-        onCompositionStart={handleCompositionStart}
-        onCompositionEnd={handleCompositionEnd}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        data-placeholder={placeholder}
-        spellCheck={false}
-        suppressContentEditableWarning
-      />
-    </div>
-  );
-});
+      // Convert newlines to br tags
+      return highlighted.replace(/\n/g, '<br>');
+    }, []);
+
+    // Handle input
+    const handleInput = useCallback(() => {
+      if (isComposing.current || !editorRef.current) return;
+
+      const plainText = getPlainText(editorRef.current);
+      onChange(plainText);
+    }, [getPlainText, onChange]);
+
+    // Handle paste - ensure plain text only
+    const handlePaste = useCallback((e: React.ClipboardEvent) => {
+      e.preventDefault();
+      const text = e.clipboardData.getData('text/plain');
+      document.execCommand('insertText', false, text);
+    }, []);
+
+    // Handle composition (for IME input)
+    const handleCompositionStart = useCallback(() => {
+      isComposing.current = true;
+    }, []);
+
+    const handleCompositionEnd = useCallback(() => {
+      isComposing.current = false;
+      handleInput();
+    }, [handleInput]);
+
+    // Handle drop events - adapt for div element
+    const handleDrop = useCallback(
+      (e: React.DragEvent<HTMLDivElement>) => {
+        if (onDrop) {
+          // Create a synthetic event that looks like a textarea event
+          onDrop(e as unknown as React.DragEvent<HTMLTextAreaElement>);
+        }
+      },
+      [onDrop]
+    );
+
+    const handleDragOver = useCallback(
+      (e: React.DragEvent<HTMLDivElement>) => {
+        if (onDragOver) {
+          onDragOver(e as unknown as React.DragEvent<HTMLTextAreaElement>);
+        }
+      },
+      [onDragOver]
+    );
+
+    // Update the content when value changes from outside
+    useEffect(() => {
+      if (!editorRef.current) return;
+
+      const currentText = getPlainText(editorRef.current);
+      if (currentText !== value) {
+        const cursorPos = saveCursorPosition();
+        editorRef.current.innerHTML = createHighlightedHTML(value);
+        if (document.activeElement === editorRef.current) {
+          restoreCursorPosition(cursorPos);
+        }
+      }
+    }, [value, getPlainText, createHighlightedHTML, saveCursorPosition, restoreCursorPosition]);
+
+    // Initial render
+    useEffect(() => {
+      if (editorRef.current && !editorRef.current.innerHTML) {
+        editorRef.current.innerHTML = createHighlightedHTML(value);
+      }
+    }, []);
+
+    return (
+      <div className={`highlighted-textarea-wrapper ${className}`}>
+        <div
+          ref={editorRef}
+          className="editable-content"
+          contentEditable
+          onInput={handleInput}
+          onPaste={handlePaste}
+          onCompositionStart={handleCompositionStart}
+          onCompositionEnd={handleCompositionEnd}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          data-placeholder={placeholder}
+          spellCheck={false}
+          suppressContentEditableWarning
+        />
+      </div>
+    );
+  }
+);
 
 HighlightedTextarea.displayName = 'HighlightedTextarea';
 

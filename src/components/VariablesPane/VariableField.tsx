@@ -37,7 +37,7 @@ const VariableField: React.FC<VariableFieldProps> = ({ spec, value, onChange }) 
       id={`var-${spec.key}`}
       className="variable-input"
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={e => onChange(e.target.value)}
       placeholder={`Enter value for ${spec.label}`}
       autoFocus={hasOptions}
     />
@@ -61,8 +61,8 @@ const VariableField: React.FC<VariableFieldProps> = ({ spec, value, onChange }) 
       <select
         id={isCustom ? undefined : `var-${spec.key}`}
         className="variable-select"
-        value={isCustom ? CUSTOM_OPTION : (value || PLACEHOLDER_OPTION)}
-        onChange={(e) => handleSelect(e.target.value)}
+        value={isCustom ? CUSTOM_OPTION : value || PLACEHOLDER_OPTION}
+        onChange={e => handleSelect(e.target.value)}
       >
         <option value={PLACEHOLDER_OPTION} disabled>
           Select an option…

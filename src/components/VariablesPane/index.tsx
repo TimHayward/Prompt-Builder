@@ -78,7 +78,7 @@ const VariablesPane: React.FC = () => {
                 <VariableField
                   spec={spec}
                   value={workingValues[spec.key] || ''}
-                  onChange={(value) => handleVariableChange(spec.key, value)}
+                  onChange={value => handleVariableChange(spec.key, value)}
                 />
               </div>
             ))}

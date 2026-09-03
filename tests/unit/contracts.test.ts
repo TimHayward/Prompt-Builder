@@ -82,7 +82,13 @@ describe('saveLibraryRequestSchema', () => {
           type: 'folder',
           expanded: true,
           children: [
-            { id: 'c1', name: 'A component', type: 'component', content: 'body', componentType: 'instruction' },
+            {
+              id: 'c1',
+              name: 'A component',
+              type: 'component',
+              content: 'body',
+              componentType: 'instruction',
+            },
           ],
         },
       ],
@@ -93,7 +99,9 @@ describe('saveLibraryRequestSchema', () => {
   });
 
   it('rejects a tree whose nodes are not folders or components', () => {
-    const result = saveLibraryRequestSchema.safeParse({ tree: [{ id: 'x', name: 'x', type: 'mystery' }] });
+    const result = saveLibraryRequestSchema.safeParse({
+      tree: [{ id: 'x', name: 'x', type: 'mystery' }],
+    });
 
     expect(result.success).toBe(false);
   });
@@ -101,8 +109,12 @@ describe('saveLibraryRequestSchema', () => {
 
 describe('ingestPromptRequestSchema', () => {
   it('rejects blank filename or content', () => {
-    expect(ingestPromptRequestSchema.safeParse({ filename: '   ', content: 'x' }).success).toBe(false);
-    expect(ingestPromptRequestSchema.safeParse({ filename: 'a.md', content: '  ' }).success).toBe(false);
+    expect(ingestPromptRequestSchema.safeParse({ filename: '   ', content: 'x' }).success).toBe(
+      false
+    );
+    expect(ingestPromptRequestSchema.safeParse({ filename: 'a.md', content: '  ' }).success).toBe(
+      false
+    );
   });
 });
 

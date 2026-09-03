@@ -155,7 +155,10 @@ describe('variables left blank', () => {
 
   it('treats an empty value the same as a missing one', () => {
     const missing = compilePrompt({ sections: [section('T', 'Hi {{name}}')] });
-    const emptied = compilePrompt({ sections: [section('T', 'Hi {{name}}')], values: { name: '' } });
+    const emptied = compilePrompt({
+      sections: [section('T', 'Hi {{name}}')],
+      values: { name: '' },
+    });
 
     expect(missing.text).toBe(emptied.text);
     expect(missing.unresolved).toEqual(emptied.unresolved);

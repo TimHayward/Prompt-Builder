@@ -19,8 +19,7 @@ export const listWorkspaces = (): PromptWorkspace[] =>
 /** One prompt's working state; an empty one when it has never been used. */
 export const getWorkspace = (promptId: string): PromptWorkspace => {
   const row = db.prepare(`${SELECT_COLUMNS} WHERE prompt_id = ?`).get(promptId) as
-    | WorkspaceRow
-    | undefined;
+    WorkspaceRow | undefined;
 
   return toWorkspace(row ?? emptyWorkspaceRow(promptId));
 };
@@ -36,8 +35,8 @@ export const saveWorkspace = (
   update: { values?: Record<string, string>; sectionOverrides?: Record<string, string> }
 ): PromptWorkspace => {
   const existing =
-    (db.prepare(`${SELECT_COLUMNS} WHERE prompt_id = ?`).get(promptId) as WorkspaceRow | undefined) ??
-    emptyWorkspaceRow(promptId);
+    (db.prepare(`${SELECT_COLUMNS} WHERE prompt_id = ?`).get(promptId) as
+      WorkspaceRow | undefined) ?? emptyWorkspaceRow(promptId);
 
   const valuesJson = update.values ? JSON.stringify(update.values) : existing.values_json;
   const overridesJson = update.sectionOverrides

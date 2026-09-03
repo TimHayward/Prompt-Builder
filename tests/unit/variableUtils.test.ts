@@ -91,7 +91,9 @@ describe('values', () => {
   });
 
   it('substitutes a choice variable by its key, not its chosen option', () => {
-    expect(resolveVariables('Use {{mail/teams}}', { 'mail/teams': 'teams' }).text).toBe('Use teams');
+    expect(resolveVariables('Use {{mail/teams}}', { 'mail/teams': 'teams' }).text).toBe(
+      'Use teams'
+    );
   });
 
   it('accepts a custom value that is not one of the choices', () => {

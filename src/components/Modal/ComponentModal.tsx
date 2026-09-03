@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
 /**
  * ComponentModal
  * Modal for adding and editing components
  */
 
-import React, { useState, useEffect } from "react";
-import ModalBase from "./ModalBase";
-import { useTreeContext } from "../../contexts/TreeContext";
+import React, { useState, useEffect } from 'react';
+import ModalBase from './ModalBase';
+import { useTreeContext } from '../../contexts/TreeContext';
 import {
   FRAMEWORKS,
   DEFAULT_FRAMEWORK_ID,
@@ -15,8 +15,8 @@ import {
   getFramework,
   getFrameworkForType,
   getTypeLabel,
-  SectionTypeValue
-} from "../../lib/frameworks";
+  SectionTypeValue,
+} from '../../lib/frameworks';
 
 const ComponentModal: React.FC = () => {
   const {
@@ -25,14 +25,14 @@ const ComponentModal: React.FC = () => {
     componentBeingEdited,
     selectedNode,
     handleAddComponent,
-    handleUpdateComponent
+    handleUpdateComponent,
   } = useTreeContext();
 
-  const [componentName, setComponentName] = useState("");
-  const [componentContent, setComponentContent] = useState("");
+  const [componentName, setComponentName] = useState('');
+  const [componentContent, setComponentContent] = useState('');
   const [componentType, setComponentType] = useState<SectionTypeValue>(DEFAULT_TYPE);
   const [frameworkId, setFrameworkId] = useState<string>(DEFAULT_FRAMEWORK_ID);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   // Reset form when modal opens/closes or editing component changes
   useEffect(() => {
@@ -45,12 +45,12 @@ const ComponentModal: React.FC = () => {
         setFrameworkId(getFrameworkForType(componentBeingEdited.componentType).id);
       } else {
         // Adding a new component
-        setComponentName("");
-        setComponentContent("");
+        setComponentName('');
+        setComponentContent('');
         setComponentType(DEFAULT_TYPE);
         setFrameworkId(DEFAULT_FRAMEWORK_ID);
       }
-      setError("");
+      setError('');
     }
   }, [isComponentModalOpen, componentBeingEdited]);
 
@@ -65,10 +65,10 @@ const ComponentModal: React.FC = () => {
   // Submit handler
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validation
     if (!componentName.trim()) {
-      setError("Component name is required");
+      setError('Component name is required');
       return;
     }
 
@@ -78,14 +78,14 @@ const ComponentModal: React.FC = () => {
         ...componentBeingEdited,
         name: componentName.trim(),
         content: componentContent,
-        componentType: componentType
+        componentType: componentType,
       });
-    } else if (selectedNode && selectedNode.type === "folder") {
+    } else if (selectedNode && selectedNode.type === 'folder') {
       // Add new component
       handleAddComponent(selectedNode.id, {
         name: componentName.trim(),
         content: componentContent,
-        componentType: componentType
+        componentType: componentType,
       });
     }
 
@@ -96,19 +96,19 @@ const ComponentModal: React.FC = () => {
     <ModalBase
       isOpen={isComponentModalOpen}
       onClose={() => setComponentModalOpen(false)}
-      title={componentBeingEdited ? "Edit Component" : "Add Component"}
+      title={componentBeingEdited ? 'Edit Component' : 'Add Component'}
       className="component-modal"
     >
       <form onSubmit={handleSubmit}>
         {error && <div className="error-message">{error}</div>}
-        
+
         <div className="form-group">
           <label htmlFor="componentName">Name:</label>
           <input
             id="componentName"
             type="text"
             value={componentName}
-            onChange={(e) => setComponentName(e.target.value)}
+            onChange={e => setComponentName(e.target.value)}
             autoFocus
           />
         </div>
@@ -118,10 +118,12 @@ const ComponentModal: React.FC = () => {
           <select
             id="componentFramework"
             value={frameworkId}
-            onChange={(e) => handleFrameworkChange(e.target.value)}
+            onChange={e => handleFrameworkChange(e.target.value)}
           >
-            {FRAMEWORKS.map((framework) => (
-              <option key={framework.id} value={framework.id}>{framework.label}</option>
+            {FRAMEWORKS.map(framework => (
+              <option key={framework.id} value={framework.id}>
+                {framework.label}
+              </option>
             ))}
           </select>
         </div>
@@ -131,10 +133,12 @@ const ComponentModal: React.FC = () => {
           <select
             id="componentType"
             value={componentType}
-            onChange={(e) => setComponentType(e.target.value as SectionTypeValue)}
+            onChange={e => setComponentType(e.target.value as SectionTypeValue)}
           >
-            {getFramework(frameworkId).types.map((type) => (
-              <option key={type} value={type}>{getTypeLabel(type)}</option>
+            {getFramework(frameworkId).types.map(type => (
+              <option key={type} value={type}>
+                {getTypeLabel(type)}
+              </option>
             ))}
           </select>
         </div>
@@ -144,15 +148,17 @@ const ComponentModal: React.FC = () => {
           <textarea
             id="componentContent"
             value={componentContent}
-            onChange={(e) => setComponentContent(e.target.value)}
+            onChange={e => setComponentContent(e.target.value)}
             rows={10}
           />
         </div>
 
         <div className="form-actions">
-          <button type="button" onClick={() => setComponentModalOpen(false)}>Cancel</button>
+          <button type="button" onClick={() => setComponentModalOpen(false)}>
+            Cancel
+          </button>
           <button type="submit" className="primary">
-            {componentBeingEdited ? "Confirm" : "Create"}
+            {componentBeingEdited ? 'Confirm' : 'Create'}
           </button>
         </div>
       </form>

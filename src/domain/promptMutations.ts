@@ -84,7 +84,11 @@ export const toggleSection = (prompt: Prompt, sectionId: string): Prompt => ({
 });
 
 /** Moves a section one place up or down; unchanged at either end. */
-export const moveSection = (prompt: Prompt, sectionId: string, direction: 'up' | 'down'): Prompt => {
+export const moveSection = (
+  prompt: Prompt,
+  sectionId: string,
+  direction: 'up' | 'down'
+): Prompt => {
   const index = prompt.sections.findIndex(section => section.id === sectionId);
   if (index === -1) return prompt;
 

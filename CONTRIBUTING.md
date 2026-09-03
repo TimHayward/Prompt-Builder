@@ -9,6 +9,7 @@ better for everyone.
 ## **Development Setup** 💻
 
 ### Prerequisites
+
 - Node.js 24 or higher — `npm ci` needs npm 11 to install this lockfile
 - A browser; there is no extension to load, it runs as a local web app
 
@@ -25,6 +26,7 @@ npm run dev         # http://localhost:3000
 ### Before opening a pull request
 
 ```bash
+npm run format     # Prettier, or check with format:check
 npm test           # unit and integration tests
 npm run test:e2e   # Playwright smoke tests (first run: npx playwright install chromium)
 npm run typecheck
@@ -37,10 +39,14 @@ build their own SQLite database in a temp directory, so they never touch your
 library.
 
 ## Coding Standards 📜
+
 - TypeScript with strict typing; avoid `any`, and map database rows through
   `src/lib/promptRows.ts` rather than asserting
+- Formatting is Prettier's job — run npm run format rather than arguing with it
 - SCSS for styling, no inline CSS
 - Functional React components with hooks
+- Imports read outward-in: packages, then @/ modules, then relative files and
+  styles. Prettier does not sort them, so this one is on you
 - Comments explain why something is the way it is; git history records what
   changed
 
@@ -49,25 +55,32 @@ change belongs in, and lists the rules worth keeping (one compiler, contracts
 defined once, editor state out of the database, schema changes as migrations).
 
 ## Submitting Changes 🔄
+
 Create a new branch:
-  - `git checkout -b feat/your-feature-name` _or_ `git checkout -b fix/your-bug-fix`
+
+- `git checkout -b feat/your-feature-name` _or_ `git checkout -b fix/your-bug-fix`
 
 Commit your changes with a descriptive message:
-  - `git commit -m "feat: add undo/redo functionality"`
+
+- `git commit -m "feat: add undo/redo functionality"`
 
 Push to your fork:
-  - `git push origin your-branch-name`
+
+- `git push origin your-branch-name`
 
 Open a Pull Request against the main branch:
-  - Include a clear description of your changes
-  - Reference related GitHub issues (e.g., "Closes #12")
-  - Keep commits squashed where appropriate
+
+- Include a clear description of your changes
+- Reference related GitHub issues (e.g., "Closes #12")
+- Keep commits squashed where appropriate
 
 Planned work lives in [BACKLOG.md](BACKLOG.md); each item is written to be
 picked up on its own, with the acceptance criteria it has to meet.
 
 ## Feature Requests & Bugs 🐛
+
 Found a bug or have an idea? Open a GitHub Issue with:
+
 - A descriptive title
 - Detailed description (include steps to reproduce for bugs)
 - Expected vs actual behavior

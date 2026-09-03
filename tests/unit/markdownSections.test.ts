@@ -22,7 +22,10 @@ const ATX_DOCUMENT = [
   'Bullet points.',
 ].join('\n');
 
-const LABEL_DOCUMENT = ['Role: You are a careful reviewer.', 'Context: The codebase is {{language}}.'].join('\n');
+const LABEL_DOCUMENT = [
+  'Role: You are a careful reviewer.',
+  'Context: The codebase is {{language}}.',
+].join('\n');
 
 const FENCED_DOCUMENT = [
   '# Role',
@@ -35,7 +38,9 @@ const FENCED_DOCUMENT = [
 ].join('\n');
 
 /** The structure a prompt ends up with, for comparing the two paths. */
-const structureOf = (sections: { name: string; content: string; type?: string; suggestedType?: string | null }[]) =>
+const structureOf = (
+  sections: { name: string; content: string; type?: string; suggestedType?: string | null }[]
+) =>
   sections.map(section => ({
     name: section.name,
     content: section.content,
@@ -119,7 +124,9 @@ describe('parseMarkdownSections', () => {
   });
 
   it('does not read a URL as a Label: heading', () => {
-    const sections = parseMarkdownSections('Role: the reviewer\nSee https://example.com for details');
+    const sections = parseMarkdownSections(
+      'Role: the reviewer\nSee https://example.com for details'
+    );
 
     expect(sections).toHaveLength(1);
     expect(sections[0].name).toBe('Role');

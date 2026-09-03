@@ -66,9 +66,9 @@ const renderApp = async () => {
     <ToastProvider>
       <SaveStateProvider>
         <AppProvider>
-        <PromptProvider>
-          <Probe />
-        </PromptProvider>
+          <PromptProvider>
+            <Probe />
+          </PromptProvider>
         </AppProvider>
       </SaveStateProvider>
     </ToastProvider>
@@ -86,9 +86,10 @@ const flushSaves = async () => {
 
 beforeEach(() => {
   saveOutcome = 'ok';
-  vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
-    mockFetch(String(input), init)
-  ));
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => mockFetch(String(input), init))
+  );
   vi.useFakeTimers({ shouldAdvanceTime: true });
 });
 

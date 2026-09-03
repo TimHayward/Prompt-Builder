@@ -5,9 +5,9 @@
  * Renders an individual node (folder or component) in the tree view
  */
 
-import React, { useState } from "react";
-import { FolderType, TreeNode, ComponentType } from "@/types";
-import { getAllComponentsFromFolder } from "@/utils/treeUtils";
+import React, { useState } from 'react';
+import { FolderType, TreeNode, ComponentType } from '@/types';
+import { getAllComponentsFromFolder } from '@/utils/treeUtils';
 import FolderIcon from '@mui/icons-material/Folder';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -15,7 +15,7 @@ import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
-import ComponentIcon from "./ComponentIcon"; // Assuming this path is correct
+import ComponentIcon from './ComponentIcon'; // Assuming this path is correct
 
 // Constants
 const INDENT = 20;
@@ -59,42 +59,41 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
   handleMoveNodeUp,
   handleMoveNodeDown,
 }) => {
-  const isFolder = node.type === "folder";
-  const isComponent = node.type === "component";
+  const isFolder = node.type === 'folder';
+  const isComponent = node.type === 'component';
   const isExpanded = isFolder && (node as FolderType).expanded; // Changed
   const isSelected = selectedNode && selectedNode.id === node.id;
   const [isHovering, setIsHovering] = useState(false);
-  
+
   // Toggle folder expansion
   const toggleExpand = () => {
     if (!isFolder) return;
     handleToggleFolderExpand(node.id); // Changed
   };
-  
+
   // Handle node selection
   const handleNodeClick = () => {
     setSelectedNode(node);
-    
-    if (node.type === "folder") {
+
+    if (node.type === 'folder') {
       toggleExpand();
-    }
-    else if (node.type === "component") {
+    } else if (node.type === 'component') {
       openEditComponentModal(node);
     }
   };
-  
+
   // Handle drag start
   const handleDragStart = (e: React.DragEvent) => {
     if (isComponent) {
       // Single component drag - keep original format for backward compatibility
       e.stopPropagation();
       const component = node as ComponentType;
-      e.dataTransfer.setData("application/json", JSON.stringify(component));
-      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData('application/json', JSON.stringify(component));
+      e.dataTransfer.effectAllowed = 'move';
       document.body.classList.add('is-dragging-something');
 
       // Custom drag preview for component
-      const dragPreview = document.createElement("div");
+      const dragPreview = document.createElement('div');
       dragPreview.className = `dragging-component dragging-component-${component.componentType}`;
       dragPreview.textContent = node.name;
       document.body.appendChild(dragPreview);
@@ -113,16 +112,19 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
       }
 
       e.stopPropagation();
-      e.dataTransfer.setData("application/json", JSON.stringify({
-        dragType: "folder",
-        folderName: node.name,
-        components: allComponents
-      }));
-      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData(
+        'application/json',
+        JSON.stringify({
+          dragType: 'folder',
+          folderName: node.name,
+          components: allComponents,
+        })
+      );
+      e.dataTransfer.effectAllowed = 'move';
       document.body.classList.add('is-dragging-something');
 
       // Custom drag preview for folder
-      const dragPreview = document.createElement("div");
+      const dragPreview = document.createElement('div');
       dragPreview.className = `dragging-component dragging-component-folder`;
       dragPreview.textContent = `${node.name} (${allComponents.length} component${allComponents.length !== 1 ? 's' : ''})`;
       document.body.appendChild(dragPreview);
@@ -142,28 +144,29 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
       document.body.removeChild(existingPreview);
     }
   };
-  
+
   // Handle drag over
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     if (!isFolder) return;
-    
-    e.dataTransfer.dropEffect = "move";
+
+    e.dataTransfer.dropEffect = 'move';
     setIsHovering(true);
   };
-  
+
   // Handle drag leave
   const handleDragLeave = () => {
     setIsHovering(false);
   };
-  
+
   // Handle drop
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsHovering(false);
     if (isFolder) {
       // Data might be stringified JSON or just the ID. Assuming ID for now.
-      const draggedData = e.dataTransfer.getData("application/json") || e.dataTransfer.getData("text/plain");
+      const draggedData =
+        e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
       let draggedNodeId: string | null = null;
       try {
         const parsedData = JSON.parse(draggedData);
@@ -172,26 +175,26 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
         draggedNodeId = draggedData; // Fallback if not JSON
       }
 
-      if (!draggedNodeId || draggedNodeId === node.id) return; 
+      if (!draggedNodeId || draggedNodeId === node.id) return;
 
       // Dispatch custom event with string IDs
       if (window.dispatchEvent) {
-        const dropEvent = new CustomEvent("node-dropped", {
+        const dropEvent = new CustomEvent('node-dropped', {
           detail: { draggedNodeId: draggedNodeId, targetNodeId: node.id }, // node.id is already string
         });
         window.dispatchEvent(dropEvent);
       }
     }
   };
-  
+
   // Delete confirmation
   const confirmDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     const message = isFolder
       ? `Are you sure you want to delete this folder and all its contents? This action cannot be undone.`
       : `Are you sure you want to delete this component? This action cannot be undone.`;
-    
+
     if (window.confirm(message)) {
       handleDeleteNode(node.id);
     }
@@ -200,9 +203,7 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
   return (
     <div>
       <div
-        className={`tree-node ${isSelected ? "selected" : ""} ${
-          isHovering ? "hover" : ""
-        }`}
+        className={`tree-node ${isSelected ? 'selected' : ''} ${isHovering ? 'hover' : ''}`}
         style={{ paddingLeft: `${level * INDENT}px` }}
         onClick={handleNodeClick}
         onDragStart={handleDragStart} // Both components and folders can be dragged to sections
@@ -214,73 +215,71 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
       >
         <div className="node-content">
           {isFolder ? (
-            <div className="node-icon">
-              {isExpanded ? <FolderOpenIcon /> : <FolderIcon />}
-            </div>
+            <div className="node-icon">{isExpanded ? <FolderOpenIcon /> : <FolderIcon />}</div>
           ) : (
             <div className="node-icon">
               <ComponentIcon componentType={(node as ComponentType).componentType} />
             </div>
           )}
           <span className="node-name">{node.name}</span>
-          
+
           {/* Move actions (up/down) */}
           <div className="node-move-actions">
             <button
               className="action-btn move-up-btn"
-              onClick={(e) => {
+              onClick={e => {
                 e.stopPropagation();
                 handleMoveNodeUp(node.id);
               }}
               title="Move Up"
             >
-              <ArrowUpwardIcon sx={{fontSize: 16}} />
+              <ArrowUpwardIcon sx={{ fontSize: 16 }} />
             </button>
             <button
               className="action-btn move-down-btn"
-              onClick={(e) => {
+              onClick={e => {
                 e.stopPropagation();
                 handleMoveNodeDown(node.id);
               }}
               title="Move Down"
             >
-              <ArrowDownwardIcon sx={{fontSize: 16}} />
+              <ArrowDownwardIcon sx={{ fontSize: 16 }} />
             </button>
           </div>
-          
+
           {/* Folder actions */}
           {isFolder && (
             <div className="node-actions">
               <button
                 className="action-btn add-folder-btn"
-                onClick={(e) => {
+                onClick={e => {
                   e.stopPropagation();
                   startAddFolder(node.id);
                 }}
                 title="Add Folder"
               >
-                <CreateNewFolderIcon sx={{fontSize: 16}} />
+                <CreateNewFolderIcon sx={{ fontSize: 16 }} />
               </button>
               <button
                 className="action-btn add-component-btn"
-                onClick={(e) => {
+                onClick={e => {
                   e.stopPropagation();
                   openAddComponentModal(node.id);
                 }}
                 title="Add Component"
               >
-                <NoteAddIcon sx={{fontSize: 16}} />
+                <NoteAddIcon sx={{ fontSize: 16 }} />
               </button>
               <button
                 className="action-btn delete-btn"
                 onClick={confirmDelete}
                 title="Delete Folder"
               >
-                <DeleteIcon sx={{fontSize: 16}} />
+                <DeleteIcon sx={{ fontSize: 16 }} />
               </button>
             </div>
           )}
-          
+
           {/* Component actions */}
           {!isFolder && (
             <div className="node-actions">
@@ -289,7 +288,7 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
                 onClick={confirmDelete}
                 title="Delete Component"
               >
-                <DeleteIcon sx={{fontSize: 16}} />
+                <DeleteIcon sx={{ fontSize: 16 }} />
               </button>
             </div>
           )}
@@ -307,7 +306,7 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
             type="text"
             className="new-folder-input"
             value={newFolderName}
-            onChange={(e) => setNewFolderName(e.target.value)}
+            onChange={e => setNewFolderName(e.target.value)}
             onKeyDown={handleKeyDown}
             onBlur={submitNewFolder}
             placeholder="Folder name..."
@@ -316,28 +315,30 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
       )}
 
       {/* Render children if expanded */}
-      {isFolder && isExpanded && (node as FolderType).children.map((child) => (
-        <TreeNodeComponent
-          key={child.id}
-          node={child}
-          level={level + 1}
-          selectedNode={selectedNode}
-          setSelectedNode={setSelectedNode}
-          isAddingFolder={isAddingFolder}
-          newFolderName={newFolderName}
-          setNewFolderName={setNewFolderName}
-          newFolderInputRef={newFolderInputRef}
-          handleKeyDown={handleKeyDown}
-          submitNewFolder={submitNewFolder}
-          startAddFolder={startAddFolder}
-          openAddComponentModal={openAddComponentModal}
-          openEditComponentModal={openEditComponentModal}
-          handleDeleteNode={handleDeleteNode}
-          handleToggleFolderExpand={handleToggleFolderExpand}
-          handleMoveNodeUp={handleMoveNodeUp}
-          handleMoveNodeDown={handleMoveNodeDown}
-        />
-      ))}
+      {isFolder &&
+        isExpanded &&
+        (node as FolderType).children.map(child => (
+          <TreeNodeComponent
+            key={child.id}
+            node={child}
+            level={level + 1}
+            selectedNode={selectedNode}
+            setSelectedNode={setSelectedNode}
+            isAddingFolder={isAddingFolder}
+            newFolderName={newFolderName}
+            setNewFolderName={setNewFolderName}
+            newFolderInputRef={newFolderInputRef}
+            handleKeyDown={handleKeyDown}
+            submitNewFolder={submitNewFolder}
+            startAddFolder={startAddFolder}
+            openAddComponentModal={openAddComponentModal}
+            openEditComponentModal={openEditComponentModal}
+            handleDeleteNode={handleDeleteNode}
+            handleToggleFolderExpand={handleToggleFolderExpand}
+            handleMoveNodeUp={handleMoveNodeUp}
+            handleMoveNodeDown={handleMoveNodeDown}
+          />
+        ))}
     </div>
   );
 };

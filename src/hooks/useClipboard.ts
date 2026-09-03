@@ -17,8 +17,9 @@ export const useClipboard = (): UseClipboardReturn => {
   const [status, setStatus] = useState<ClipboardStatus>('idle');
 
   // Check if clipboard API is available
-  const isSupported = typeof navigator !== 'undefined' &&
-                     (!!navigator.clipboard || document.queryCommandSupported?.('copy'));
+  const isSupported =
+    typeof navigator !== 'undefined' &&
+    (!!navigator.clipboard || document.queryCommandSupported?.('copy'));
 
   /**
    * Fallback method: Use deprecated execCommand (works in HTTP)
@@ -46,32 +47,35 @@ export const useClipboard = (): UseClipboardReturn => {
   /**
    * Main copy function with fallback chain
    */
-  const copyToClipboard = useCallback(async (text: string): Promise<boolean> => {
-    if (!text) {
-      setStatus('error');
-      return false;
-    }
-
-    setStatus('idle');
-
-    // Try modern clipboard API first (works on HTTPS/localhost)
-    if (navigator.clipboard && window.isSecureContext) {
-      try {
-        await navigator.clipboard.writeText(text);
-        setStatus('success');
-        setTimeout(() => setStatus('idle'), 2000);
-        return true;
-      } catch (err) {
-        console.warn('Clipboard API failed, trying fallback:', err);
+  const copyToClipboard = useCallback(
+    async (text: string): Promise<boolean> => {
+      if (!text) {
+        setStatus('error');
+        return false;
       }
-    }
 
-    // Fallback to execCommand (works on HTTP)
-    const success = fallbackCopy(text);
-    setStatus(success ? 'success' : 'error');
-    setTimeout(() => setStatus('idle'), 2000);
-    return success;
-  }, [fallbackCopy]);
+      setStatus('idle');
+
+      // Try modern clipboard API first (works on HTTPS/localhost)
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(text);
+          setStatus('success');
+          setTimeout(() => setStatus('idle'), 2000);
+          return true;
+        } catch (err) {
+          console.warn('Clipboard API failed, trying fallback:', err);
+        }
+      }
+
+      // Fallback to execCommand (works on HTTP)
+      const success = fallbackCopy(text);
+      setStatus(success ? 'success' : 'error');
+      setTimeout(() => setStatus('idle'), 2000);
+      return success;
+    },
+    [fallbackCopy]
+  );
 
   return {
     copyToClipboard,

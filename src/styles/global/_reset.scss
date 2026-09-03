@@ -10,13 +10,15 @@
 }
 
 /* Reset for HTML and body */
-html, body {
+html,
+body {
   height: 100%;
   width: 100%;
 }
 
 /* Remove list styles */
-ul, ol {
+ul,
+ol {
   list-style: none;
 }
 
@@ -37,7 +39,10 @@ button {
 }
 
 /* Reset input styles */
-input, textarea, select, button {
+input,
+textarea,
+select,
+button {
   font: inherit;
 }
 

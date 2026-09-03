@@ -12,7 +12,9 @@ import { assertSchema, getSchemaVersion, LATEST_VERSION, migrate } from '../src/
 
 // Matches the application's own resolution, so a deployment or a test can put
 // the database somewhere other than ./data and initialise it the same way.
-const dbDirectory = path.resolve(process.env.PROMPT_BUILDER_DATA_DIR || path.join(process.cwd(), 'data'));
+const dbDirectory = path.resolve(
+  process.env.PROMPT_BUILDER_DATA_DIR || path.join(process.cwd(), 'data')
+);
 const dbPath = path.join(dbDirectory, 'prompt_builder.db');
 
 // Ensure the data directory exists
@@ -53,7 +55,9 @@ try {
   if (version !== LATEST_VERSION) {
     // A database stamped ahead of this build belongs to a newer version of the
     // app; say so rather than letting it fail later inside some query.
-    console.warn(`Warning: schema version is ${version}, but this build expects ${LATEST_VERSION}.`);
+    console.warn(
+      `Warning: schema version is ${version}, but this build expects ${LATEST_VERSION}.`
+    );
   }
 
   console.log('Database initialization complete.');

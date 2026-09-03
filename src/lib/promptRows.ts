@@ -54,7 +54,9 @@ const parseJson = <T>(value: string | null, fallback: T): T => {
  * Turns a prompts row into the prompt the API returns
  * @param row - A row from one of the prompt SELECTs
  */
-export const toPrompt = (row: PromptRow): Prompt & { created_at?: string; updated_at?: string } => ({
+export const toPrompt = (
+  row: PromptRow
+): Prompt & { created_at?: string; updated_at?: string } => ({
   ...row,
   sections: parseJson<StoredSection[]>(row.sections, []) as Prompt['sections'],
   variables: parseJson<Record<string, string>>(row.variables, {}),

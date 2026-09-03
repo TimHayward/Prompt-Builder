@@ -23,7 +23,14 @@ const promptFixture = (): Prompt => ({
   num: 1,
   name: 'Announcement',
   sections: [
-    { id: 's1', name: 'Instruction', content: SOURCE_TEXT, type: 'instruction', open: true, dirty: false },
+    {
+      id: 's1',
+      name: 'Instruction',
+      content: SOURCE_TEXT,
+      type: 'instruction',
+      open: true,
+      dirty: false,
+    },
   ],
   variables: {},
 });
@@ -31,7 +38,11 @@ const promptFixture = (): Prompt => ({
 /** Everything the fake server was asked to change. */
 let promptWrites: { url: string; method: string; body: unknown }[];
 let workspaceWrites: { url: string; method: string; body: unknown }[];
-let workspacesOnServer: { promptId: string; values: Record<string, string>; sectionOverrides: Record<string, string> }[];
+let workspacesOnServer: {
+  promptId: string;
+  values: Record<string, string>;
+  sectionOverrides: Record<string, string>;
+}[];
 
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -77,11 +88,11 @@ const renderApp = async () => {
     <ToastProvider>
       <SaveStateProvider>
         <AppProvider>
-        <PromptProvider>
-          <WorkspaceProvider>
-            <Probe />
-          </WorkspaceProvider>
-        </PromptProvider>
+          <PromptProvider>
+            <WorkspaceProvider>
+              <Probe />
+            </WorkspaceProvider>
+          </PromptProvider>
         </AppProvider>
       </SaveStateProvider>
     </ToastProvider>
@@ -105,9 +116,10 @@ beforeEach(() => {
   promptWrites = [];
   workspaceWrites = [];
   workspacesOnServer = [];
-  vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
-    mockFetch(String(input), init)
-  ));
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => mockFetch(String(input), init))
+  );
   vi.useFakeTimers({ shouldAdvanceTime: true });
 });
 
@@ -151,7 +163,9 @@ describe('entering working values', () => {
   });
 
   it('restores values saved in an earlier session', async () => {
-    workspacesOnServer = [{ promptId: 'prompt-1', values: { channel: 'WhatsApp' }, sectionOverrides: {} }];
+    workspacesOnServer = [
+      { promptId: 'prompt-1', values: { channel: 'WhatsApp' }, sectionOverrides: {} },
+    ];
     const app = await renderApp();
 
     expect(app.current.workspace.getWorkingValues('prompt-1')).toEqual({ channel: 'WhatsApp' });

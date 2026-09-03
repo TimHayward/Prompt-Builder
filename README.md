@@ -17,11 +17,11 @@ Find → Select → Customise → Resolve → Copy
 
 Three things are kept apart, which is the idea the rest of the app is built on:
 
-| | |
-| --- | --- |
-| **Source prompt** | The reusable text and its variable definitions. Stored. |
-| **Working prompt** | The values you enter for this use. Stored separately; clearing them never touches the source. |
-| **Resolved prompt** | What lands on the clipboard. The Preview tab shows exactly this. |
+|                     |                                                                                               |
+| ------------------- | --------------------------------------------------------------------------------------------- |
+| **Source prompt**   | The reusable text and its variable definitions. Stored.                                       |
+| **Working prompt**  | The values you enter for this use. Stored separately; clearing them never touches the source. |
+| **Resolved prompt** | What lands on the clipboard. The Preview tab shows exactly this.                              |
 
 [docs/prompt-model.md](docs/prompt-model.md) explains the model in full.
 
@@ -57,11 +57,11 @@ serving a half-working application.
 Anything wrapped in double braces becomes an editable field in the Variables
 pane, and is substituted when you copy the prompt.
 
-| Syntax | Pane shows |
-| --- | --- |
-| `{{tone}}` | A free-text box |
-| `{{mail/teams/calendar}}` | A dropdown of the three options, plus `Custom…` for free text |
-| `{{channel: mail/teams/calendar}}` | The same dropdown, labelled `channel` |
+| Syntax                             | Pane shows                                                    |
+| ---------------------------------- | ------------------------------------------------------------- |
+| `{{tone}}`                         | A free-text box                                               |
+| `{{mail/teams/calendar}}`          | A dropdown of the three options, plus `Custom…` for free text |
+| `{{channel: mail/teams/calendar}}` | The same dropdown, labelled `channel`                         |
 
 A `/` only creates a choice list when there are at least two options and none of
 them are empty, so `{{https://example.com}}` stays a plain free-text variable.

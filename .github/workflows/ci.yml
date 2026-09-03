@@ -24,6 +24,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Formatting first: a diff of reflowed lines makes every other failure
+      # below harder to read.
+      - name: Format
+        run: npm run format:check
+
       - name: Lint
         run: npm run lint
 

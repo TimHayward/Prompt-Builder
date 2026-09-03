@@ -5,7 +5,7 @@
 import React from 'react';
 import './MenuBar.scss';
 
-import SettingsIcon from "@mui/icons-material/Settings";
+import SettingsIcon from '@mui/icons-material/Settings';
 import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined';
 
 interface MenuBarProps {
@@ -13,7 +13,6 @@ interface MenuBarProps {
 }
 
 const MenuBar: React.FC<MenuBarProps> = ({ openSettings }) => {
-
   return (
     <div id="menu-bar">
       <a
@@ -29,7 +28,7 @@ const MenuBar: React.FC<MenuBarProps> = ({ openSettings }) => {
       {/* Profile Button and Menu */}
       <div className="profile-section">
         <button className="menu-button" title="Settings" onClick={openSettings}>
-            <SettingsIcon fontSize="inherit" />
+          <SettingsIcon fontSize="inherit" />
         </button>
       </div>
     </div>

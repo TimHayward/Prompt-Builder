@@ -19,12 +19,12 @@ They are part of the database, not scratch files.
 
 ## Tables
 
-| Table | Holds |
-| --- | --- |
-| `prompts` | Source prompts; sections and variable defaults as JSON |
+| Table               | Holds                                                                               |
+| ------------------- | ----------------------------------------------------------------------------------- |
+| `prompts`           | Source prompts; sections and variable defaults as JSON                              |
 | `component_library` | The sidebar tree; `parent_id` is self-referential, `sort_order` gives sibling order |
-| `prompt_workspaces` | Working values per prompt, and room for section overrides |
-| `app_config` | One row: settings JSON and the active prompt |
+| `prompt_workspaces` | Working values per prompt, and room for section overrides                           |
+| `app_config`        | One row: settings JSON and the active prompt                                        |
 
 Foreign keys are enabled on every connection, so deleting a folder takes its
 children with it and deleting a prompt takes its working values.

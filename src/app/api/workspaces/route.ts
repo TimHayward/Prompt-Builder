@@ -14,10 +14,10 @@ import { errorResponse } from '@/lib/apiValidation';
  * Fetches the working state for every prompt that has any.
  */
 export async function GET() {
-    try {
-        return NextResponse.json(listWorkspaces());
-    } catch (error) {
-        console.error('Error fetching workspaces:', error);
-        return errorResponse('Failed to fetch working values', 500);
-    }
+  try {
+    return NextResponse.json(listWorkspaces());
+  } catch (error) {
+    console.error('Error fetching workspaces:', error);
+    return errorResponse('Failed to fetch working values', 500);
+  }
 }

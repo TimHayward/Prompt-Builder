@@ -5,14 +5,14 @@
  * Individual section within a prompt
  */
 
-import React, { useState, useEffect, useRef } from "react";
-import { Section as SectionType, ComponentType } from "@/types";
-import { usePromptContext } from "@/contexts/PromptContext";
-import { useTreeContext } from "@/contexts/TreeContext";
-import SectionHeader from "./SectionHeader";
-import HighlightedTextarea from "@/components/HighlightedTextarea";
-import { usePrompts } from "@/hooks/usePrompts";
-import { getTypeColor } from "@/lib/frameworks";
+import React, { useState, useEffect, useRef } from 'react';
+import { Section as SectionType, ComponentType } from '@/types';
+import { usePromptContext } from '@/contexts/PromptContext';
+import { useTreeContext } from '@/contexts/TreeContext';
+import SectionHeader from './SectionHeader';
+import HighlightedTextarea from '@/components/HighlightedTextarea';
+import { usePrompts } from '@/hooks/usePrompts';
+import { getTypeColor } from '@/lib/frameworks';
 
 interface SectionProps {
   section: SectionType;
@@ -23,16 +23,16 @@ interface SectionProps {
 
 const findComponentById = (treeData: any[], id: string): ComponentType | null => {
   for (const node of treeData) {
-    if (node.id === id && node.type === "component") {
+    if (node.id === id && node.type === 'component') {
       return node as ComponentType;
     }
-    
-    if (node.type === "folder" && node.children) {
+
+    if (node.type === 'folder' && node.children) {
       const found = findComponentById(node.children, id);
       if (found) return found;
     }
   }
-  
+
   return null;
 };
 
@@ -44,10 +44,10 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
     updateSectionFromLinkedComponent,
     addSectionFromComponent,
   } = usePromptContext();
-  
+
   const { treeData } = useTreeContext();
-  const { saveSectionToComponentLibrary } = usePrompts(); 
-  
+  const { saveSectionToComponentLibrary } = usePrompts();
+
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -57,14 +57,25 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
     if (section.linked && section.linkedComponentId) {
       const linkedComponent = findComponentById(treeData, section.linkedComponentId);
 
-      if (linkedComponent &&
-          (linkedComponent.content !== section.originalContent ||
-           linkedComponent.componentType !== section.type ||
-           linkedComponent.name !== section.name)) {
+      if (
+        linkedComponent &&
+        (linkedComponent.content !== section.originalContent ||
+          linkedComponent.componentType !== section.type ||
+          linkedComponent.name !== section.name)
+      ) {
         updateSectionFromLinkedComponent(promptId, section.id, linkedComponent);
       }
     }
-  }, [treeData, section.linked, section.linkedComponentId, section.originalContent, section.type, section.name, promptId, updateSectionFromLinkedComponent]);
+  }, [
+    treeData,
+    section.linked,
+    section.linkedComponentId,
+    section.originalContent,
+    section.type,
+    section.name,
+    promptId,
+    updateSectionFromLinkedComponent,
+  ]);
 
   /** The component this section came from, for the origin label. */
   const originComponent = section.linkedComponentId
@@ -90,7 +101,7 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     updateSection(promptId, section.id, {
-      content: e.target.value
+      content: e.target.value,
     });
   };
 
@@ -98,23 +109,27 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
     e.preventDefault();
     setIsDraggingOver(true);
   };
-  
+
   const handleDragLeave = () => {
     setIsDraggingOver(false);
   };
-  
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingOver(false);
 
     try {
-      const data = e.dataTransfer.getData("application/json");
+      const data = e.dataTransfer.getData('application/json');
       const dragData = JSON.parse(data);
 
       if (!dragData) return;
 
       // Handle folder drop with multiple components
-      if (dragData.dragType === "folder" && dragData.components && Array.isArray(dragData.components)) {
+      if (
+        dragData.dragType === 'folder' &&
+        dragData.components &&
+        Array.isArray(dragData.components)
+      ) {
         const components = dragData.components;
 
         if (components.length === 0) return;
@@ -142,7 +157,7 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
         });
       }
       // Handle standard component drop (original format)
-      else if (dragData.type === "component" && dragData.componentType) {
+      else if (dragData.type === 'component' && dragData.componentType) {
         updateSection(promptId, section.id, {
           content: dragData.content,
           type: dragData.componentType,
@@ -153,21 +168,21 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
         });
       }
     } catch (error) {
-      console.error("Error handling drop:", error);
+      console.error('Error handling drop:', error);
     }
   };
 
   const handleSectionDragStart = (e: React.DragEvent) => {
-    e.stopPropagation(); 
+    e.stopPropagation();
     const dragData = {
-      dragType: "existingSection",
+      dragType: 'existingSection',
       sectionId: section.id,
       promptId: promptId,
       sectionData: section,
       originalIndex: index, // Added: original index of the dragged section
     };
-    e.dataTransfer.setData("application/json", JSON.stringify(dragData));
-    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData('application/json', JSON.stringify(dragData));
+    e.dataTransfer.effectAllowed = 'move';
     document.body.classList.add('is-dragging-something');
   };
 
@@ -178,10 +193,10 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
 
   return (
     <div
-      className={`section ${section.open ? "open" : "closed"} ${isDraggingOver ? "drag-over" : ""} ${section.type}`}
-      style={{ "--section-color": getTypeColor(section.type) } as React.CSSProperties}
+      className={`section ${section.open ? 'open' : 'closed'} ${isDraggingOver ? 'drag-over' : ''} ${section.type}`}
+      style={{ '--section-color': getTypeColor(section.type) } as React.CSSProperties}
     >
-      <div 
+      <div
         className="section-drag-handle"
         draggable={true}
         onDragStart={handleSectionDragStart}
@@ -189,24 +204,20 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
         title="Drag to reorder section"
       ></div>
 
-      <SectionHeader 
+      <SectionHeader
         section={section}
         promptId={promptId}
         onToggle={() => toggleSectionOpen(promptId, section.id)}
         onDelete={() => deleteSection(promptId, section.id)}
         nameInputRefCallback={nameInputRefCallback}
       />
-      
+
       {section.open && (
-        <div
-          className="section-content"
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-        >
+        <div className="section-content" onDragOver={handleDragOver} onDragLeave={handleDragLeave}>
           <HighlightedTextarea
             ref={textAreaRef}
             value={section.content}
-            onChange={(value) => {
+            onChange={value => {
               handleContentChange({ target: { value } } as React.ChangeEvent<HTMLTextAreaElement>);
             }}
             onDrop={handleDrop}
@@ -216,9 +227,11 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
             autosize={true}
             isOpen={section.open}
           />
-          
+
           {section.linkedComponentId && (
-            <div className={`linked-component-indicator ${section.linked ? 'is-linked' : 'is-copy'}`}>
+            <div
+              className={`linked-component-indicator ${section.linked ? 'is-linked' : 'is-copy'}`}
+            >
               <span>
                 {section.linked
                   ? `Linked to ${originComponentName} — follows changes to it`

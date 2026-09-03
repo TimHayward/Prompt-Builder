@@ -8,7 +8,15 @@
  * the user goes on believing their change was stored.
  */
 
-import React, { createContext, useCallback, useContext, useMemo, useRef, useState, ReactNode } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+  ReactNode,
+} from 'react';
 import './Toast.scss';
 
 export type ToastTone = 'error' | 'success';

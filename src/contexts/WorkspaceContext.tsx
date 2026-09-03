@@ -9,7 +9,16 @@
  * keeps a variable's definition, and its list of choices, intact.
  */
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  ReactNode,
+} from 'react';
 import { useAppContext } from './AppContext';
 import { useToast } from './ToastContext';
 import { useSaveState } from './SaveStateContext';
@@ -132,7 +141,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const hasWorkingValues = useCallback(
-    (promptId: string) => Object.values(workspaces[promptId]?.values ?? {}).some(value => value !== ''),
+    (promptId: string) =>
+      Object.values(workspaces[promptId]?.values ?? {}).some(value => value !== ''),
     [workspaces]
   );
 

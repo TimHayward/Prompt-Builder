@@ -56,12 +56,12 @@ prompts and components; columns and JSON blobs stop here.
 
 ## Where to add things
 
-| Adding | Goes in |
-| --- | --- |
-| A new way to change a prompt | `src/domain/promptMutations.ts`, exposed through `PromptContext` |
-| A new endpoint | a contract in `src/types/contracts.ts`, a route in `src/app/api`, a repository function |
-| A new stored field | a migration in `src/lib/migrations.mjs`, then the repository and the contract |
-| Anything about resolved text | `src/utils/compilePrompt.ts` — not a second implementation |
+| Adding                       | Goes in                                                                                 |
+| ---------------------------- | --------------------------------------------------------------------------------------- |
+| A new way to change a prompt | `src/domain/promptMutations.ts`, exposed through `PromptContext`                        |
+| A new endpoint               | a contract in `src/types/contracts.ts`, a route in `src/app/api`, a repository function |
+| A new stored field           | a migration in `src/lib/migrations.mjs`, then the repository and the contract           |
+| Anything about resolved text | `src/utils/compilePrompt.ts` — not a second implementation                              |
 
 ## Tests
 

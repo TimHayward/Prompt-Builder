@@ -32,14 +32,16 @@ beforeEach(() => {
 });
 
 describe('component_library cascade', () => {
-  it('deletes a folder\'s descendants with it', () => {
+  it("deletes a folder's descendants with it", () => {
     insertFolder('root', null);
     insertFolder('child-folder', 'root');
     insertComponent('grandchild', 'child-folder');
 
     db.prepare('DELETE FROM component_library WHERE id = ?').run('root');
 
-    expect(db.prepare('SELECT COUNT(*) AS count FROM component_library').get()).toEqual({ count: 0 });
+    expect(db.prepare('SELECT COUNT(*) AS count FROM component_library').get()).toEqual({
+      count: 0,
+    });
   });
 
   it('refuses a parent_id that does not exist', () => {
@@ -50,7 +52,9 @@ describe('component_library cascade', () => {
 describe('app_config.active_prompt_id', () => {
   it('is cleared when the prompt it points at is deleted', () => {
     db.prepare("INSERT INTO prompts (id, name, sections) VALUES ('p1', 'One', '[]')").run();
-    db.prepare("INSERT INTO app_config (id, settings_json, active_prompt_id) VALUES (1, '{}', 'p1')").run();
+    db.prepare(
+      "INSERT INTO app_config (id, settings_json, active_prompt_id) VALUES (1, '{}', 'p1')"
+    ).run();
 
     db.prepare('DELETE FROM prompts WHERE id = ?').run('p1');
 

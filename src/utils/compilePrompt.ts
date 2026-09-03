@@ -52,8 +52,7 @@ const headingFor = (section: CompilableSection): string =>
  * Sections imported from Markdown keep their heading line, so adding one would
  * print two headings back to back.
  */
-const startsWithOwnHeading = (content: string): boolean =>
-  /^\s*#(?!#)/.test(content);
+const startsWithOwnHeading = (content: string): boolean => /^\s*#(?!#)/.test(content);
 
 /**
  * Compiles a prompt into the text a user copies
@@ -88,9 +87,7 @@ export const compilePrompt = ({
 
   const body = compiledSections.join(SECTION_SEPARATOR);
 
-  const text = markdownEnabled && systemPrompt
-    ? systemPrompt + SECTION_SEPARATOR + body
-    : body;
+  const text = markdownEnabled && systemPrompt ? systemPrompt + SECTION_SEPARATOR + body : body;
 
   return { text, unresolved };
 };

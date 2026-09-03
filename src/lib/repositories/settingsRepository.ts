@@ -21,8 +21,7 @@ export type StoredConfig = {
 
 const readRow = (): AppConfigRow | undefined =>
   db.prepare('SELECT settings_json, active_prompt_id FROM app_config WHERE id = 1').get() as
-    | AppConfigRow
-    | undefined;
+    AppConfigRow | undefined;
 
 /** The stored configuration; settings is null when nothing has been saved. */
 export const getConfig = (): StoredConfig => {
@@ -33,7 +32,10 @@ export const getConfig = (): StoredConfig => {
   }
 
   try {
-    return { settings: JSON.parse(row.settings_json) as Settings, activePromptId: row.active_prompt_id ?? null };
+    return {
+      settings: JSON.parse(row.settings_json) as Settings,
+      activePromptId: row.active_prompt_id ?? null,
+    };
   } catch {
     // A corrupt settings blob should not take the application down with it.
     return { settings: null, activePromptId: row.active_prompt_id ?? null };
@@ -58,14 +60,18 @@ export const saveConfig = (
     : existing?.settings_json || JSON.stringify(fallbackSettings);
 
   let activePromptId =
-    update.activePromptId !== undefined ? update.activePromptId : existing?.active_prompt_id ?? null;
+    update.activePromptId !== undefined
+      ? update.activePromptId
+      : (existing?.active_prompt_id ?? null);
 
   // Pointing at a prompt that is not there would survive a reload and confuse
   // the tab restore, so it is refused rather than stored.
   if (activePromptId) {
     const exists = db.prepare('SELECT id FROM prompts WHERE id = ?').get(activePromptId);
     if (!exists) {
-      console.warn(`Active prompt ID ${activePromptId} not found in prompts table. Setting to null.`);
+      console.warn(
+        `Active prompt ID ${activePromptId} not found in prompts table. Setting to null.`
+      );
       activePromptId = null;
     }
   }

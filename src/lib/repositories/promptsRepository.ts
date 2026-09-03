@@ -86,12 +86,17 @@ export const createPrompt = (input: CreatePromptInput): StoredPrompt | undefined
  */
 export const updatePrompt = (id: string, input: UpdatePromptInput): StoredPrompt | undefined => {
   const current = db
-    .prepare("SELECT name, sections, COALESCE(variables, '{}') as variables, num FROM prompts WHERE id = ?")
-    .get(id) as { name: string; sections: string; variables: string; num: number | null } | undefined;
+    .prepare(
+      "SELECT name, sections, COALESCE(variables, '{}') as variables, num FROM prompts WHERE id = ?"
+    )
+    .get(id) as
+    { name: string; sections: string; variables: string; num: number | null } | undefined;
 
   if (!current) return undefined;
 
-  db.prepare('UPDATE prompts SET name = ?, sections = ?, variables = ?, num = ?, updated_at = ? WHERE id = ?').run(
+  db.prepare(
+    'UPDATE prompts SET name = ?, sections = ?, variables = ?, num = ?, updated_at = ? WHERE id = ?'
+  ).run(
     input.name ?? current.name,
     input.sections ? JSON.stringify(input.sections) : current.sections,
     input.variables ? JSON.stringify(input.variables) : current.variables,
@@ -110,8 +115,7 @@ export const updatePrompt = (id: string, input: UpdatePromptInput): StoredPrompt
 export const deletePrompt = (id: string): boolean => {
   const remove = db.transaction(() => {
     const config = db.prepare('SELECT active_prompt_id FROM app_config WHERE id = 1').get() as
-      | { active_prompt_id?: string | null }
-      | undefined;
+      { active_prompt_id?: string | null } | undefined;
 
     // app_config.active_prompt_id is ON DELETE SET NULL, but clearing it here
     // keeps the behaviour whether or not the pragma is on.
@@ -133,7 +137,11 @@ export const findPromptByName = (name: string): { id: string } | undefined =>
 
 /** The next free ordering position. */
 export const nextPromptNumber = (): number =>
-  (db.prepare('SELECT COALESCE(MAX(num), 0) + 1 AS next_num FROM prompts').get() as { next_num: number }).next_num;
+  (
+    db.prepare('SELECT COALESCE(MAX(num), 0) + 1 AS next_num FROM prompts').get() as {
+      next_num: number;
+    }
+  ).next_num;
 
 /**
  * Replaces a prompt's sections, or creates it when the name is new

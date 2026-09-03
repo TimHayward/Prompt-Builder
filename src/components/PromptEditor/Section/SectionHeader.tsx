@@ -5,9 +5,9 @@
  * Header for an individual prompt section
  */
 
-import React, { useState, useRef, useEffect } from "react";
-import { Section } from "@/types";
-import { usePromptContext } from "@/contexts/PromptContext";
+import React, { useState, useRef, useEffect } from 'react';
+import { Section } from '@/types';
+import { usePromptContext } from '@/contexts/PromptContext';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import CloseIcon from '@mui/icons-material/Close';
@@ -16,8 +16,8 @@ import {
   getFramework,
   getFrameworkForType,
   getTypeLabel,
-  SectionTypeValue
-} from "@/lib/frameworks";
+  SectionTypeValue,
+} from '@/lib/frameworks';
 
 interface SectionHeaderProps {
   section: Section;
@@ -27,11 +27,11 @@ interface SectionHeaderProps {
   nameInputRefCallback?: (el: HTMLInputElement | null) => void; // Added for focusing
 }
 
-const SectionHeader: React.FC<SectionHeaderProps> = ({ 
-  section, 
-  promptId, 
-  onToggle, 
-  onDelete, 
+const SectionHeader: React.FC<SectionHeaderProps> = ({
+  section,
+  promptId,
+  onToggle,
+  onDelete,
   nameInputRefCallback, // Added for focusing
 }) => {
   const { updateSection } = usePromptContext();
@@ -54,26 +54,38 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
   useEffect(() => {
     if (section.editingHeader) {
       setIsEditing(true);
-      setEditName(section.editingHeaderTempName !== undefined ? section.editingHeaderTempName : section.name);
-      const initialType = section.editingHeaderTempType !== undefined ? section.editingHeaderTempType : section.type;
+      setEditName(
+        section.editingHeaderTempName !== undefined ? section.editingHeaderTempName : section.name
+      );
+      const initialType =
+        section.editingHeaderTempType !== undefined ? section.editingHeaderTempType : section.type;
       setEditType(initialType);
       setEditFrameworkId(getFrameworkForType(initialType).id);
       // Reset the editingHeader flag in the context once editing is initiated
       // Also clear temp names/types
-      updateSection(promptId, section.id, { 
+      updateSection(promptId, section.id, {
         editingHeader: false,
         editingHeaderTempName: undefined,
-        editingHeaderTempType: undefined
+        editingHeaderTempType: undefined,
       });
     }
-  }, [section.editingHeader, section.id, promptId, section.name, section.type, updateSection, section.editingHeaderTempName, section.editingHeaderTempType]);
-  
+  }, [
+    section.editingHeader,
+    section.id,
+    promptId,
+    section.name,
+    section.type,
+    updateSection,
+    section.editingHeaderTempName,
+    section.editingHeaderTempType,
+  ]);
+
   // Effect for dynamic input width adjustment
   useEffect(() => {
     if (isEditing && nameInputRef.current) {
       nameInputRef.current.style.minWidth = '100px'; // Or from SCSS
       nameInputRef.current.style.width = 'auto'; // Reset width to allow shrinkage
-      
+
       // Ensure styles are applied and measurements can be taken
       requestAnimationFrame(() => {
         if (nameInputRef.current) {
@@ -124,85 +136,97 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
       setEditType(framework.types[0]);
     }
   };
-  
+
   // Save header edit
   const saveEdit = () => {
     // Only update if there are actual changes to name or type
     if (editName.trim() !== section.name || editType !== section.type) {
-      if (editName.trim()) { // Ensure name is not just whitespace
+      if (editName.trim()) {
+        // Ensure name is not just whitespace
         updateSection(promptId, section.id, {
           name: editName.trim(),
-          type: editType
+          type: editType,
         });
-      } else if (section.name !== "") { // If original name was not empty, allow saving empty name
-         updateSection(promptId, section.id, {
-          name: "", // Save as empty
-          type: editType
+      } else if (section.name !== '') {
+        // If original name was not empty, allow saving empty name
+        updateSection(promptId, section.id, {
+          name: '', // Save as empty
+          type: editType,
         });
       }
     }
     setIsEditing(false);
   };
-  
+
   // Handle key press in edit mode
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
+    if (e.key === 'Enter') {
       saveEdit();
-    } else if (e.key === "Escape") {
+    } else if (e.key === 'Escape') {
       setIsEditing(false);
     }
   };
 
   return (
-    <div 
-      className="section-header"
-      onClick={onToggle} 
-    >
+    <div className="section-header" onClick={onToggle}>
       <div className="section-info" ref={headerInfoRef}>
         <div className="section-toggle">
           {section.open ? <ExpandLessIcon /> : <ExpandMoreIcon />}
         </div>
         {isEditing ? (
-          <div className="section-edit" ref={editZoneRef} onClick={(e) => e.stopPropagation()}>
+          <div className="section-edit" ref={editZoneRef} onClick={e => e.stopPropagation()}>
             <input
               type="text"
               value={editName}
-              onChange={(e) => setEditName(e.target.value)}
+              onChange={e => setEditName(e.target.value)}
               onKeyDown={handleKeyDown}
               autoFocus
               ref={nameInputRef}
             />
             <select
               value={editFrameworkId}
-              onChange={(e) => handleFrameworkChange(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
+              onChange={e => handleFrameworkChange(e.target.value)}
+              onClick={e => e.stopPropagation()}
               title="Framework"
             >
-              {FRAMEWORKS.map((framework) => (
-                <option key={framework.id} value={framework.id}>{framework.label}</option>
+              {FRAMEWORKS.map(framework => (
+                <option key={framework.id} value={framework.id}>
+                  {framework.label}
+                </option>
               ))}
             </select>
             •
             <select
               value={editType}
-              onChange={(e) => {setEditType(e.target.value as SectionTypeValue)}}
-              onClick={(e) => e.stopPropagation()}
+              onChange={e => {
+                setEditType(e.target.value as SectionTypeValue);
+              }}
+              onClick={e => e.stopPropagation()}
               title="Type"
             >
-              {getFramework(editFrameworkId).types.map((type) => (
-                <option key={type} value={type}>{getTypeLabel(type)}</option>
+              {getFramework(editFrameworkId).types.map(type => (
+                <option key={type} value={type}>
+                  {getTypeLabel(type)}
+                </option>
               ))}
             </select>
           </div>
         ) : (
-            <div onClick={(e) => {if(section.open){startEdit(e)}}} className="section-display">
+          <div
+            onClick={e => {
+              if (section.open) {
+                startEdit(e);
+              }
+            }}
+            className="section-display"
+          >
             {section.name} • {section.type ? getTypeLabel(section.type) : 'Section'}
-            </div>
+          </div>
         )}
       </div>
 
       {!isEditing && (
-        <div className="section-actions" onClick={(e) => e.stopPropagation()}>
+        <div className="section-actions" onClick={e => e.stopPropagation()}>
           <button className="action-btn delete-btn" onClick={onDelete} title="Delete Section">
             <CloseIcon fontSize="small" />
           </button>

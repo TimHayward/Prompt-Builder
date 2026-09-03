@@ -5,9 +5,9 @@
  * Tab navigation between different prompts
  */
 
-import React from "react";
-import { Prompt } from "@/types";
-import { usePromptContext } from "@/contexts/PromptContext";
+import React from 'react';
+import { Prompt } from '@/types';
+import { usePromptContext } from '@/contexts/PromptContext';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -42,11 +42,12 @@ const PromptTabs: React.FC<PromptTabsProps> = ({
   };
 
   // Handle deleting a prompt
-  const handleDeletePrompt = (promptId: string, e: React.MouseEvent) => { // Changed promptId to string
+  const handleDeletePrompt = (promptId: string, e: React.MouseEvent) => {
+    // Changed promptId to string
     e.stopPropagation();
-    
+
     if (prompts.length <= 1) {
-      alert("Cannot delete the only prompt. Create another prompt first.");
+      alert('Cannot delete the only prompt. Create another prompt first.');
       return;
     }
     deletePrompt(promptId); // deletePrompt expects string
@@ -57,7 +58,7 @@ const PromptTabs: React.FC<PromptTabsProps> = ({
     if (activePromptId === null) {
       // This case should ideally be prevented by disabling the button if no prompt is active,
       // but as a fallback, an alert can be shown or it can simply do nothing.
-      alert("No active prompt to duplicate."); 
+      alert('No active prompt to duplicate.');
       return;
     }
     // The duplicatePrompt function in the context now handles setting the new prompt as active.
@@ -65,25 +66,27 @@ const PromptTabs: React.FC<PromptTabsProps> = ({
   };
 
   // Handle key presses in prompt name edit input
-  const handleKeyDown = (e: React.KeyboardEvent, promptId: string) => { // Changed promptId to string
-    if (e.key === "Enter") {
+  const handleKeyDown = (e: React.KeyboardEvent, promptId: string) => {
+    // Changed promptId to string
+    if (e.key === 'Enter') {
       savePromptName(promptId);
-    } else if (e.key === "Escape") {
+    } else if (e.key === 'Escape') {
       // Cancel editing
-      startEditingPromptName("", ""); // Pass empty strings or handle appropriately
+      startEditingPromptName('', ''); // Pass empty strings or handle appropriately
     }
   };
 
   return (
     <div className="prompt-tabs">
-      {prompts.map((prompt, index) => { // Added index to map
+      {prompts.map((prompt, index) => {
+        // Added index to map
         const activeIndex = prompts.findIndex(p => p.id === activePromptId);
-        let tabClassName = "prompt-tab";
+        let tabClassName = 'prompt-tab';
 
         if (activePromptId === prompt.id) {
-          tabClassName += " active";
+          tabClassName += ' active';
         } else if (activeIndex !== -1 && index === activeIndex + 1) {
-          tabClassName += " next-tab";
+          tabClassName += ' next-tab';
         }
 
         return (
@@ -96,10 +99,10 @@ const PromptTabs: React.FC<PromptTabsProps> = ({
               <input
                 type="text"
                 value={editingPromptNameValue}
-                onChange={(e) => setEditingPromptNameValue(e.target.value)}
-                onKeyDown={(e) => handleKeyDown(e, prompt.id)}
+                onChange={e => setEditingPromptNameValue(e.target.value)}
+                onKeyDown={e => handleKeyDown(e, prompt.id)}
                 onBlur={() => savePromptName(prompt.id)}
-                onClick={(e) => e.stopPropagation()}
+                onClick={e => e.stopPropagation()}
                 autoFocus
               />
             ) : (
@@ -108,7 +111,7 @@ const PromptTabs: React.FC<PromptTabsProps> = ({
                 <div className="tab-actions">
                   <button
                     className="action-btn delete-btn"
-                    onClick={(e) => handleDeletePrompt(prompt.id, e)}
+                    onClick={e => handleDeletePrompt(prompt.id, e)}
                     title="Delete Prompt"
                   >
                     <CloseIcon fontSize="small" />
@@ -119,16 +122,16 @@ const PromptTabs: React.FC<PromptTabsProps> = ({
           </div>
         );
       })}
-      
+
       <div className="prompt-tab-actions">
-        <div 
-          className="add-prompt-tab" 
-          onClick={handleAddPrompt} 
+        <div
+          className="add-prompt-tab"
+          onClick={handleAddPrompt}
           title="Add New Prompt" // Added title
         >
           <AddIcon />
         </div>
-        <div 
+        <div
           className="duplicate-prompt-tab" // New class for styling
           onClick={handleDuplicatePrompt}
           title="Duplicate Current Prompt" // Added title

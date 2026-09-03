@@ -1,25 +1,25 @@
-"use client"; // Mark as a Client Component
+'use client'; // Mark as a Client Component
 
 /**
  * App component
  * Main application entry point that orchestrates contexts and components
  */
 
-import React, { useEffect } from "react";
-import { AppProvider, useAppContext } from "@/contexts/AppContext";
-import { TreeProvider, useTreeContext } from "@/contexts/TreeContext";
-import { PromptProvider } from "@/contexts/PromptContext";
-import { ToastProvider } from "@/contexts/ToastContext";
-import { SaveStateProvider } from "@/contexts/SaveStateContext";
-import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
-import Sidebar from "@/components/Sidebar";
-import PromptEditor from "@/components/PromptEditor";
-import VariablesPane from "@/components/VariablesPane";
-import ComponentModal from "@/components/Modal/ComponentModal";
-import SettingsModal from "@/components/Modal/SettingsModal";
-import ImportPromptModal from "@/components/Modal/ImportPromptModal";
-import MenuBar from '@/components/MenuBar'; 
-import "./App.scss";
+import React, { useEffect } from 'react';
+import { AppProvider, useAppContext } from '@/contexts/AppContext';
+import { TreeProvider, useTreeContext } from '@/contexts/TreeContext';
+import { PromptProvider } from '@/contexts/PromptContext';
+import { ToastProvider } from '@/contexts/ToastContext';
+import { SaveStateProvider } from '@/contexts/SaveStateContext';
+import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
+import Sidebar from '@/components/Sidebar';
+import PromptEditor from '@/components/PromptEditor';
+import VariablesPane from '@/components/VariablesPane';
+import ComponentModal from '@/components/Modal/ComponentModal';
+import SettingsModal from '@/components/Modal/SettingsModal';
+import ImportPromptModal from '@/components/Modal/ImportPromptModal';
+import MenuBar from '@/components/MenuBar';
+import './App.scss';
 
 // Inner App component that uses the contexts
 const AppContent: React.FC = () => {
@@ -52,9 +52,7 @@ const AppContent: React.FC = () => {
       <Sidebar />
       <PromptEditor />
       <VariablesPane />
-      <MenuBar 
-        openSettings={() => setSettingsModalOpen(true)} 
-      />
+      <MenuBar openSettings={() => setSettingsModalOpen(true)} />
       <ComponentModal />
       <SettingsModal />
       <ImportPromptModal />

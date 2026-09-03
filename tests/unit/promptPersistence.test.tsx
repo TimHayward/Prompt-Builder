@@ -42,10 +42,12 @@ const mockFetch = (url: string, init?: RequestInit) => {
   const method = init?.method ?? 'GET';
 
   if (url === '/api/settings' && method === 'GET') {
-    return Promise.resolve(new Response(
-      JSON.stringify({ settings: null, activePromptId: 'prompt-1' }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    ));
+    return Promise.resolve(
+      new Response(JSON.stringify({ settings: null, activePromptId: 'prompt-1' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
   }
 
   if (url === '/api/settings') {
@@ -53,10 +55,12 @@ const mockFetch = (url: string, init?: RequestInit) => {
   }
 
   if (url === '/api/prompts' && method === 'GET') {
-    return Promise.resolve(new Response(JSON.stringify(promptsOnServer), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    }));
+    return Promise.resolve(
+      new Response(JSON.stringify(promptsOnServer), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
   }
 
   if (url.startsWith('/api/prompts/') && method === 'PUT') {
@@ -84,9 +88,9 @@ const renderPromptContext = async () => {
     <ToastProvider>
       <SaveStateProvider>
         <AppProvider>
-        <PromptProvider>
-          <Probe />
-        </PromptProvider>
+          <PromptProvider>
+            <Probe />
+          </PromptProvider>
         </AppProvider>
       </SaveStateProvider>
     </ToastProvider>
@@ -113,9 +117,10 @@ describe('PromptContext persistence', () => {
   beforeEach(() => {
     savedPrompts = [];
     promptsOnServer = [promptFixture()];
-    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
-      mockFetch(String(input), init)
-    ));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => mockFetch(String(input), init))
+    );
     vi.useFakeTimers({ shouldAdvanceTime: true });
   });
 

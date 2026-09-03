@@ -61,10 +61,9 @@ export const updatePromptRequestSchema = z
     variables: variablesSchema.optional(),
     num: z.number().nullable().optional(),
   })
-  .refine(
-    body => ['name', 'sections', 'variables', 'num'].some(field => field in body),
-    { message: 'No fields to update provided' }
-  );
+  .refine(body => ['name', 'sections', 'variables', 'num'].some(field => field in body), {
+    message: 'No fields to update provided',
+  });
 
 export const ingestPromptRequestSchema = z.object({
   filename: z.string().trim().min(1, 'Filename is required'),

@@ -1,7 +1,7 @@
 /**
  * Modal styles
  */
-@use "sass:color"; // Ensure sass:color is imported
+@use 'sass:color'; // Ensure sass:color is imported
 
 /* Modal overlay for Add/Edit Component screens */
 .modal-overlay {
@@ -66,14 +66,14 @@ label {
   font-weight: 500;
 }
 
-.form-group{
+.form-group {
   width: 97%;
   margin: auto;
   position: relative;
 }
 
-input[type="text"],
-input[type="number"],
+input[type='text'],
+input[type='number'],
 textarea,
 select {
   padding: 0.75rem;
@@ -91,13 +91,13 @@ select {
   }
 }
 
-input[type="text"],
-input[type="number"],
-textarea{
+input[type='text'],
+input[type='number'],
+textarea {
   width: calc(100% - 1.5rem);
 }
 
-select{
+select {
   width: 100%;
 }
 
@@ -107,7 +107,7 @@ textarea {
 }
 
 /* Checkbox styling */
-input[type="checkbox"] {
+input[type='checkbox'] {
   margin-right: 0.5rem;
 }
 
@@ -127,10 +127,10 @@ small {
   width: 97%;
   margin: auto;
 
-  button{
+  button {
     @include mixins.btn();
   }
-  
+
   .primary {
     background-color: transparent;
     border: 1px solid colors.$accent-color;
@@ -138,7 +138,7 @@ small {
     color: colors.$accent-color;
     font-size: 1rem;
     cursor: pointer;
-    
+
     &:hover {
       background-color: rgba(colors.$accent-color, 0.1);
     }
@@ -157,7 +157,7 @@ small {
   font-weight: bold;
   background-color: transparent;
   color: colors.$light-gray;
-  
+
   &:hover {
     color: colors.$text-color;
     background-color: rgba(255, 255, 255, 0.1);
@@ -170,11 +170,11 @@ small {
 }
 
 /* Settings modal specific styles */
-.settings-modal input[type="checkbox"] {
+.settings-modal input[type='checkbox'] {
   margin-bottom: 1rem;
 }
 
-.settings-modal{
+.settings-modal {
   width: 45%;
 
   h4 {
@@ -184,48 +184,49 @@ small {
     margin-top: 0.25rem;
   }
 
-  p{
+  p {
     margin-bottom: 0.5rem;
     color: colors.$light-gray;
     font-size: 1rem;
 
-    a{
+    a {
       color: #089ad9;
       text-decoration: none;
       font-weight: bold;
     }
   }
-  
+
   label {
     display: block;
     margin: 0.75rem 0;
-    
-    input, select {
+
+    input,
+    select {
       width: 100%;
       margin-top: 0.375rem;
     }
   }
-  
+
   .settings-toggle {
     @include mixins.flex(row, space-between, center);
   }
-  
+
   .settings-toggle {
     @include mixins.flex(row, space-between, center);
     margin: 1rem 0;
   }
-    
+
   .system-prompt-header {
     display: flex;
     justify-content: flex-start;
     align-items: baseline;
     margin-bottom: 0.5rem;
     margin-top: 1.5rem;
-    
+
     label {
       margin: 0;
     }
-    
+
     .reset-default-btn {
       color: colors.$light-gray;
       padding: 0.25rem 0.5rem;
@@ -244,7 +245,7 @@ small {
 }
 
 .community-components-modal {
-  .modal-content{
+  .modal-content {
     width: 70vw;
     max-width: 900px;
   }
@@ -293,7 +294,7 @@ small {
           }
         }
       }
-      
+
       .file-actions {
         display: flex;
         align-items: center;
@@ -350,7 +351,7 @@ small {
     border-radius: 4px;
     margin-bottom: 0.2rem;
 
-    &.component{
+    &.component {
       &:hover {
         background-color: colors.$hover-gray;
       }

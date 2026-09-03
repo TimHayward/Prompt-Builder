@@ -20,7 +20,9 @@ const promptFixture = (): Prompt => ({
   id: 'prompt-1',
   num: 1,
   name: 'Prompt One',
-  sections: [{ id: 's1', name: 'Role', content: 'body', type: 'instruction', open: true, dirty: false }],
+  sections: [
+    { id: 's1', name: 'Role', content: 'body', type: 'instruction', open: true, dirty: false },
+  ],
   variables: {},
 });
 
@@ -75,9 +77,10 @@ const indicatorText = () => document.querySelector('.save-state')?.textContent;
 
 beforeEach(() => {
   saveOutcome = 'ok';
-  vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
-    mockFetch(String(input), init)
-  ));
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => mockFetch(String(input), init))
+  );
   vi.useFakeTimers({ shouldAdvanceTime: true });
 });
 

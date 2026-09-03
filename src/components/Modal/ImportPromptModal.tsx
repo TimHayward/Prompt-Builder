@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 /**
  * ImportPromptModal
@@ -7,28 +7,23 @@
  * confirm creates a library folder of components plus a linked prompt.
  */
 
-import React, { useState, useEffect } from "react";
-import { v4 as uuidv4 } from "uuid";
-import ModalBase from "./ModalBase";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
-import { useAppContext } from "../../contexts/AppContext";
-import { useTreeContext } from "../../contexts/TreeContext";
-import { usePromptContext } from "../../contexts/PromptContext";
-import { ComponentType, Section } from "../../types";
-import { insertNode } from "../../utils/treeUtils";
-import { derivePromptName } from "../../utils/markdownParser";
+import React, { useState, useEffect } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import ModalBase from './ModalBase';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import { useAppContext } from '../../contexts/AppContext';
+import { useTreeContext } from '../../contexts/TreeContext';
+import { usePromptContext } from '../../contexts/PromptContext';
+import { ComponentType, Section } from '../../types';
+import { insertNode } from '../../utils/treeUtils';
+import { derivePromptName } from '../../utils/markdownParser';
 import {
   parseMarkdownByHeaders,
   detectFramework,
   resolveTypeForFramework,
-} from "../../utils/markdownImport";
-import {
-  FRAMEWORKS,
-  getFramework,
-  getTypeLabel,
-  SectionTypeValue,
-} from "../../lib/frameworks";
+} from '../../utils/markdownImport';
+import { FRAMEWORKS, getFramework, getTypeLabel, SectionTypeValue } from '../../lib/frameworks';
 
 interface ImportRow {
   key: string;
@@ -46,11 +41,11 @@ const ImportPromptModal: React.FC = () => {
   const { treeData, setTreeData, isTreeLoading } = useTreeContext();
   const { addPrompt } = usePromptContext();
 
-  const [title, setTitle] = useState("");
-  const [frameworkId, setFrameworkId] = useState<string>("standard");
+  const [title, setTitle] = useState('');
+  const [frameworkId, setFrameworkId] = useState<string>('standard');
   const [rows, setRows] = useState<ImportRow[]>([]);
   const [noHeaders, setNoHeaders] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [importing, setImporting] = useState(false);
 
   const isOpen = importPromptPayload !== null;
@@ -60,7 +55,7 @@ const ImportPromptModal: React.FC = () => {
     if (!importPromptPayload) return;
 
     const { filename, content } = importPromptPayload;
-    setError("");
+    setError('');
     setImporting(false);
     setTitle(derivePromptName(filename));
 
@@ -71,10 +66,10 @@ const ImportPromptModal: React.FC = () => {
       const trimmed = content.trim();
       if (!trimmed) {
         setRows([]);
-        setFrameworkId("standard");
+        setFrameworkId('standard');
         return;
       }
-      const fw = getFramework("standard");
+      const fw = getFramework('standard');
       setFrameworkId(fw.id);
       const resolved = resolveTypeForFramework(null, fw);
       setRows([
@@ -97,7 +92,7 @@ const ImportPromptModal: React.FC = () => {
     const framework = getFramework(detectedId);
     setFrameworkId(framework.id);
     setRows(
-      parsed.map((section) => {
+      parsed.map(section => {
         const resolved = resolveTypeForFramework(section.suggestedType, framework);
         return {
           key: uuidv4(),
@@ -120,10 +115,13 @@ const ImportPromptModal: React.FC = () => {
   const handleFrameworkChange = (id: string) => {
     const framework = getFramework(id);
     setFrameworkId(framework.id);
-    setRows((prev) =>
-      prev.map((row) => {
+    setRows(prev =>
+      prev.map(row => {
         // Keep a manually-set type if it's valid in the new framework
-        if (row.typeTouched && (framework.types as readonly SectionTypeValue[]).includes(row.type)) {
+        if (
+          row.typeTouched &&
+          (framework.types as readonly SectionTypeValue[]).includes(row.type)
+        ) {
           return { ...row, matched: true };
         }
         const resolved = resolveTypeForFramework(row.suggestedType, framework);
@@ -133,19 +131,19 @@ const ImportPromptModal: React.FC = () => {
   };
 
   const updateRow = (key: string, updates: Partial<ImportRow>) => {
-    setRows((prev) => prev.map((row) => (row.key === key ? { ...row, ...updates } : row)));
+    setRows(prev => prev.map(row => (row.key === key ? { ...row, ...updates } : row)));
   };
 
   const handleImport = async () => {
     if (!title.trim() || rows.length === 0 || importing) return;
     setImporting(true);
-    setError("");
+    setError('');
 
     try {
-      const components: ComponentType[] = rows.map((row) => ({
+      const components: ComponentType[] = rows.map(row => ({
         id: uuidv4(),
-        name: row.name.trim() || "Untitled",
-        type: "component",
+        name: row.name.trim() || 'Untitled',
+        type: 'component',
         content: row.content,
         componentType: row.type,
       }));
@@ -153,9 +151,7 @@ const ImportPromptModal: React.FC = () => {
       // Unique folder name under the root Components folder
       const root = treeData[0];
       const existingNames = new Set(
-        (root?.children ?? [])
-          .filter((child) => child.type === "folder")
-          .map((child) => child.name)
+        (root?.children ?? []).filter(child => child.type === 'folder').map(child => child.name)
       );
       let folderName = title.trim();
       if (existingNames.has(folderName)) {
@@ -165,11 +161,11 @@ const ImportPromptModal: React.FC = () => {
       }
 
       if (root) {
-        setTreeData((prev) =>
+        setTreeData(prev =>
           insertNode(prev, prev[0].id, {
             id: uuidv4(),
             name: folderName,
-            type: "folder",
+            type: 'folder',
             children: components,
             expanded: true,
           })
@@ -177,7 +173,7 @@ const ImportPromptModal: React.FC = () => {
       }
 
       // Prompt sections linked to the new components
-      const sections: Section[] = components.map((component) => ({
+      const sections: Section[] = components.map(component => ({
         id: uuidv4(),
         name: component.name,
         content: component.content,
@@ -194,8 +190,8 @@ const ImportPromptModal: React.FC = () => {
 
       setImportPromptPayload(null);
     } catch (err) {
-      console.error("Failed to import prompt:", err);
-      setError(err instanceof Error ? err.message : "Failed to import prompt");
+      console.error('Failed to import prompt:', err);
+      setError(err instanceof Error ? err.message : 'Failed to import prompt');
       setImporting(false);
     }
   };
@@ -222,7 +218,7 @@ const ImportPromptModal: React.FC = () => {
               id="importTitle"
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={e => setTitle(e.target.value)}
               autoFocus
             />
           </div>
@@ -232,10 +228,12 @@ const ImportPromptModal: React.FC = () => {
             <select
               id="importFramework"
               value={frameworkId}
-              onChange={(e) => handleFrameworkChange(e.target.value)}
+              onChange={e => handleFrameworkChange(e.target.value)}
             >
-              {FRAMEWORKS.map((fw) => (
-                <option key={fw.id} value={fw.id}>{fw.label}</option>
+              {FRAMEWORKS.map(fw => (
+                <option key={fw.id} value={fw.id}>
+                  {fw.label}
+                </option>
               ))}
             </select>
           </div>
@@ -247,7 +245,7 @@ const ImportPromptModal: React.FC = () => {
           )}
 
           <div className="import-rows">
-            {rows.map((row) => {
+            {rows.map(row => {
               const highlight = !row.matched && !row.typeTouched;
               return (
                 <div key={row.key} className="import-row">
@@ -256,13 +254,13 @@ const ImportPromptModal: React.FC = () => {
                       type="text"
                       className="import-row-name"
                       value={row.name}
-                      onChange={(e) => updateRow(row.key, { name: e.target.value })}
+                      onChange={e => updateRow(row.key, { name: e.target.value })}
                       placeholder="Component name"
                     />
                     <select
-                      className={`import-row-type${highlight ? " unmatched" : ""}`}
+                      className={`import-row-type${highlight ? ' unmatched' : ''}`}
                       value={row.type}
-                      onChange={(e) =>
+                      onChange={e =>
                         updateRow(row.key, {
                           type: e.target.value as SectionTypeValue,
                           typeTouched: true,
@@ -270,24 +268,30 @@ const ImportPromptModal: React.FC = () => {
                         })
                       }
                     >
-                      {framework.types.map((type) => (
-                        <option key={type} value={type}>{getTypeLabel(type)}</option>
+                      {framework.types.map(type => (
+                        <option key={type} value={type}>
+                          {getTypeLabel(type)}
+                        </option>
                       ))}
                     </select>
                     <button
                       type="button"
                       className="import-row-toggle"
                       onClick={() => updateRow(row.key, { expanded: !row.expanded })}
-                      title={row.expanded ? "Hide content" : "Show content"}
+                      title={row.expanded ? 'Hide content' : 'Show content'}
                     >
-                      {row.expanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+                      {row.expanded ? (
+                        <ExpandLessIcon fontSize="small" />
+                      ) : (
+                        <ExpandMoreIcon fontSize="small" />
+                      )}
                     </button>
                   </div>
                   {row.expanded && (
                     <textarea
                       className="import-row-content"
                       value={row.content}
-                      onChange={(e) => updateRow(row.key, { content: e.target.value })}
+                      onChange={e => updateRow(row.key, { content: e.target.value })}
                       rows={6}
                     />
                   )}
@@ -299,14 +303,16 @@ const ImportPromptModal: React.FC = () => {
       )}
 
       <div className="form-actions">
-        <button type="button" onClick={handleClose}>Cancel</button>
+        <button type="button" onClick={handleClose}>
+          Cancel
+        </button>
         <button
           type="button"
           className="primary"
           onClick={handleImport}
           disabled={emptyFile || !title.trim() || rows.length === 0 || importing || isTreeLoading}
         >
-          {importing ? "Importing…" : "Import"}
+          {importing ? 'Importing…' : 'Import'}
         </button>
       </div>
     </ModalBase>

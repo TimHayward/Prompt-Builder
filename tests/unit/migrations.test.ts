@@ -67,9 +67,7 @@ describe('migrate', () => {
 
   it('migrates an existing installation without losing its rows', () => {
     const database = legacyDatabase();
-    database
-      .prepare("INSERT INTO prompts (id, name, sections) VALUES ('p1', 'Kept', '[]')")
-      .run();
+    database.prepare("INSERT INTO prompts (id, name, sections) VALUES ('p1', 'Kept', '[]')").run();
     expect(getSchemaVersion(database)).toBe(0);
     expect(columnsOf(database, 'component_library')).not.toContain('sort_order');
 
@@ -93,6 +91,8 @@ describe('assertSchema', () => {
   it('names the missing tables and points at the init script', () => {
     const database = freshDatabase();
 
-    expect(() => assertSchema(database, '/tmp/x.db')).toThrowError(/component_library[\s\S]*npm run db:init/);
+    expect(() => assertSchema(database, '/tmp/x.db')).toThrowError(
+      /component_library[\s\S]*npm run db:init/
+    );
   });
 });
