@@ -1262,3 +1262,79 @@ Replace the approximately 30 MB animated GIF with a more appropriate mechanism s
 
 
 **Completed:** 2026-09-02 · `b7d1ed4`
+
+---
+
+## E1. Reduce PromptContext responsibilities
+
+**Priority:** P2  
+**Size:** L
+
+### Problem
+
+PromptContext currently manages:
+
+- loading
+- persistence
+- prompt mutation
+- section mutation
+- variable handling
+- prompt compilation
+- active prompt state
+- temporary UI state
+
+### Action
+
+Separate concerns into:
+
+```text
+domain
+API
+persistence
+state
+UI hooks
+```
+
+Suggested structure:
+
+```text
+src/features/prompts/
+  domain/
+  api/
+  hooks/
+  state/
+  components/
+```
+
+### Acceptance
+
+PromptContext becomes an orchestration layer rather than the primary business logic implementation.
+
+
+**Completed:** 2026-09-03 · `21d8699`
+
+---
+
+## E4. Introduce repository abstractions
+
+**Priority:** P2  
+**Size:** M
+
+Create:
+
+```text
+promptsRepository
+componentsRepository
+settingsRepository
+```
+
+These should encapsulate SQLite persistence.
+
+React should not depend upon database implementation details.
+
+### Acceptance
+
+API routes delegate database operations to repositories.
+
+
+**Completed:** 2026-09-03 · `fae69ab`
