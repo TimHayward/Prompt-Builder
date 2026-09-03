@@ -675,3 +675,88 @@
     text-overflow: ellipsis;
   }
 }
+
+// The Check view: what the prompt amounts to, and what looks wrong with it.
+.prompt-check {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.5rem;
+  @include mixins.custom-scrollbar(6px, colors.$dark-gray);
+
+  .check-statistics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    li {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .statistic-value {
+      font-size: typography.$font-size-xl;
+      font-weight: 600;
+      color: colors.$text-color;
+    }
+
+    .statistic-label {
+      font-size: typography.$font-size-xs;
+      color: rgba(colors.$text-color, 0.55);
+    }
+  }
+
+  .check-note {
+    font-size: typography.$font-size-xs;
+    color: rgba(colors.$text-color, 0.45);
+    margin: 0.6rem 0 1.25rem;
+  }
+
+  .check-clear,
+  .check-findings li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+    font-size: typography.$font-size-sm;
+  }
+
+  .check-clear {
+    color: rgba(colors.$text-color, 0.7);
+    margin: 0;
+  }
+
+  .check-findings {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    li {
+      color: colors.$text-color;
+      background-color: rgba(0, 0, 0, 0.2);
+      border-left: 2px solid transparent;
+      border-radius: 3px;
+      padding: 0.5rem 0.6rem;
+    }
+
+    .warning {
+      border-left-color: colors.$warning-color;
+
+      svg {
+        color: colors.$warning-color;
+      }
+    }
+
+    .suggestion {
+      border-left-color: rgba(colors.$accent-color, 0.7);
+
+      svg {
+        color: rgba(colors.$accent-color, 0.8);
+      }
+    }
+  }
+}

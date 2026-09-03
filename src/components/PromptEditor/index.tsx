@@ -16,6 +16,7 @@ import PromptTags from './PromptTags';
 import PromptBrowser from './PromptBrowser';
 import ActionBar from './ActionBar';
 import ResolvedPreview from './ResolvedPreview';
+import PromptCheck from './PromptCheck';
 import SaveStateIndicator from './SaveStateIndicator';
 import './PromptEditor.scss';
 import { ComponentType as ComponentNodeType, Section as SectionType } from '../../types';
@@ -41,7 +42,7 @@ const PromptEditor: React.FC = () => {
 
   // Which half of the editor is showing: the prompt as written, or as it will
   // be copied.
-  const [view, setView] = useState<'source' | 'preview'>('source');
+  const [view, setView] = useState<'source' | 'preview' | 'check'>('source');
 
   // Whether typing changes this use of the prompt or the prompt itself. Using
   // is the default: customising is the common act, and editing the library
@@ -340,10 +341,25 @@ const PromptEditor: React.FC = () => {
         <button className={view === 'preview' ? 'active' : ''} onClick={() => setView('preview')}>
           Preview
         </button>
+        <button className={view === 'check' ? 'active' : ''} onClick={() => setView('check')}>
+          Check
+        </button>
       </div>
 
       {view === 'preview' && activePrompt && (
         <ResolvedPreview
+          sections={applySectionOverrides(
+            activePrompt.sections,
+            getSectionOverrides(activePrompt.id)
+          )}
+          values={getWorkingValues(activePrompt.id)}
+          systemPrompt={settings.systemPrompt}
+          markdownEnabled={settings.markdownPromptingEnabled}
+        />
+      )}
+
+      {view === 'check' && activePrompt && (
+        <PromptCheck
           sections={applySectionOverrides(
             activePrompt.sections,
             getSectionOverrides(activePrompt.id)
