@@ -64,6 +64,10 @@ const mockFetch = async (url: string, init?: RequestInit) => {
     workspaceWrites.push({ url, method, body });
     return jsonResponse({ promptId: 'prompt-1', values: {}, sectionOverrides: {} });
   }
+  if (url === '/api/prompts' && method === 'POST') {
+    promptWrites.push({ url, method, body });
+    return jsonResponse({ ...(body as object), id: 'prompt-2', num: 2 }, 201);
+  }
   if (url.startsWith('/api/prompts/')) {
     promptWrites.push({ url, method, body });
     return jsonResponse(promptFixture());
@@ -203,5 +207,27 @@ describe('clearing working values', () => {
     await flush();
 
     expect(workspaceWrites.map(write => write.method)).toEqual(['DELETE']);
+  });
+});
+
+describe('duplicating a prompt', () => {
+  it('creates an independent prompt, with its own section ids', async () => {
+    const app = await renderApp();
+    const original = app.current.prompts.prompts[0];
+
+    await act(async () => {
+      await app.current.prompts.duplicatePrompt(original.id);
+    });
+
+    const created = promptWrites.find(write => write.method === 'POST');
+    expect(created).toBeDefined();
+
+    const body = created!.body as { name: string; sections: { id: string; content: string }[] };
+    expect(body.name).toBe('Announcement (Copy)');
+
+    // New ids, so editing the copy cannot reach into the original...
+    expect(body.sections[0].id).not.toBe(original.sections[0].id);
+    // ...and the text, with its variable definitions, comes across intact.
+    expect(body.sections[0].content).toBe(SOURCE_TEXT);
   });
 });

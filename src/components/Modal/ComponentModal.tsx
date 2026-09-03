@@ -8,6 +8,8 @@
 import React, { useState, useEffect } from 'react';
 import ModalBase from './ModalBase';
 import { useTreeContext } from '../../contexts/TreeContext';
+import { usePromptContext } from '../../contexts/PromptContext';
+import { describeComponentUsage, findComponentUsage } from '../../domain/componentLinks';
 import {
   FRAMEWORKS,
   DEFAULT_FRAMEWORK_ID,
@@ -33,6 +35,11 @@ const ComponentModal: React.FC = () => {
   const [componentType, setComponentType] = useState<SectionTypeValue>(DEFAULT_TYPE);
   const [frameworkId, setFrameworkId] = useState<string>(DEFAULT_FRAMEWORK_ID);
   const [error, setError] = useState('');
+  // Set when a save would change linked sections, so the user is told before it
+  // reaches prompts they are not looking at.
+  const [pendingWarning, setPendingWarning] = useState<string | null>(null);
+
+  const { prompts } = usePromptContext();
 
   // Reset form when modal opens/closes or editing component changes
   useEffect(() => {
@@ -51,6 +58,7 @@ const ComponentModal: React.FC = () => {
         setFrameworkId(DEFAULT_FRAMEWORK_ID);
       }
       setError('');
+      setPendingWarning(null);
     }
   }, [isComponentModalOpen, componentBeingEdited]);
 
@@ -62,16 +70,8 @@ const ComponentModal: React.FC = () => {
     }
   };
 
-  // Submit handler
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validation
-    if (!componentName.trim()) {
-      setError('Component name is required');
-      return;
-    }
-
+  /** Writes the component away and closes. */
+  const saveComponent = () => {
     if (componentBeingEdited) {
       // Update existing component
       handleUpdateComponent({
@@ -92,6 +92,29 @@ const ComponentModal: React.FC = () => {
     setComponentModalOpen(false);
   };
 
+  // Submit handler
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validation
+    if (!componentName.trim()) {
+      setError('Component name is required');
+      return;
+    }
+
+    // Editing a component that prompts follow changes those prompts too, which
+    // is invisible from here — so say so once, and let the next submit through.
+    if (componentBeingEdited && !pendingWarning) {
+      const warning = describeComponentUsage(findComponentUsage(prompts, componentBeingEdited.id));
+      if (warning) {
+        setPendingWarning(warning);
+        return;
+      }
+    }
+
+    saveComponent();
+  };
+
   return (
     <ModalBase
       isOpen={isComponentModalOpen}
@@ -101,6 +124,11 @@ const ComponentModal: React.FC = () => {
     >
       <form onSubmit={handleSubmit}>
         {error && <div className="error-message">{error}</div>}
+        {pendingWarning && (
+          <div className="warning-message" role="alert">
+            {pendingWarning} Press Confirm again to go ahead.
+          </div>
+        )}
 
         <div className="form-group">
           <label htmlFor="componentName">Name:</label>

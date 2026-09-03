@@ -57,6 +57,15 @@
   margin-bottom: 1rem;
 }
 
+/* Shown when a save reaches further than the thing being edited. */
+.warning-message {
+  color: #e6b800;
+  background-color: rgba(230, 184, 0, 0.1);
+  padding: 0.5rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
 /* Form input styling */
 label {
   display: block;
