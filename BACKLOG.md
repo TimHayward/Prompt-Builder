@@ -89,55 +89,6 @@ New product capabilities.
 
 ---
 
-# J. P3 Variable Improvements
-
-## J2. Add required variables
-
-Support a way to designate a variable as required.
-
-Example candidate syntax:
-
-```text
-{{!customer}}
-```
-
-or explicit metadata.
-
-Do not commit to syntax until reviewed.
-
-### Behaviour
-
-Before copy:
-
-```text
-Customer has not been populated.
-```
-
-The application may warn without blocking.
-
----
-
-## J3. Add variable descriptions
-
-Allow variables to provide help text such as:
-
-```text
-customer
-Customer organisation being assessed
-```
-
-This may ultimately require metadata beyond inline prompt syntax.
-
----
-
-## J4. Add variable defaults
-
-Allow a source definition to provide an optional default working value.
-
-This must remain distinguishable from the currently selected value.
-
----
-
 # K. P3 Working Prompt Enhancements
 
 ## K1. Temporary section overrides

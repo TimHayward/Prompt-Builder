@@ -1766,3 +1766,71 @@ one rather than keep its own.
 tests/support/buildPrompt.ts holds the defaults; the nine fixtures each state only what their test depends on, and promptSearch.test.ts dropped its own local helper for the shared one. Verified by adding a required field to Prompt and typechecking: three production sites reported it and no test fixture did.
 
 **Completed:** 2026-09-03 · `dd045f0`
+
+---
+
+## J2. Add required variables
+
+Support a way to designate a variable as required.
+
+Example candidate syntax:
+
+```text
+{{!customer}}
+```
+
+or explicit metadata.
+
+Do not commit to syntax until reviewed.
+
+### Behaviour
+
+Before copy:
+
+```text
+Customer has not been populated.
+```
+
+The application may warn without blocking.
+
+
+### How it was met
+
+The syntax was reviewed before implementation, as the item required, and one grammar was chosen to cover J2, J3 and J4 together: `{{ [!] [label:] name-or-options [=default] [|help] }}`, every part optional. Keeping the metadata in the prompt text follows the product direction — a variable’s name, label, options, syntax and defaults belong to the source prompt — and means it survives Markdown export and import, where a sidecar column would not. Documented in docs/variables.md. `!` marks a variable required; it was already reserved by the parser for future syntax and nothing in the library used it, so `>` and `#` remain reserved. An empty required variable warns without blocking, in the preview and again in the toast after copying: "Copied. customer has not been populated."
+
+**Completed:** 2026-09-03 · `14f90dd`
+
+---
+
+## J3. Add variable descriptions
+
+Allow variables to provide help text such as:
+
+```text
+customer
+Customer organisation being assessed
+```
+
+This may ultimately require metadata beyond inline prompt syntax.
+
+
+### How it was met
+
+The syntax was reviewed before implementation, as the item required, and one grammar was chosen to cover J2, J3 and J4 together: `{{ [!] [label:] name-or-options [=default] [|help] }}`, every part optional. Keeping the metadata in the prompt text follows the product direction — a variable’s name, label, options, syntax and defaults belong to the source prompt — and means it survives Markdown export and import, where a sidecar column would not. Documented in docs/variables.md. Help text follows a `|` and is shown under the variable’s label in the pane, wired to the field with aria-describedby. It is stripped before resolution, so it never reaches the clipboard.
+
+**Completed:** 2026-09-03 · `14f90dd`
+
+---
+
+## J4. Add variable defaults
+
+Allow a source definition to provide an optional default working value.
+
+This must remain distinguishable from the currently selected value.
+
+
+### How it was met
+
+The syntax was reviewed before implementation, as the item required, and one grammar was chosen to cover J2, J3 and J4 together: `{{ [!] [label:] name-or-options [=default] [|help] }}`, every part optional. Keeping the metadata in the prompt text follows the product direction — a variable’s name, label, options, syntax and defaults belong to the source prompt — and means it survives Markdown export and import, where a sidecar column would not. Documented in docs/variables.md. A default follows `=`. It is applied at resolution when the working value is empty and never written into the working values, which is what keeps it distinguishable from a value the user chose: the pane shows it as a placeholder, Clear values returns to it rather than past it, and a required variable carrying a default never warns.
+
+**Completed:** 2026-09-03 · `14f90dd`
