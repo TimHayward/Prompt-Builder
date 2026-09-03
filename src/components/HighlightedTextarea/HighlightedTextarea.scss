@@ -59,5 +59,11 @@
       outline: 1px dashed rgba(colors.$accent-color, 0.6);
       outline-offset: -1px;
     }
+
+    // A variable the prompt marks required, so it stands out while writing.
+    .highlighted-variable--required {
+      outline: 1px solid rgba(colors.$warning-color, 0.7);
+      outline-offset: -1px;
+    }
   }
 }

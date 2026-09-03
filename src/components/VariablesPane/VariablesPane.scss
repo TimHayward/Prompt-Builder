@@ -175,3 +175,15 @@
     }
   }
 }
+
+// A variable the prompt marks required, and the help text it may carry.
+.variable-required {
+  color: colors.$warning-color;
+  margin-left: 0.15rem;
+}
+
+.variable-help {
+  font-size: typography.$font-size-xs;
+  color: rgba(colors.$text-color, 0.55);
+  margin: 0 0 0.25rem;
+}

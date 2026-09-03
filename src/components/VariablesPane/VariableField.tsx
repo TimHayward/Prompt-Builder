@@ -5,6 +5,10 @@
  * One editor for one prompt variable: a plain textarea for free-text variables,
  * a dropdown for choice lists ({{mail/teams/calendar}}) with a "Custom…" entry
  * that falls back to the same textarea.
+ *
+ * A default from the source is shown as a placeholder rather than filled in:
+ * it is what the prompt will resolve with, not something the user has chosen,
+ * and the two have to stay distinguishable.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -31,6 +35,7 @@ const VariableField: React.FC<VariableFieldProps> = ({ spec, value, onChange }) 
 
   const hasOptions = spec.options.length > 0;
   const isCustom = forceCustom || (value !== '' && !spec.options.includes(value));
+  const describedBy = spec.description ? `var-${spec.key}-help` : undefined;
 
   const textarea = (
     <textarea
@@ -38,7 +43,10 @@ const VariableField: React.FC<VariableFieldProps> = ({ spec, value, onChange }) 
       className="variable-input"
       value={value}
       onChange={e => onChange(e.target.value)}
-      placeholder={`Enter value for ${spec.label}`}
+      placeholder={
+        spec.defaultValue ? `Default: ${spec.defaultValue}` : `Enter value for ${spec.label}`
+      }
+      aria-describedby={describedBy}
       autoFocus={hasOptions}
     />
   );
@@ -63,9 +71,10 @@ const VariableField: React.FC<VariableFieldProps> = ({ spec, value, onChange }) 
         className="variable-select"
         value={isCustom ? CUSTOM_OPTION : value || PLACEHOLDER_OPTION}
         onChange={e => handleSelect(e.target.value)}
+        aria-describedby={describedBy}
       >
         <option value={PLACEHOLDER_OPTION} disabled>
-          Select an option…
+          {spec.defaultValue ? `Default: ${spec.defaultValue}` : 'Select an option…'}
         </option>
         {spec.options.map(option => (
           <option key={option} value={option}>

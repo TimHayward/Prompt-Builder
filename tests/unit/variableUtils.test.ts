@@ -7,6 +7,9 @@ describe('parseVariableToken', () => {
       key: 'mail/teams/calendar',
       label: 'mail / teams / calendar',
       options: ['mail', 'teams', 'calendar'],
+      required: false,
+      description: '',
+      defaultValue: '',
     });
   });
 
@@ -24,11 +27,21 @@ describe('parseVariableToken', () => {
       key: 'channel',
       label: 'channel',
       options: ['mail', 'teams'],
+      required: false,
+      description: '',
+      defaultValue: '',
     });
   });
 
   it('treats a token with no real choice list as free text', () => {
-    expect(parseVariableToken('tone')).toEqual({ key: 'tone', label: 'tone', options: [] });
+    expect(parseVariableToken('tone')).toEqual({
+      key: 'tone',
+      label: 'tone',
+      options: [],
+      required: false,
+      description: '',
+      defaultValue: '',
+    });
     expect(parseVariableToken('see https://example.com')?.options).toEqual([]);
   });
 });
@@ -117,5 +130,156 @@ describe('resolveVariables', () => {
     const text = 'Pick {{Variables: VariableOne/VariableTwo/VariableOne}}';
 
     expect(resolveVariables(text, { Variables: 'VariableTwo' }).text).toBe('Pick VariableTwo');
+  });
+});
+
+describe('required variables (J2)', () => {
+  it('reads the marker, and keys the variable without it', () => {
+    const spec = parseVariableToken('!customer');
+
+    expect(spec?.required).toBe(true);
+    expect(spec?.key).toBe('customer');
+    expect(spec?.label).toBe('customer');
+  });
+
+  it('marks a labelled choice list required', () => {
+    const spec = parseVariableToken('!channel: mail/teams');
+
+    expect(spec?.required).toBe(true);
+    expect(spec?.key).toBe('channel');
+    expect(spec?.options).toEqual(['mail', 'teams']);
+  });
+
+  it('shares a value with the same variable written plainly', () => {
+    const specs = extractVariableSpecs('{{!customer}} and {{customer}}');
+
+    expect(specs).toHaveLength(1);
+    expect(specs[0].key).toBe('customer');
+  });
+
+  it('stays required if any occurrence says so', () => {
+    expect(extractVariableSpecs('{{customer}} then {{!customer}}')[0].required).toBe(true);
+  });
+
+  it('reports the required ones left empty', () => {
+    const resolved = resolveVariables('Hello {{!customer}} and {{tone}}', {});
+
+    expect(resolved.unresolved).toEqual(['customer', 'tone']);
+    expect(resolved.missingRequired).toEqual(['customer']);
+  });
+
+  it('reports nothing once it is filled', () => {
+    const resolved = resolveVariables('Hello {{!customer}}', { customer: 'Contoso' });
+
+    expect(resolved.missingRequired).toEqual([]);
+    expect(resolved.text).toBe('Hello Contoso');
+  });
+
+  it('leaves a genuinely reserved token alone', () => {
+    // '!' now means required, but '>' and '#' are still held back.
+    expect(parseVariableToken('> Component Name')).toBeNull();
+    expect(parseVariableToken('# Heading')).toBeNull();
+  });
+
+  it('is not a variable when the marker stands alone', () => {
+    expect(parseVariableToken('!')).toBeNull();
+  });
+});
+
+describe('variable descriptions (J3)', () => {
+  it('reads help text off the token', () => {
+    const spec = parseVariableToken('customer|Customer organisation being assessed');
+
+    expect(spec?.key).toBe('customer');
+    expect(spec?.description).toBe('Customer organisation being assessed');
+  });
+
+  it('keeps help text out of the resolved output', () => {
+    const text = 'For {{customer|Who is being assessed}}.';
+
+    expect(resolveVariables(text, { customer: 'Contoso' }).text).toBe('For Contoso.');
+  });
+
+  it('shares one entry with the same variable written plainly', () => {
+    const specs = extractVariableSpecs('{{customer|Who it is for}} and {{customer}}');
+
+    expect(specs).toHaveLength(1);
+    expect(specs[0].description).toBe('Who it is for');
+  });
+
+  it('takes the first help text when two occurrences differ', () => {
+    const specs = extractVariableSpecs('{{customer|First}} then {{customer|Second}}');
+
+    expect(specs[0].description).toBe('First');
+  });
+});
+
+describe('variable defaults (J4)', () => {
+  it('reads a default off a free-text variable', () => {
+    const spec = parseVariableToken('customer=Contoso');
+
+    expect(spec?.key).toBe('customer');
+    expect(spec?.defaultValue).toBe('Contoso');
+  });
+
+  it('reads a default off a labelled choice list', () => {
+    const spec = parseVariableToken('tone: formal/technical=formal');
+
+    expect(spec?.key).toBe('tone');
+    expect(spec?.options).toEqual(['formal', 'technical']);
+    expect(spec?.defaultValue).toBe('formal');
+  });
+
+  it('resolves with the default when nothing was entered', () => {
+    expect(resolveVariables('A {{tone: formal/technical=formal}} note', {}).text).toBe(
+      'A formal note'
+    );
+  });
+
+  it('does not count a defaulted variable as empty', () => {
+    expect(resolveVariables('A {{tone=formal}} note', {}).unresolved).toEqual([]);
+  });
+
+  it('does not count a defaulted required variable as missing', () => {
+    // The prompt supplied an answer, so there is nothing to warn about.
+    expect(resolveVariables('For {{!customer=Contoso}}', {}).missingRequired).toEqual([]);
+  });
+
+  it('prefers the working value over the default', () => {
+    expect(resolveVariables('A {{tone=formal}} note', { tone: 'technical' }).text).toBe(
+      'A technical note'
+    );
+  });
+});
+
+describe('the grammar together', () => {
+  it('reads every part of one token', () => {
+    const spec = parseVariableToken('!channel: mail/teams=mail|How the update is sent');
+
+    expect(spec).toEqual({
+      key: 'channel',
+      label: 'channel',
+      options: ['mail', 'teams'],
+      required: true,
+      description: 'How the update is sent',
+      defaultValue: 'mail',
+    });
+  });
+
+  it('lets help text contain an equals sign', () => {
+    // Help is split off first, so its prose cannot be read as a default.
+    const spec = parseVariableToken('customer|Written as name=value');
+
+    expect(spec?.description).toBe('Written as name=value');
+    expect(spec?.defaultValue).toBe('');
+  });
+
+  it('leaves prompts written before the grammar grew exactly as they were', () => {
+    expect(parseVariableToken('tone')?.key).toBe('tone');
+    expect(parseVariableToken('mail/teams')?.key).toBe('mail/teams');
+    expect(parseVariableToken('channel: mail/teams')?.key).toBe('channel');
+    expect(parseVariableToken('Note: see below')?.key).toBe('Note: see below');
+    expect(parseVariableToken('see https://example.com')?.options).toEqual([]);
+    expect(resolveVariables('Keep {{> Component}}', {}).text).toBe('Keep {{> Component}}');
   });
 });

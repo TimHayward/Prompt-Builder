@@ -74,7 +74,17 @@ const VariablesPane: React.FC = () => {
               <div key={spec.key} className="variable-item">
                 <label htmlFor={`var-${spec.key}`} className="variable-label">
                   {spec.label}
+                  {spec.required && (
+                    <span className="variable-required" aria-label="required" title="Required">
+                      *
+                    </span>
+                  )}
                 </label>
+                {spec.description && (
+                  <p id={`var-${spec.key}-help`} className="variable-help">
+                    {spec.description}
+                  </p>
+                )}
                 <VariableField
                   spec={spec}
                   value={workingValues[spec.key] || ''}

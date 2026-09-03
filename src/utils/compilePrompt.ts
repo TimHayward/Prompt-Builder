@@ -36,6 +36,8 @@ export type CompiledPrompt = {
   text: string;
   /** Variables the prompt declares but this use left blank. */
   unresolved: string[];
+  /** Of those, the ones the prompt marks required. */
+  missingRequired: string[];
 };
 
 /**
@@ -66,6 +68,7 @@ export const compilePrompt = ({
   markdownEnabled = false,
 }: CompilePromptOptions): CompiledPrompt => {
   const unresolved: string[] = [];
+  const missingRequired: string[] = [];
 
   const compiledSections = sections
     // A section with nothing in it contributes nothing, heading included.
@@ -74,6 +77,9 @@ export const compilePrompt = ({
       const resolved = resolveVariables(section.content, values);
       resolved.unresolved.forEach(key => {
         if (!unresolved.includes(key)) unresolved.push(key);
+      });
+      resolved.missingRequired.forEach(key => {
+        if (!missingRequired.includes(key)) missingRequired.push(key);
       });
 
       // Headings are what makes the system prompt's description of the format
@@ -89,5 +95,5 @@ export const compilePrompt = ({
 
   const text = markdownEnabled && systemPrompt ? systemPrompt + SECTION_SEPARATOR + body : body;
 
-  return { text, unresolved };
+  return { text, unresolved, missingRequired };
 };

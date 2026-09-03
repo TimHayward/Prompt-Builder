@@ -26,10 +26,23 @@ const ResolvedPreview: React.FC<ResolvedPreviewProps> = ({
   systemPrompt,
   markdownEnabled,
 }) => {
-  const { text, unresolved } = compilePrompt({ sections, values, systemPrompt, markdownEnabled });
+  const { text, unresolved, missingRequired } = compilePrompt({
+    sections,
+    values,
+    systemPrompt,
+    markdownEnabled,
+  });
 
   return (
     <div className="resolved-preview">
+      {missingRequired.length > 0 && (
+        <p className="resolved-preview-required">
+          {missingRequired.length === 1
+            ? `${missingRequired[0]} has not been populated.`
+            : `${missingRequired.join(', ')} have not been populated.`}
+        </p>
+      )}
+
       {unresolved.length > 0 && (
         <p className="resolved-preview-note">
           {unresolved.length === 1

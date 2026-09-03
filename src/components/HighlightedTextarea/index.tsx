@@ -144,7 +144,8 @@ const HighlightedTextarea = forwardRef<HTMLTextAreaElement, HighlightedTextareaP
       const escape = (value: string): string =>
         value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-      // Wrap {{variables}} in highlighted spans, flagging choice lists separately
+      // Wrap {{variables}} in highlighted spans, flagging choice lists and the
+      // ones the prompt marks required separately
       let highlighted = '';
       let cursor = 0;
 
@@ -153,9 +154,16 @@ const HighlightedTextarea = forwardRef<HTMLTextAreaElement, HighlightedTextareaP
         const token = escape(match[0]);
 
         highlighted += escape(text.slice(cursor, match.index));
-        highlighted += spec
-          ? `<span class="highlighted-variable${spec.options.length > 0 ? ' highlighted-variable--choice' : ''}">${token}</span>`
-          : token;
+
+        if (spec) {
+          const classes = ['highlighted-variable'];
+          if (spec.options.length > 0) classes.push('highlighted-variable--choice');
+          if (spec.required) classes.push('highlighted-variable--required');
+
+          highlighted += `<span class="${classes.join(' ')}">${token}</span>`;
+        } else {
+          highlighted += token;
+        }
 
         cursor = match.index + match[0].length;
       }

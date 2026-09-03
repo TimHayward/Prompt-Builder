@@ -2,10 +2,19 @@
  * Variable Utilities
  * Functions for extracting and managing prompt variables ({{variable}})
  *
- * Three token forms are recognised:
+ * One grammar, every part optional:
+ *
+ *   {{ [!] [label:] name-or-options [=default] [|help] }}
+ *
  *   {{tone}}                          free text
  *   {{mail/teams/calendar}}           choice list
  *   {{channel: mail/teams/calendar}}  labelled choice list
+ *   {{!customer}}                     required
+ *   {{tone: formal/technical=formal}} with a default working value
+ *   {{customer|Who is being assessed}} with help text
+ *
+ * The optional parts are stripped in that order — required marker, help text,
+ * default — before the label and options are read, so each is unambiguous.
  */
 
 /**
@@ -18,8 +27,20 @@ export const VARIABLE_TOKEN_REGEX = /\{\{([^}]+)\}\}/g;
 /**
  * Tokens opening with one of these are not variables. Reserved for future
  * syntax, e.g. {{> Component Name}} component references.
+ *
+ * '!' was reserved here until it was given its meaning: it now marks a variable
+ * as required.
  */
-const RESERVED_SIGILS = ['>', '#', '!'];
+const RESERVED_SIGILS = ['>', '#'];
+
+/** Marks a variable the prompt expects to be filled in. */
+const REQUIRED_SIGIL = '!';
+
+/** Separates help text from the rest of the token. */
+const HELP_SEPARATOR = '|';
+
+/** Separates a default working value from the rest of the token. */
+const DEFAULT_SEPARATOR = '=';
 
 /**
  * Splits an optional `label:` prefix off the inner text. The label may not
@@ -34,6 +55,33 @@ export type VariableSpec = {
   label: string;
   /** Predefined choices; empty means free text only */
   options: string[];
+  /** Whether the prompt expects this one to be filled in before use */
+  required: boolean;
+  /** Help text for the pane; empty when the token gives none */
+  description: string;
+  /**
+   * The value to resolve with when the working value is empty.
+   *
+   * Deliberately not written into the working values: a default has to stay
+   * distinguishable from something the user chose, so it is applied at
+   * resolution and shown in the pane as a placeholder.
+   */
+  defaultValue: string;
+};
+
+/**
+ * Splits an optional trailing part off a token body
+ * @param body - What is left of the token
+ * @param separator - The character introducing the trailing part
+ * @returns The body without it, and the part itself (empty when absent)
+ */
+const splitTrailing = (body: string, separator: string): [string, string] => {
+  // The first occurrence wins, so the trailing part may itself contain the
+  // separator: a default of `a=b` reads, a variable named `a=b` does not.
+  const at = body.indexOf(separator);
+  if (at === -1) return [body, ''];
+
+  return [body.slice(0, at).trim(), body.slice(at + 1).trim()];
 };
 
 /**
@@ -62,24 +110,36 @@ export const parseVariableToken = (inner: string): VariableSpec | null => {
   if (!trimmed) return null;
   if (RESERVED_SIGILS.includes(trimmed[0])) return null;
 
-  const labelMatch = trimmed.match(LABEL_REGEX);
+  const required = trimmed[0] === REQUIRED_SIGIL;
+  const withoutSigil = required ? trimmed.slice(1).trim() : trimmed;
+  if (!withoutSigil) return null;
+
+  // Help text first: it is free prose and may contain anything, including an
+  // '=' that would otherwise read as a default.
+  const [withoutHelp, description] = splitTrailing(withoutSigil, HELP_SEPARATOR);
+  const [body, defaultValue] = splitTrailing(withoutHelp, DEFAULT_SEPARATOR);
+  if (!body) return null;
+
+  const meta = { required, description, defaultValue };
+
+  const labelMatch = body.match(LABEL_REGEX);
   const label = labelMatch ? labelMatch[1].trim() : '';
-  const options = parseOptions(labelMatch ? labelMatch[2] : trimmed);
+  const options = parseOptions(labelMatch ? labelMatch[2] : body);
 
   // Without a real choice list the token stays a plain free-text variable keyed
   // on its whole inner text, exactly as before choice lists existed. A label
   // only takes effect alongside options, so `{{Note: see below}}` is untouched.
   if (options.length === 0) {
-    return { key: trimmed, label: trimmed, options: [] };
+    return { key: body, label: body, options: [], ...meta };
   }
 
   if (label) {
-    return { key: label, label, options };
+    return { key: label, label, options, ...meta };
   }
 
   // Key on the canonical join so spacing is irrelevant: `{{ a / b }}` and
   // `{{a/b}}` are the same variable.
-  return { key: options.join('/'), label: options.join(' / '), options };
+  return { key: options.join('/'), label: options.join(' / '), options, ...meta };
 };
 
 /**
@@ -101,6 +161,13 @@ const mergeSpec = (specs: VariableSpec[], spec: VariableSpec): void => {
       existing.options.push(option);
     }
   });
+
+  // Marking one occurrence required makes the variable required: the prompt has
+  // said it needs a value, and the other occurrences share that value.
+  existing.required = existing.required || spec.required;
+  // Help and default keep the first non-empty answer, as the label does.
+  if (!existing.description) existing.description = spec.description;
+  if (!existing.defaultValue) existing.defaultValue = spec.defaultValue;
 };
 
 /**
@@ -159,8 +226,10 @@ export const extractVariablesFromSections = (
 
 export type ResolvedText = {
   text: string;
-  /** Keys that had no value, in order of first appearance. */
+  /** Keys that resolved to nothing, in order of first appearance. */
   unresolved: string[];
+  /** Of those, the ones the prompt marks required. */
+  missingRequired: string[];
 };
 
 /**
@@ -179,17 +248,21 @@ export type ResolvedText = {
  */
 export const resolveVariables = (text: string, values: Record<string, string>): ResolvedText => {
   const unresolved: string[] = [];
+  const missingRequired: string[] = [];
 
   const resolved = text.replace(VARIABLE_TOKEN_REGEX, (match, inner: string) => {
     const spec = parseVariableToken(inner);
     if (!spec) return match; // Reserved token, leave it alone
 
-    const value = values[spec.key];
+    // The working value wins; the source's default stands in when there is
+    // none, which is what makes a default a starting point rather than a choice.
+    const value = values[spec.key] || spec.defaultValue;
     if (value) return value;
 
     if (!unresolved.includes(spec.key)) unresolved.push(spec.key);
+    if (spec.required && !missingRequired.includes(spec.key)) missingRequired.push(spec.key);
     return '';
   });
 
-  return { text: resolved, unresolved };
+  return { text: resolved, unresolved, missingRequired };
 };

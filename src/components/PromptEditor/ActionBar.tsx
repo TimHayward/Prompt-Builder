@@ -37,7 +37,7 @@ const ActionBar: React.FC<ActionBarProps> = ({ activePromptId, systemPrompt, mar
     if (!activePrompt) return;
 
     // The resolved prompt is the source with this use's working values applied.
-    const { text, unresolved } = compilePrompt({
+    const { text, unresolved, missingRequired } = compilePrompt({
       sections: activePrompt.sections,
       values: getWorkingValues(activePromptId),
       systemPrompt,
@@ -50,8 +50,15 @@ const ActionBar: React.FC<ActionBarProps> = ({ activePromptId, systemPrompt, mar
     if (copied) markPromptUsed(activePromptId);
 
     // Said after the fact rather than blocking the copy: a prompt with blanks
-    // is often exactly what someone wants to paste and fill in elsewhere.
-    if (copied && unresolved.length > 0) {
+    // is often exactly what someone wants to paste and fill in elsewhere. A
+    // variable the prompt marks required is named on its own, because the
+    // prompt has said it expects one.
+    if (copied && missingRequired.length > 0) {
+      showToast(
+        `Copied. ${missingRequired.join(', ')} ${missingRequired.length === 1 ? 'has' : 'have'} not been populated.`,
+        'error'
+      );
+    } else if (copied && unresolved.length > 0) {
       showToast(
         `Copied. ${unresolved.length === 1 ? 'One variable was' : `${unresolved.length} variables were`} left empty: ${unresolved.join(', ')}.`,
         'success'
