@@ -1657,3 +1657,63 @@ Provide a favourite filter.
 A star beside the description marks a favourite, stored as is_favourite. The filter this enables belongs with the prompt browser in I6, which is still open.
 
 **Completed:** 2026-09-03 · `f2ff750`
+
+---
+
+## I3. Add tags
+
+Example:
+
+```text
+Microsoft 365
+Security
+Development
+Research
+Writing
+```
+
+Allow multiple tags per prompt.
+
+
+### How it was met
+
+A prompt carries any number of tags, edited under its description and stored as a JSON array. Typing offers the tags already in the library, and a tag differing only in case is treated as the one that exists. The browser filters on one tag at a time.
+
+**Completed:** 2026-09-03 · `6961f0b`
+
+---
+
+## I5. Add recently used prompts
+
+Track a local `last_used_at` timestamp.
+
+Display recently used prompts.
+
+
+### How it was met
+
+last_used_at is stamped when a prompt is copied — a copy the clipboard refuses stamps nothing — and the browser’s Recent filter lists what was used in the last 14 days, most recent first.
+
+**Completed:** 2026-09-03 · `6961f0b`
+
+---
+
+## I6. Add prompt search
+
+Search across:
+
+- prompt name
+- description
+- tags
+- section names
+- section content
+- variable names
+
+SQLite FTS5 should be considered.
+
+
+### How it was met
+
+The browser searches every field the item names: prompt name, description, tags, section names, section content and variable names, and reports which of them matched. FTS5 was considered and rejected: the library is loaded whole on start, so a pure function over it needs no shadow table, no triggers and no round trip. The reasoning is recorded in docs/prompt-model.md so the decision can be revisited if the library ever stops being loaded whole.
+
+**Completed:** 2026-09-03 · `6961f0b`

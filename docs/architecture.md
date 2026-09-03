@@ -28,7 +28,7 @@ its provider rather than handing back plausible no-ops.
 
 **Domain** — `src/domain` and the pure helpers in `src/utils`. Prompt mutations,
 the compiler, the variable grammar, the Markdown parser, the section
-stored/editor split. No React, no fetch: these are the parts worth testing on
+stored/editor split, prompt search and component linkage. No React, no fetch: these are the parts worth testing on
 their own, and most of the test suite lives here.
 
 **API client** — `src/api` over `src/lib/apiClient.ts`. The client checks status

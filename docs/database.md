@@ -21,7 +21,7 @@ They are part of the database, not scratch files.
 
 | Table               | Holds                                                                               |
 | ------------------- | ----------------------------------------------------------------------------------- |
-| `prompts`           | Source prompts; sections and variable defaults as JSON                              |
+| `prompts`           | Source prompts; sections and variable defaults as JSON, plus library metadata       |
 | `component_library` | The sidebar tree; `parent_id` is self-referential, `sort_order` gives sibling order |
 | `prompt_workspaces` | Working values per prompt, and room for section overrides                           |
 | `app_config`        | One row: settings JSON and the active prompt                                        |
@@ -42,6 +42,16 @@ upgrades by being started. To inspect the version:
 ```bash
 sqlite3 data/prompt_builder.db "PRAGMA user_version;"
 ```
+
+### Library metadata
+
+A prompt carries more than its text. `description` says what it is for,
+`is_favourite` marks the ones reached for often, `tags` is a JSON array of
+labels, and `last_used_at` is stamped when the prompt is copied. All four
+default to empty, so an existing library gains them without changing.
+
+Searching them is done in the client, not in SQL — see
+[prompt-model.md](prompt-model.md#finding-a-prompt).
 
 Adding one: append an entry to `MIGRATIONS` with the next number. Never edit or
 renumber a released migration — installations that ran it will not run it again.

@@ -65,6 +65,23 @@ Compilation:
    system prompt in front. A section whose text already begins with its own
    heading keeps that one rather than gaining a second.
 
+## Finding a prompt
+
+Once there are more prompts than fit in a row of tabs, the tabs stop being a
+way to find anything. The browser searches everything a prompt holds — name,
+description, tags, section names, section text and variable names — and can
+narrow to favourites, to recent use, or to one tag.
+
+It is a pure function over the prompts already in memory,
+`src/domain/promptSearch.ts`. The whole library is loaded on start, so this
+needs no round trip and no index. SQLite's FTS5 was considered and left alone:
+it would mean a shadow table and triggers kept in step with every write, to
+search a list that fits in a variable. That trade changes only if the library
+stops being loaded whole.
+
+Using a prompt means copying it. The stamp is written when the text reaches the
+clipboard, not when the button is pressed, so a refused copy is not a use.
+
 ## Why the separation matters
 
 - Entering a value cannot corrupt a reusable prompt.

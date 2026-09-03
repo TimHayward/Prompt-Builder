@@ -89,47 +89,6 @@ New product capabilities.
 
 ---
 
-# I. P3 Prompt Library Features
-
-## I3. Add tags
-
-Example:
-
-```text
-Microsoft 365
-Security
-Development
-Research
-Writing
-```
-
-Allow multiple tags per prompt.
-
----
-
-## I5. Add recently used prompts
-
-Track a local `last_used_at` timestamp.
-
-Display recently used prompts.
-
----
-
-## I6. Add prompt search
-
-Search across:
-
-- prompt name
-- description
-- tags
-- section names
-- section content
-- variable names
-
-SQLite FTS5 should be considered.
-
----
-
 # J. P3 Variable Improvements
 
 ## J2. Add required variables
