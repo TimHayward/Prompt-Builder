@@ -146,7 +146,8 @@
       }
 
       .add-prompt-tab,
-      .duplicate-prompt-tab {
+      .duplicate-prompt-tab,
+      .find-prompt-tab {
         @include mixins.flex(row, center, center);
         border-radius: 6px;
         background-color: rgba(0, 0, 0, 0.3);
@@ -163,7 +164,8 @@
         }
       }
 
-      .duplicate-prompt-tab {
+      .duplicate-prompt-tab,
+      .find-prompt-tab {
         margin-left: 0.35rem;
       }
     }
@@ -213,6 +215,68 @@
         border-bottom: 1px solid transparent;
         outline: none;
         padding: 0.15rem 0.25rem;
+
+        &::placeholder {
+          color: rgba(colors.$text-color, 0.4);
+        }
+
+        &:hover,
+        &:focus {
+          border-bottom-color: rgba(colors.$text-color, 0.3);
+        }
+      }
+    }
+
+    .prompt-tags {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+      padding: 0 0.5rem 0.7rem;
+
+      .tags-icon {
+        font-size: 1rem;
+        color: rgba(colors.$text-color, 0.4);
+        margin-right: 0.1rem;
+      }
+
+      .tag-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        font-size: typography.$font-size-xs;
+        color: colors.$text-color;
+        background-color: rgba(colors.$accent-color, 0.15);
+        border: 1px solid rgba(colors.$accent-color, 0.35);
+        border-radius: 10px;
+        padding: 0.1rem 0.2rem 0.1rem 0.5rem;
+
+        button {
+          display: flex;
+          align-items: center;
+          background: none;
+          border: none;
+          padding: 0.05rem;
+          border-radius: 50%;
+          cursor: pointer;
+          color: rgba(colors.$text-color, 0.6);
+
+          &:hover {
+            color: colors.$text-color;
+            background-color: rgba(colors.$text-color, 0.15);
+          }
+        }
+      }
+
+      .tag-input {
+        font-size: typography.$font-size-xs;
+        color: colors.$text-color;
+        background-color: transparent;
+        border: none;
+        border-bottom: 1px solid transparent;
+        outline: none;
+        padding: 0.15rem 0.25rem;
+        min-width: 6rem;
 
         &::placeholder {
           color: rgba(colors.$text-color, 0.4);

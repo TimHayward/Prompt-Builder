@@ -23,6 +23,8 @@ const promptWith = (name: string, sections: Section[]): Prompt => ({
   name,
   description: '',
   isFavourite: false,
+  tags: [],
+  lastUsedAt: null,
   sections,
   variables: {},
 });

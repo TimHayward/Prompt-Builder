@@ -44,6 +44,8 @@ export const savePrompt = (prompt: Prompt): Promise<unknown> => {
     name: prompt.name,
     description: prompt.description,
     isFavourite: prompt.isFavourite,
+    tags: prompt.tags,
+    lastUsedAt: prompt.lastUsedAt,
     num: prompt.num,
     variables: prompt.variables,
     sections: toStoredSections(prompt.sections),

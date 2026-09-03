@@ -54,6 +54,12 @@ export const toggleFavourite = (prompt: Prompt): Prompt => ({
   isFavourite: !prompt.isFavourite,
 });
 
+/** Replaces the prompt's tags. */
+export const setTags = (prompt: Prompt, tags: string[]): Prompt => ({ ...prompt, tags });
+
+/** Records that the prompt has just been used. */
+export const markUsed = (prompt: Prompt, at: string): Prompt => ({ ...prompt, lastUsedAt: at });
+
 export const appendSection = (prompt: Prompt, section: Section): Prompt => ({
   ...prompt,
   sections: [...prompt.sections, section],

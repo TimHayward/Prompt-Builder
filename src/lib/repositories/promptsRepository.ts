@@ -16,7 +16,7 @@ export type StoredPrompt = Prompt & { created_at?: string; updated_at?: string }
 
 const SELECT_COLUMNS = `
     SELECT id, name, sections, COALESCE(variables, '{}') as variables, num,
-           description, is_favourite, created_at, updated_at
+           description, is_favourite, tags, last_used_at, created_at, updated_at
     FROM prompts
 `;
 
@@ -24,6 +24,7 @@ export type CreatePromptInput = {
   name: string;
   description?: string;
   isFavourite?: boolean;
+  tags?: string[];
   sections?: StoredSection[];
   variables?: Record<string, string>;
   num?: number | null;
@@ -33,6 +34,8 @@ export type UpdatePromptInput = {
   name?: string;
   description?: string;
   isFavourite?: boolean;
+  tags?: string[];
+  lastUsedAt?: string | null;
   sections?: StoredSection[];
   variables?: Record<string, string>;
   num?: number | null;
@@ -71,13 +74,14 @@ export const createPrompt = (input: CreatePromptInput): StoredPrompt | undefined
   const now = new Date().toISOString();
 
   db.prepare(
-    `INSERT INTO prompts (id, name, description, is_favourite, sections, variables, num, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO prompts (id, name, description, is_favourite, tags, sections, variables, num, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     input.name,
     input.description ?? '',
     input.isFavourite ? 1 : 0,
+    JSON.stringify(input.tags ?? []),
     JSON.stringify(input.sections ?? []),
     JSON.stringify(input.variables ?? {}),
     input.num ?? null,
@@ -95,7 +99,8 @@ export const createPrompt = (input: CreatePromptInput): StoredPrompt | undefined
 export const updatePrompt = (id: string, input: UpdatePromptInput): StoredPrompt | undefined => {
   const current = db
     .prepare(
-      `SELECT name, description, is_favourite, sections, COALESCE(variables, '{}') as variables, num
+      `SELECT name, description, is_favourite, tags, last_used_at, sections,
+              COALESCE(variables, '{}') as variables, num
          FROM prompts WHERE id = ?`
     )
     .get(id) as
@@ -103,6 +108,8 @@ export const updatePrompt = (id: string, input: UpdatePromptInput): StoredPrompt
         name: string;
         description: string;
         is_favourite: number;
+        tags: string;
+        last_used_at: string | null;
         sections: string;
         variables: string;
         num: number | null;
@@ -112,13 +119,15 @@ export const updatePrompt = (id: string, input: UpdatePromptInput): StoredPrompt
   if (!current) return undefined;
 
   db.prepare(
-    `UPDATE prompts SET name = ?, description = ?, is_favourite = ?, sections = ?, variables = ?,
-       num = ?, updated_at = ? WHERE id = ?`
+    `UPDATE prompts SET name = ?, description = ?, is_favourite = ?, tags = ?, last_used_at = ?,
+       sections = ?, variables = ?, num = ?, updated_at = ? WHERE id = ?`
   ).run(
     input.name ?? current.name,
     input.description ?? current.description,
     // A partial update leaves the flag alone; only an explicit boolean moves it.
     input.isFavourite === undefined ? current.is_favourite : input.isFavourite ? 1 : 0,
+    input.tags ? JSON.stringify(input.tags) : current.tags,
+    input.lastUsedAt === undefined ? current.last_used_at : input.lastUsedAt,
     input.sections ? JSON.stringify(input.sections) : current.sections,
     input.variables ? JSON.stringify(input.variables) : current.variables,
     input.num ?? current.num,

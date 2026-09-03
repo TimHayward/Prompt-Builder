@@ -73,6 +73,10 @@ export type Prompt = {
   description: string;
   /** Marks the prompts reached for often. */
   isFavourite: boolean;
+  /** Free-form labels, for grouping a library across the tab order. */
+  tags: string[];
+  /** When the prompt was last copied, or null if it never has been. */
+  lastUsedAt: string | null;
   sections: Section[];
   variables?: Record<string, string>; // Variables mapping: {variableName: value}
 };

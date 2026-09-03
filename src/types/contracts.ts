@@ -42,6 +42,8 @@ export const promptSchema = z.object({
   name: z.string().min(1),
   description: z.string(),
   isFavourite: z.boolean(),
+  tags: z.array(z.string()),
+  lastUsedAt: z.string().nullable(),
   sections: z.array(sectionSchema),
   variables: variablesSchema.optional(),
 });
@@ -52,6 +54,7 @@ export const createPromptRequestSchema = z.object({
   name: z.string({ error: 'Prompt name is required' }).min(1, 'Prompt name is required'),
   description: z.string().optional(),
   isFavourite: z.boolean().optional(),
+  tags: z.array(z.string()).optional(),
   sections: z.array(sectionSchema).optional(),
   variables: variablesSchema.optional(),
   num: z.number().nullable().optional(),
@@ -63,15 +66,24 @@ export const updatePromptRequestSchema = z
     name: z.string().min(1).optional(),
     description: z.string().optional(),
     isFavourite: z.boolean().optional(),
+    tags: z.array(z.string()).optional(),
+    lastUsedAt: z.string().nullable().optional(),
     sections: z.array(sectionSchema).optional(),
     variables: variablesSchema.optional(),
     num: z.number().nullable().optional(),
   })
   .refine(
     body =>
-      ['name', 'description', 'isFavourite', 'sections', 'variables', 'num'].some(
-        field => field in body
-      ),
+      [
+        'name',
+        'description',
+        'isFavourite',
+        'tags',
+        'lastUsedAt',
+        'sections',
+        'variables',
+        'num',
+      ].some(field => field in body),
     {
       message: 'No fields to update provided',
     }

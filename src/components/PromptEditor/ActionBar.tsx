@@ -23,7 +23,7 @@ interface ActionBarProps {
 }
 
 const ActionBar: React.FC<ActionBarProps> = ({ activePromptId, systemPrompt, markdownEnabled }) => {
-  const { prompts, addNewSectionForEditing } = usePromptContext();
+  const { prompts, addNewSectionForEditing, markPromptUsed } = usePromptContext();
   const { getWorkingValues } = useWorkspaceContext();
   const { copyToClipboard, status, isSupported } = useClipboard();
   const { showToast } = useToast();
@@ -45,6 +45,9 @@ const ActionBar: React.FC<ActionBarProps> = ({ activePromptId, systemPrompt, mar
     });
 
     const copied = await copyToClipboard(text);
+
+    // Only a copy that reached the clipboard counts as a use.
+    if (copied) markPromptUsed(activePromptId);
 
     // Said after the fact rather than blocking the copy: a prompt with blanks
     // is often exactly what someone wants to paste and fill in elsewhere.

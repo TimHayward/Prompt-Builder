@@ -504,3 +504,134 @@ small {
     }
   }
 }
+
+// The find-a-prompt browser: a search box, filter chips, and the results.
+.prompt-browser {
+  width: 90%;
+  max-width: 640px;
+
+  .browser-search {
+    @include mixins.flex(row, flex-start, center);
+    gap: 0.4rem;
+    border: 1px solid colors.$dark-gray;
+    border-radius: 4px;
+    padding: 0.4rem 0.6rem;
+    margin-bottom: 0.75rem;
+
+    &:focus-within {
+      border-color: colors.$accent-color;
+    }
+
+    svg {
+      color: rgba(colors.$text-color, 0.5);
+    }
+
+    input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: colors.$text-color;
+      font-size: typography.$font-size-sm;
+
+      &::placeholder {
+        color: rgba(colors.$text-color, 0.4);
+      }
+    }
+  }
+
+  .browser-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-bottom: 0.75rem;
+
+    .filter-chip {
+      font-size: typography.$font-size-xs;
+      color: rgba(colors.$text-color, 0.75);
+      background-color: rgba(0, 0, 0, 0.25);
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 0.2rem 0.6rem;
+      cursor: pointer;
+
+      &:hover {
+        color: colors.$text-color;
+        background-color: rgba(0, 0, 0, 0.4);
+      }
+
+      &.active {
+        color: colors.$text-color;
+        background-color: rgba(colors.$accent-color, 0.2);
+        border-color: rgba(colors.$accent-color, 0.5);
+      }
+    }
+  }
+
+  .browser-results {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 22rem;
+    overflow-y: auto;
+    @include mixins.custom-scrollbar(6px, colors.$dark-gray);
+
+    .result {
+      @include mixins.flex(column, flex-start, flex-start);
+      gap: 0.15rem;
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      border-radius: 4px;
+      padding: 0.5rem 0.6rem;
+      cursor: pointer;
+      color: colors.$text-color;
+
+      &:hover,
+      &:focus-visible {
+        background-color: rgba(colors.$accent-color, 0.12);
+        outline: none;
+      }
+
+      .result-heading {
+        @include mixins.flex(row, flex-start, center);
+        flex-wrap: wrap;
+        gap: 0.35rem;
+      }
+
+      .result-star {
+        color: colors.$accent-color;
+      }
+
+      .result-name {
+        font-weight: 500;
+      }
+
+      .result-tag {
+        font-size: typography.$font-size-xs;
+        color: rgba(colors.$text-color, 0.8);
+        background-color: rgba(colors.$accent-color, 0.15);
+        border-radius: 8px;
+        padding: 0.05rem 0.45rem;
+      }
+
+      .result-description {
+        font-size: typography.$font-size-sm;
+        color: rgba(colors.$text-color, 0.7);
+      }
+
+      .result-why {
+        font-size: typography.$font-size-xs;
+        color: rgba(colors.$text-color, 0.45);
+      }
+    }
+  }
+
+  .browser-empty {
+    color: rgba(colors.$text-color, 0.6);
+    font-size: typography.$font-size-sm;
+    padding: 0.75rem 0.6rem;
+    margin: 0;
+  }
+}

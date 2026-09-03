@@ -212,6 +212,10 @@ export const parseLoadedData = (
         // has neither field.
         description: typeof prompt.description === 'string' ? prompt.description : '',
         isFavourite: prompt.isFavourite === true,
+        tags: Array.isArray(prompt.tags)
+          ? prompt.tags.filter((t: unknown) => typeof t === 'string')
+          : [],
+        lastUsedAt: typeof prompt.lastUsedAt === 'string' ? prompt.lastUsedAt : null,
         num: prompt.num || (typeof prompt.id === 'number' ? prompt.id : 0),
         sections: prompt.sections.map((section: any): Section => {
           if (

@@ -36,6 +36,8 @@ const promptWith = (...ids: string[]): Prompt => ({
   name: 'A prompt',
   description: '',
   isFavourite: false,
+  tags: [],
+  lastUsedAt: null,
   sections: ids.map(id => section(id)),
   variables: {},
 });

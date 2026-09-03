@@ -11,6 +11,7 @@ import { usePromptContext } from '@/contexts/PromptContext';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import SearchIcon from '@mui/icons-material/Search';
 
 interface PromptTabsProps {
   prompts: Prompt[];
@@ -21,6 +22,7 @@ interface PromptTabsProps {
   setEditingPromptNameValue: (value: string) => void;
   startEditingPromptName: (id: string, name: string) => void;
   savePromptName: (id: string) => void;
+  openBrowser: () => void;
 }
 
 const PromptTabs: React.FC<PromptTabsProps> = ({
@@ -32,6 +34,7 @@ const PromptTabs: React.FC<PromptTabsProps> = ({
   setEditingPromptNameValue,
   startEditingPromptName,
   savePromptName,
+  openBrowser,
 }) => {
   const { addPrompt, deletePrompt, duplicatePrompt } = usePromptContext(); // Add duplicatePrompt
 
@@ -137,6 +140,15 @@ const PromptTabs: React.FC<PromptTabsProps> = ({
           title="Duplicate Current Prompt" // Added title
         >
           <ContentCopyIcon />
+        </div>
+        <div
+          className="find-prompt-tab"
+          onClick={openBrowser}
+          title="Find a Prompt"
+          role="button"
+          aria-label="Find a prompt"
+        >
+          <SearchIcon />
         </div>
       </div>
     </div>

@@ -71,6 +71,8 @@ type PromptContextType = {
   updatePromptName: (promptId: string, newName: string) => void;
   updatePromptDescription: (promptId: string, description: string) => void;
   togglePromptFavourite: (promptId: string) => void;
+  setPromptTags: (promptId: string, tags: string[]) => void;
+  markPromptUsed: (promptId: string) => void;
   getPromptVariableNames: (promptId: string) => string[];
   getPromptVariableSpecs: (promptId: string) => VariableSpec[];
   isPromptsLoading: boolean;
@@ -248,6 +250,8 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
         name: request.name,
         description: request.description ?? '',
         isFavourite: request.isFavourite ?? false,
+        tags: request.tags ?? [],
+        lastUsedAt: null,
         sections,
         variables: request.variables ?? {},
         num: request.num ?? null,
@@ -395,6 +399,21 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     [mutatePrompt]
   );
 
+  const setPromptTags = useCallback(
+    (promptId: string, tags: string[]) => {
+      mutatePrompt(promptId, prompt => mutations.setTags(prompt, tags));
+    },
+    [mutatePrompt]
+  );
+
+  const markPromptUsed = useCallback(
+    (promptId: string) => {
+      const at = new Date().toISOString();
+      mutatePrompt(promptId, prompt => mutations.markUsed(prompt, at));
+    },
+    [mutatePrompt]
+  );
+
   const addSectionToPrompt = useCallback(
     (promptId: string, type?: Settings['defaultSectionType']): string | undefined => {
       const section = mutations.newSection(type || settings.defaultSectionType || 'instruction');
@@ -532,6 +551,8 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
         updatePromptName,
         updatePromptDescription,
         togglePromptFavourite,
+        setPromptTags,
+        markPromptUsed,
         getPromptVariableNames,
         getPromptVariableSpecs,
         isPromptsLoading,

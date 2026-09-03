@@ -175,6 +175,57 @@ describe('prompt metadata', () => {
     expect(reloaded.body.isFavourite).toBe(true);
   });
 
+  it('carries tags and the last use through a reload', async () => {
+    const created = await createPrompt('Tagged');
+
+    expect(created.body.tags).toEqual([]);
+    expect(created.body.lastUsedAt).toBeNull();
+
+    await callWithParams(prompt.PUT, {
+      method: 'PUT',
+      params: { id: created.body.id },
+      body: { tags: ['Security', 'M365'], lastUsedAt: '2026-09-03T09:00:00.000Z' },
+    });
+
+    const reloaded = await readPrompt(created.body.id);
+    expect(reloaded.body.tags).toEqual(['Security', 'M365']);
+    expect(reloaded.body.lastUsedAt).toBe('2026-09-03T09:00:00.000Z');
+  });
+
+  it('keeps tags through an update that does not mention them', async () => {
+    const created = await createPrompt('Still tagged');
+
+    await callWithParams(prompt.PUT, {
+      method: 'PUT',
+      params: { id: created.body.id },
+      body: { tags: ['Writing'] },
+    });
+    await callWithParams(prompt.PUT, {
+      method: 'PUT',
+      params: { id: created.body.id },
+      body: { name: 'Renamed' },
+    });
+
+    expect((await readPrompt(created.body.id)).body.tags).toEqual(['Writing']);
+  });
+
+  it('can have its tags emptied', async () => {
+    const created = await createPrompt('Untagged');
+
+    await callWithParams(prompt.PUT, {
+      method: 'PUT',
+      params: { id: created.body.id },
+      body: { tags: ['Temporary'] },
+    });
+    await callWithParams(prompt.PUT, {
+      method: 'PUT',
+      params: { id: created.body.id },
+      body: { tags: [] },
+    });
+
+    expect((await readPrompt(created.body.id)).body.tags).toEqual([]);
+  });
+
   it('can be unmarked', async () => {
     const created = await createPrompt('Unmarked');
 

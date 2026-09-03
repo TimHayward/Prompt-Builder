@@ -43,6 +43,8 @@ CREATE TABLE IF NOT EXISTS prompts (
     num INTEGER,
     description TEXT NOT NULL DEFAULT '',
     is_favourite INTEGER NOT NULL DEFAULT 0,
+    tags TEXT NOT NULL DEFAULT '[]',
+    last_used_at TEXT,
     created_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')),
     updated_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
@@ -156,6 +158,20 @@ export const MIGRATIONS = [
       }
       if (!hasColumn(database, 'prompts', 'is_favourite')) {
         database.exec('ALTER TABLE prompts ADD COLUMN is_favourite INTEGER NOT NULL DEFAULT 0');
+      }
+    },
+  },
+  {
+    version: 6,
+    name: 'prompt tags and last use',
+    apply(database) {
+      // Tags group a library across the order the tabs happen to be in, and the
+      // last use is what makes "the one I reached for yesterday" findable.
+      if (!hasColumn(database, 'prompts', 'tags')) {
+        database.exec("ALTER TABLE prompts ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'");
+      }
+      if (!hasColumn(database, 'prompts', 'last_used_at')) {
+        database.exec('ALTER TABLE prompts ADD COLUMN last_used_at TEXT');
       }
     },
   },

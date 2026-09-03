@@ -12,6 +12,8 @@ import { useWorkspaceContext } from '../../contexts/WorkspaceContext';
 import Section from './Section';
 import PromptTabs from './PromptTabs';
 import PromptMetadata from './PromptMetadata';
+import PromptTags from './PromptTags';
+import PromptBrowser from './PromptBrowser';
 import ActionBar from './ActionBar';
 import ResolvedPreview from './ResolvedPreview';
 import SaveStateIndicator from './SaveStateIndicator';
@@ -49,6 +51,9 @@ const PromptEditor: React.FC = () => {
   // Track editing state for prompt names (for tabs)
   const [editingPromptName, setEditingPromptName] = useState<string | null>(null);
   const [editingPromptNameValue, setEditingPromptNameValue] = useState('');
+
+  // Whether the find-a-prompt browser is showing
+  const [isBrowserOpen, setBrowserOpen] = useState(false);
 
   // State for drag and drop indicator
   const [dropSectionIndex, setDropSectionIndex] = useState<number | null>(null);
@@ -244,7 +249,10 @@ const PromptEditor: React.FC = () => {
         setEditingPromptNameValue={setEditingPromptNameValue}
         startEditingPromptName={startEditingPromptName}
         savePromptName={savePromptName}
+        openBrowser={() => setBrowserOpen(true)}
       />
+
+      <PromptBrowser isOpen={isBrowserOpen} onClose={() => setBrowserOpen(false)} />
 
       {/* Main Prompt Title Display/Input */}
       {activePrompt && (
@@ -293,6 +301,7 @@ const PromptEditor: React.FC = () => {
             </h2>
           )}
           <PromptMetadata prompt={activePrompt} />
+          <PromptTags prompt={activePrompt} />
         </div>
       )}
 
