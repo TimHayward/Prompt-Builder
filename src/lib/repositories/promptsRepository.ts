@@ -9,6 +9,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '@/lib/db';
 import { toPrompt, type PromptRow } from '@/lib/promptRows';
+import { recordRevision } from '@/lib/repositories/revisionsRepository';
 import type { Prompt, StoredSection } from '@/types';
 
 /** A prompt as the API returns it, with the row's timestamps. */
@@ -117,6 +118,16 @@ export const updatePrompt = (id: string, input: UpdatePromptInput): StoredPrompt
     | undefined;
 
   if (!current) return undefined;
+
+  // A change to the source leaves the previous version recoverable. Metadata
+  // and the last-used stamp are not the source, so they alone do not.
+  const changesSource =
+    (input.sections !== undefined && JSON.stringify(input.sections) !== current.sections) ||
+    (input.name !== undefined && input.name !== current.name);
+
+  if (changesSource) {
+    recordRevision('prompt', id, { name: current.name, body: current.sections });
+  }
 
   db.prepare(
     `UPDATE prompts SET name = ?, description = ?, is_favourite = ?, tags = ?, last_used_at = ?,

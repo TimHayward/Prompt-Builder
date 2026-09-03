@@ -68,6 +68,8 @@ type PromptContextType = {
   addNewSectionForEditing: (promptId: string) => void;
   newlyAddedSectionIdForFocus: string | null;
   clearNewlyAddedSectionIdForFocus: () => void;
+  /** Re-reads one prompt from the server, dropping any save queued for it. */
+  reloadPrompt: (promptId: string) => Promise<void>;
   updatePromptName: (promptId: string, newName: string) => void;
   updatePromptDescription: (promptId: string, description: string) => void;
   togglePromptFavourite: (promptId: string) => void;
@@ -378,6 +380,30 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     [commitPrompts, persistence, showToast]
   );
 
+  const reloadPrompt = useCallback(
+    async (promptId: string) => {
+      // The server has just been told what this prompt says — by a restore, or
+      // by anything else that writes behind the client's back. A save still
+      // queued here holds the text that was replaced, so it is dropped rather
+      // than allowed to undo the write moments later.
+      persistence.cancelSave(promptId);
+
+      try {
+        const fetched = await promptsApi.fetchPrompts();
+        const updated = fetched.find(prompt => prompt.id === promptId);
+        if (!updated) return;
+
+        commitPrompts(
+          promptsRef.current.map(prompt => (prompt.id === promptId ? updated : prompt))
+        );
+      } catch (error) {
+        console.error(`Failed to reload prompt ${promptId}:`, error);
+        showToast(describeApiFailure(error, 'Could not reload the prompt.'));
+      }
+    },
+    [commitPrompts, persistence, showToast]
+  );
+
   const updatePromptName = useCallback(
     (promptId: string, newName: string) => {
       mutatePrompt(promptId, prompt => mutations.renamePrompt(prompt, newName));
@@ -548,6 +574,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
         addNewSectionForEditing,
         newlyAddedSectionIdForFocus,
         clearNewlyAddedSectionIdForFocus,
+        reloadPrompt,
         updatePromptName,
         updatePromptDescription,
         togglePromptFavourite,

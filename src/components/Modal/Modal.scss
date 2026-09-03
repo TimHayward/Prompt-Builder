@@ -671,3 +671,122 @@ small {
     margin: 0.5rem 0 0;
   }
 }
+
+// Revision history: the list of versions, and what one of them would change.
+.revision-history-modal {
+  width: 92%;
+  max-width: 760px;
+
+  .history-empty {
+    color: rgba(colors.$text-color, 0.6);
+    font-size: typography.$font-size-sm;
+    margin: 0.5rem 0;
+  }
+
+  .history-body {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .history-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    width: 15rem;
+    flex-shrink: 0;
+    max-height: 24rem;
+    overflow-y: auto;
+    @include mixins.custom-scrollbar(6px, colors.$dark-gray);
+
+    button {
+      @include mixins.flex(row, flex-start, center);
+      gap: 0.35rem;
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      border-radius: 4px;
+      padding: 0.4rem 0.5rem;
+      cursor: pointer;
+      color: colors.$text-color;
+      font-size: typography.$font-size-sm;
+
+      &:hover {
+        background-color: rgba(colors.$text-color, 0.08);
+      }
+
+      &.active {
+        background-color: rgba(colors.$accent-color, 0.15);
+      }
+    }
+
+    .history-name {
+      color: rgba(colors.$text-color, 0.55);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .history-detail {
+    flex: 1;
+    min-width: 0;
+    max-height: 24rem;
+    overflow-y: auto;
+    @include mixins.custom-scrollbar(6px, colors.$dark-gray);
+  }
+
+  .history-summary {
+    font-size: typography.$font-size-sm;
+    color: rgba(colors.$text-color, 0.75);
+    margin: 0 0 0.6rem;
+  }
+
+  .history-changes {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    li {
+      margin-bottom: 0.6rem;
+    }
+
+    .change-status {
+      font-size: typography.$font-size-xs;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-right: 0.4rem;
+      color: rgba(colors.$text-color, 0.5);
+    }
+
+    .changed .change-status {
+      color: colors.$accent-color;
+    }
+
+    .removed .change-status {
+      color: colors.$warning-color;
+    }
+
+    .change-name {
+      font-size: typography.$font-size-sm;
+    }
+  }
+
+  .change-text {
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: typography.$font-size-xs;
+    color: rgba(colors.$text-color, 0.8);
+    background-color: rgba(0, 0, 0, 0.25);
+    border-radius: 3px;
+    padding: 0.5rem;
+    margin: 0.3rem 0 0;
+  }
+
+  .history-link {
+    @include mixins.flex(row, center, center);
+    gap: 0.3rem;
+    margin-right: auto;
+  }
+}

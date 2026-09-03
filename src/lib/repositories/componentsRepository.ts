@@ -10,6 +10,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '@/lib/db';
 import { toComponentResponse, type ComponentResponse, type ComponentRow } from '@/lib/promptRows';
+import { recordRevision } from '@/lib/repositories/revisionsRepository';
 import type { FolderType, TreeNode } from '@/types';
 
 /** A row as the save path builds it. */
@@ -148,6 +149,21 @@ export const updateLibraryItem = (
   updates: { column: string; value: unknown }[]
 ): ComponentResponse | undefined => {
   if (updates.length === 0) return undefined;
+
+  const changed = new Set(updates.map(update => update.column));
+
+  // A component's text is the thing that propagates to every linked section, so
+  // a change to it leaves the previous version recoverable. Renaming, moving
+  // and expanding a folder do not.
+  if (changed.has('content') || changed.has('name')) {
+    const current = db
+      .prepare('SELECT name, content, item_type FROM component_library WHERE id = ?')
+      .get(id) as { name: string; content: string | null; item_type: string } | undefined;
+
+    if (current?.item_type === 'component' && current.content !== null) {
+      recordRevision('component', id, { name: current.name, body: current.content });
+    }
+  }
 
   const assignments = updates.map(update => `${update.column} = ?`).join(', ');
   const values = updates.map(update => update.value);

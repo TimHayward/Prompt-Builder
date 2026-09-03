@@ -8,9 +8,12 @@
  * through the ordinary prompt update, so the existing autosave carries them.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
+import HistoryIcon from '@mui/icons-material/History';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
+import RevisionHistoryModal from '../Modal/RevisionHistoryModal';
+import { toStoredSections } from '@/utils/sectionState';
 import { usePromptContext } from '@/contexts/PromptContext';
 import type { Prompt } from '@/types';
 
@@ -19,7 +22,8 @@ interface PromptMetadataProps {
 }
 
 const PromptMetadata: React.FC<PromptMetadataProps> = ({ prompt }) => {
-  const { updatePromptDescription, togglePromptFavourite } = usePromptContext();
+  const { updatePromptDescription, togglePromptFavourite, reloadPrompt } = usePromptContext();
+  const [isHistoryOpen, setHistoryOpen] = useState(false);
 
   return (
     <div className="prompt-metadata">
@@ -35,6 +39,25 @@ const PromptMetadata: React.FC<PromptMetadataProps> = ({ prompt }) => {
       >
         {prompt.isFavourite ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}
       </button>
+
+      <button
+        type="button"
+        className="history-button"
+        onClick={() => setHistoryOpen(true)}
+        aria-label="Prompt history"
+        title="What this prompt said before"
+      >
+        <HistoryIcon fontSize="small" />
+      </button>
+
+      <RevisionHistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setHistoryOpen(false)}
+        kind="prompt"
+        entityId={prompt.id}
+        current={{ name: prompt.name, sections: toStoredSections(prompt.sections) }}
+        onRestored={() => void reloadPrompt(prompt.id)}
+      />
 
       <input
         type="text"

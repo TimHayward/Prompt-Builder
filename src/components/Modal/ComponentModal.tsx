@@ -6,7 +6,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import HistoryIcon from '@mui/icons-material/History';
 import ModalBase from './ModalBase';
+import RevisionHistoryModal from './RevisionHistoryModal';
 import { useTreeContext } from '../../contexts/TreeContext';
 import { usePromptContext } from '../../contexts/PromptContext';
 import { describeComponentUsage, findComponentUsage } from '../../domain/componentLinks';
@@ -38,6 +40,7 @@ const ComponentModal: React.FC = () => {
   // Set when a save would change linked sections, so the user is told before it
   // reaches prompts they are not looking at.
   const [pendingWarning, setPendingWarning] = useState<string | null>(null);
+  const [isHistoryOpen, setHistoryOpen] = useState(false);
 
   const { prompts } = usePromptContext();
 
@@ -182,6 +185,17 @@ const ComponentModal: React.FC = () => {
         </div>
 
         <div className="form-actions">
+          {componentBeingEdited && (
+            <button
+              type="button"
+              className="history-link"
+              onClick={() => setHistoryOpen(true)}
+              title="What this component said before"
+            >
+              <HistoryIcon sx={{ fontSize: 16 }} />
+              History
+            </button>
+          )}
           <button type="button" onClick={() => setComponentModalOpen(false)}>
             Cancel
           </button>
@@ -190,6 +204,22 @@ const ComponentModal: React.FC = () => {
           </button>
         </div>
       </form>
+
+      {componentBeingEdited && (
+        <RevisionHistoryModal
+          isOpen={isHistoryOpen}
+          onClose={() => setHistoryOpen(false)}
+          kind="component"
+          entityId={componentBeingEdited.id}
+          current={{ name: componentName, content: componentContent }}
+          onRestored={() => {
+            // The library is reloaded on the next read; closing the editor
+            // avoids leaving the old text sitting in a form over the new.
+            setComponentModalOpen(false);
+            window.location.reload();
+          }}
+        />
+      )}
     </ModalBase>
   );
 };

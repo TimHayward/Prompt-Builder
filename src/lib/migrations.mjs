@@ -70,8 +70,39 @@ CREATE TABLE IF NOT EXISTS prompt_workspaces (
 );
 `;
 
+const createPromptRevisionsTable = `
+CREATE TABLE IF NOT EXISTS prompt_revisions (
+    id TEXT PRIMARY KEY,
+    prompt_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    sections TEXT NOT NULL,
+    created_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    FOREIGN KEY (prompt_id) REFERENCES prompts(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_prompt_revisions ON prompt_revisions(prompt_id, created_at DESC);
+`;
+
+const createComponentRevisionsTable = `
+CREATE TABLE IF NOT EXISTS component_revisions (
+    id TEXT PRIMARY KEY,
+    component_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    FOREIGN KEY (component_id) REFERENCES component_library(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_component_revisions ON component_revisions(component_id, created_at DESC);
+`;
+
 /** Tables every migrated database must have. */
-export const REQUIRED_TABLES = ['component_library', 'prompts', 'app_config', 'prompt_workspaces'];
+export const REQUIRED_TABLES = [
+  'component_library',
+  'prompts',
+  'app_config',
+  'prompt_workspaces',
+  'prompt_revisions',
+  'component_revisions',
+];
 
 /**
  * Reports whether a table already has a column
@@ -95,6 +126,8 @@ export const MIGRATIONS = [
       database.exec(createPromptsTable);
       database.exec(createAppConfigTable);
       database.exec(createPromptWorkspacesTable);
+      database.exec(createPromptRevisionsTable);
+      database.exec(createComponentRevisionsTable);
     },
   },
   {
@@ -173,6 +206,17 @@ export const MIGRATIONS = [
       if (!hasColumn(database, 'prompts', 'last_used_at')) {
         database.exec('ALTER TABLE prompts ADD COLUMN last_used_at TEXT');
       }
+    },
+  },
+  {
+    version: 7,
+    name: 'revision history',
+    apply(database) {
+      // A deliberate edit to a prompt or a component leaves the previous text
+      // recoverable. Each table cascades from what it is the history of, so a
+      // deleted prompt takes its revisions with it.
+      database.exec(createPromptRevisionsTable);
+      database.exec(createComponentRevisionsTable);
     },
   },
 ];

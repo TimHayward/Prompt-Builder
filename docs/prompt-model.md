@@ -110,6 +110,28 @@ stops being loaded whole.
 Using a prompt means copying it. The stamp is written when the text reaches the
 clipboard, not when the button is pressed, so a refused copy is not a use.
 
+## History
+
+A deliberate change to a source — a prompt’s sections or name, a component’s
+text — leaves the previous version recoverable. Metadata does not: marking a
+favourite or adding a tag is not a change to the prompt.
+
+Two rules keep the list worth reading, since saving is automatic:
+
+- **One entry per editing session.** A revision records what something looked
+  like _before_ a sitting. Saves within five minutes of the last revision add
+  nothing, so a burst of typing leaves one recoverable point rather than fifty.
+- **A cap of twenty.** History is a safety net for recent mistakes, not an
+  archive. The export in Settings is the archive.
+
+Restoring is itself a change to the source, so it records what it replaced:
+a restore can be undone from the same list.
+
+**Working values are never part of history.** A revision holds the source and
+nothing about how one use of it was filled in, which is the same separation the
+rest of this document describes. Each history table cascades from what it is the
+history of, so a deleted prompt takes its revisions with it.
+
 ## Why the separation matters
 
 - Entering a value cannot corrupt a reusable prompt.
