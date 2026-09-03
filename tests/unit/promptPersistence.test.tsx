@@ -28,6 +28,8 @@ const promptFixture = (): Prompt => ({
   id: 'prompt-1',
   num: 1,
   name: 'Prompt One',
+  description: '',
+  isFavourite: false,
   sections: [section('s1'), section('s2'), section('s3')],
   variables: {},
 });

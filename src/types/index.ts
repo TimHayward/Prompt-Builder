@@ -69,6 +69,10 @@ export type Prompt = {
   /** Ordering position. Nullable in the database, so nullable here too. */
   num: number | null;
   name: string;
+  /** What the prompt is for; shown in the editor and, later, when browsing. */
+  description: string;
+  /** Marks the prompts reached for often. */
+  isFavourite: boolean;
   sections: Section[];
   variables?: Record<string, string>; // Variables mapping: {variableName: value}
 };

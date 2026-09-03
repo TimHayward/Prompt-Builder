@@ -21,6 +21,8 @@ const promptWith = (name: string, sections: Section[]): Prompt => ({
   id: `prompt-${name}`,
   num: 1,
   name,
+  description: '',
+  isFavourite: false,
   sections,
   variables: {},
 });

@@ -11,6 +11,7 @@ import { useAppContext } from '../../contexts/AppContext';
 import { useWorkspaceContext } from '../../contexts/WorkspaceContext';
 import Section from './Section';
 import PromptTabs from './PromptTabs';
+import PromptMetadata from './PromptMetadata';
 import ActionBar from './ActionBar';
 import ResolvedPreview from './ResolvedPreview';
 import SaveStateIndicator from './SaveStateIndicator';
@@ -291,6 +292,7 @@ const PromptEditor: React.FC = () => {
               {activePrompt.name}
             </h2>
           )}
+          <PromptMetadata prompt={activePrompt} />
         </div>
       )}
 

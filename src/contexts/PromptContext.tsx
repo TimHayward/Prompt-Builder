@@ -69,6 +69,8 @@ type PromptContextType = {
   newlyAddedSectionIdForFocus: string | null;
   clearNewlyAddedSectionIdForFocus: () => void;
   updatePromptName: (promptId: string, newName: string) => void;
+  updatePromptDescription: (promptId: string, description: string) => void;
+  togglePromptFavourite: (promptId: string) => void;
   getPromptVariableNames: (promptId: string) => string[];
   getPromptVariableSpecs: (promptId: string) => VariableSpec[];
   isPromptsLoading: boolean;
@@ -244,6 +246,8 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
       const tempPrompt: Prompt = {
         id: tempClientId,
         name: request.name,
+        description: request.description ?? '',
+        isFavourite: request.isFavourite ?? false,
         sections,
         variables: request.variables ?? {},
         num: request.num ?? null,
@@ -373,6 +377,20 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
   const updatePromptName = useCallback(
     (promptId: string, newName: string) => {
       mutatePrompt(promptId, prompt => mutations.renamePrompt(prompt, newName));
+    },
+    [mutatePrompt]
+  );
+
+  const updatePromptDescription = useCallback(
+    (promptId: string, description: string) => {
+      mutatePrompt(promptId, prompt => mutations.describePrompt(prompt, description));
+    },
+    [mutatePrompt]
+  );
+
+  const togglePromptFavourite = useCallback(
+    (promptId: string) => {
+      mutatePrompt(promptId, mutations.toggleFavourite);
     },
     [mutatePrompt]
   );
@@ -512,6 +530,8 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
         newlyAddedSectionIdForFocus,
         clearNewlyAddedSectionIdForFocus,
         updatePromptName,
+        updatePromptDescription,
+        togglePromptFavourite,
         getPromptVariableNames,
         getPromptVariableSpecs,
         isPromptsLoading,

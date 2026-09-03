@@ -19,6 +19,8 @@ export type PromptRow = {
   sections: string | null;
   variables: string | null;
   num: number | null;
+  description?: string | null;
+  is_favourite?: number | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -54,13 +56,18 @@ const parseJson = <T>(value: string | null, fallback: T): T => {
  * Turns a prompts row into the prompt the API returns
  * @param row - A row from one of the prompt SELECTs
  */
-export const toPrompt = (
-  row: PromptRow
-): Prompt & { created_at?: string; updated_at?: string } => ({
-  ...row,
-  sections: parseJson<StoredSection[]>(row.sections, []) as Prompt['sections'],
-  variables: parseJson<Record<string, string>>(row.variables, {}),
-});
+export const toPrompt = (row: PromptRow): Prompt & { created_at?: string; updated_at?: string } => {
+  const { is_favourite, ...rest } = row;
+
+  return {
+    ...rest,
+    description: row.description ?? '',
+    // SQLite has no boolean type; the column holds 0 or 1.
+    isFavourite: is_favourite === 1,
+    sections: parseJson<StoredSection[]>(row.sections, []) as Prompt['sections'],
+    variables: parseJson<Record<string, string>>(row.variables, {}),
+  };
+};
 
 /**
  * Turns a component_library row into the item the API returns

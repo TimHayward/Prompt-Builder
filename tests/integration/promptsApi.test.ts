@@ -133,6 +133,66 @@ describe('updating a prompt', () => {
   });
 });
 
+describe('prompt metadata', () => {
+  it('is empty on a new prompt', async () => {
+    const created = await createPrompt('Fresh');
+
+    expect(created.body.description).toBe('');
+    expect(created.body.isFavourite).toBe(false);
+  });
+
+  it('survives a reload', async () => {
+    const created = await createPrompt('Described');
+
+    await callWithParams(prompt.PUT, {
+      method: 'PUT',
+      params: { id: created.body.id },
+      body: { description: 'Weekly client update', isFavourite: true },
+    });
+
+    const reloaded = await readPrompt(created.body.id);
+    expect(reloaded.body.description).toBe('Weekly client update');
+    expect(reloaded.body.isFavourite).toBe(true);
+  });
+
+  it('is left alone by an update that does not mention it', async () => {
+    const created = await createPrompt('Marked');
+
+    await callWithParams(prompt.PUT, {
+      method: 'PUT',
+      params: { id: created.body.id },
+      body: { description: 'Keep me', isFavourite: true },
+    });
+    // A section edit is the common case, and it must not clear the metadata.
+    await callWithParams(prompt.PUT, {
+      method: 'PUT',
+      params: { id: created.body.id },
+      body: { sections: [section('s1', 'New text')] },
+    });
+
+    const reloaded = await readPrompt(created.body.id);
+    expect(reloaded.body.description).toBe('Keep me');
+    expect(reloaded.body.isFavourite).toBe(true);
+  });
+
+  it('can be unmarked', async () => {
+    const created = await createPrompt('Unmarked');
+
+    await callWithParams(prompt.PUT, {
+      method: 'PUT',
+      params: { id: created.body.id },
+      body: { isFavourite: true },
+    });
+    await callWithParams(prompt.PUT, {
+      method: 'PUT',
+      params: { id: created.body.id },
+      body: { isFavourite: false },
+    });
+
+    expect((await readPrompt(created.body.id)).body.isFavourite).toBe(false);
+  });
+});
+
 describe('a reordered prompt after reload', () => {
   it('comes back in the new order', async () => {
     const created = await createPrompt('Reorder me', [section('a'), section('b'), section('c')]);

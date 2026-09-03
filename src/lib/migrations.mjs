@@ -41,6 +41,8 @@ CREATE TABLE IF NOT EXISTS prompts (
     sections TEXT,
     variables TEXT,
     num INTEGER,
+    description TEXT NOT NULL DEFAULT '',
+    is_favourite INTEGER NOT NULL DEFAULT 0,
     created_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')),
     updated_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
@@ -141,6 +143,20 @@ export const MIGRATIONS = [
         `UPDATE prompts SET variables = '{}'
          WHERE id IN (SELECT prompt_id FROM prompt_workspaces)`
       );
+    },
+  },
+  {
+    version: 5,
+    name: 'prompt description and favourite',
+    apply(database) {
+      // A library outgrows a row of tabs: a description says what a prompt is
+      // for, and a favourite marks the ones reached for often.
+      if (!hasColumn(database, 'prompts', 'description')) {
+        database.exec("ALTER TABLE prompts ADD COLUMN description TEXT NOT NULL DEFAULT ''");
+      }
+      if (!hasColumn(database, 'prompts', 'is_favourite')) {
+        database.exec('ALTER TABLE prompts ADD COLUMN is_favourite INTEGER NOT NULL DEFAULT 0');
+      }
     },
   },
 ];

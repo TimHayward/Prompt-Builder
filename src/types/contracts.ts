@@ -40,6 +40,8 @@ export const promptSchema = z.object({
   id: z.string().min(1),
   num: z.number().nullable(),
   name: z.string().min(1),
+  description: z.string(),
+  isFavourite: z.boolean(),
   sections: z.array(sectionSchema),
   variables: variablesSchema.optional(),
 });
@@ -48,6 +50,8 @@ export const createPromptRequestSchema = z.object({
   // The message covers both a missing name and an empty one, so the UI shows
   // something readable rather than "expected string, received undefined".
   name: z.string({ error: 'Prompt name is required' }).min(1, 'Prompt name is required'),
+  description: z.string().optional(),
+  isFavourite: z.boolean().optional(),
   sections: z.array(sectionSchema).optional(),
   variables: variablesSchema.optional(),
   num: z.number().nullable().optional(),
@@ -57,13 +61,21 @@ export const createPromptRequestSchema = z.object({
 export const updatePromptRequestSchema = z
   .object({
     name: z.string().min(1).optional(),
+    description: z.string().optional(),
+    isFavourite: z.boolean().optional(),
     sections: z.array(sectionSchema).optional(),
     variables: variablesSchema.optional(),
     num: z.number().nullable().optional(),
   })
-  .refine(body => ['name', 'sections', 'variables', 'num'].some(field => field in body), {
-    message: 'No fields to update provided',
-  });
+  .refine(
+    body =>
+      ['name', 'description', 'isFavourite', 'sections', 'variables', 'num'].some(
+        field => field in body
+      ),
+    {
+      message: 'No fields to update provided',
+    }
+  );
 
 export const ingestPromptRequestSchema = z.object({
   filename: z.string().trim().min(1, 'Filename is required'),

@@ -15,12 +15,15 @@ import type { Prompt, StoredSection } from '@/types';
 export type StoredPrompt = Prompt & { created_at?: string; updated_at?: string };
 
 const SELECT_COLUMNS = `
-    SELECT id, name, sections, COALESCE(variables, '{}') as variables, num, created_at, updated_at
+    SELECT id, name, sections, COALESCE(variables, '{}') as variables, num,
+           description, is_favourite, created_at, updated_at
     FROM prompts
 `;
 
 export type CreatePromptInput = {
   name: string;
+  description?: string;
+  isFavourite?: boolean;
   sections?: StoredSection[];
   variables?: Record<string, string>;
   num?: number | null;
@@ -28,6 +31,8 @@ export type CreatePromptInput = {
 
 export type UpdatePromptInput = {
   name?: string;
+  description?: string;
+  isFavourite?: boolean;
   sections?: StoredSection[];
   variables?: Record<string, string>;
   num?: number | null;
@@ -66,10 +71,13 @@ export const createPrompt = (input: CreatePromptInput): StoredPrompt | undefined
   const now = new Date().toISOString();
 
   db.prepare(
-    'INSERT INTO prompts (id, name, sections, variables, num, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    `INSERT INTO prompts (id, name, description, is_favourite, sections, variables, num, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     input.name,
+    input.description ?? '',
+    input.isFavourite ? 1 : 0,
     JSON.stringify(input.sections ?? []),
     JSON.stringify(input.variables ?? {}),
     input.num ?? null,
@@ -87,17 +95,30 @@ export const createPrompt = (input: CreatePromptInput): StoredPrompt | undefined
 export const updatePrompt = (id: string, input: UpdatePromptInput): StoredPrompt | undefined => {
   const current = db
     .prepare(
-      "SELECT name, sections, COALESCE(variables, '{}') as variables, num FROM prompts WHERE id = ?"
+      `SELECT name, description, is_favourite, sections, COALESCE(variables, '{}') as variables, num
+         FROM prompts WHERE id = ?`
     )
     .get(id) as
-    { name: string; sections: string; variables: string; num: number | null } | undefined;
+    | {
+        name: string;
+        description: string;
+        is_favourite: number;
+        sections: string;
+        variables: string;
+        num: number | null;
+      }
+    | undefined;
 
   if (!current) return undefined;
 
   db.prepare(
-    'UPDATE prompts SET name = ?, sections = ?, variables = ?, num = ?, updated_at = ? WHERE id = ?'
+    `UPDATE prompts SET name = ?, description = ?, is_favourite = ?, sections = ?, variables = ?,
+       num = ?, updated_at = ? WHERE id = ?`
   ).run(
     input.name ?? current.name,
+    input.description ?? current.description,
+    // A partial update leaves the flag alone; only an explicit boolean moves it.
+    input.isFavourite === undefined ? current.is_favourite : input.isFavourite ? 1 : 0,
     input.sections ? JSON.stringify(input.sections) : current.sections,
     input.variables ? JSON.stringify(input.variables) : current.variables,
     input.num ?? current.num,

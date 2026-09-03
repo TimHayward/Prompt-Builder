@@ -42,6 +42,8 @@ export const createPrompt = async (prompt: CreatePromptRequest): Promise<Prompt>
 export const savePrompt = (prompt: Prompt): Promise<unknown> => {
   const update: UpdatePromptRequest = {
     name: prompt.name,
+    description: prompt.description,
+    isFavourite: prompt.isFavourite,
     num: prompt.num,
     variables: prompt.variables,
     sections: toStoredSections(prompt.sections),

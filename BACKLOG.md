@@ -91,19 +91,6 @@ New product capabilities.
 
 # I. P3 Prompt Library Features
 
-## I1. Complete prompt duplication
-
-**Priority:** P3  
-**Size:** S
-
-Make duplicate prompt a fully supported and tested workflow.
-
-### Acceptance
-
-Duplicating a prompt creates an independent source prompt with independent section IDs and preserved variable definitions.
-
----
-
 ## I2. Add prompt descriptions
 
 Allow prompts to have a short description explaining intended use.
@@ -163,14 +150,6 @@ SQLite FTS5 should be considered.
 
 # J. P3 Variable Improvements
 
-## J1. Preserve choice variables as source definitions
-
-This is mandatory throughout future variable development.
-
-Choice options must never be replaced by the last selected working value.
-
----
-
 ## J2. Add required variables
 
 Support a way to designate a variable as required.
@@ -215,18 +194,6 @@ This may ultimately require metadata beyond inline prompt syntax.
 Allow a source definition to provide an optional default working value.
 
 This must remain distinguishable from the currently selected value.
-
----
-
-## J5. Improve Custom option behaviour
-
-Choice variables must support:
-
-```text
-Custom…
-```
-
-A custom current value does not modify the persistent option list.
 
 ---
 
@@ -293,63 +260,6 @@ while preserving:
 - variable definitions
 - variable option lists
 - component definitions
-
----
-
-# L. P3 Component Improvements
-
-## L1. Default component insertion to Copy
-
-Dragging or inserting a component into a prompt creates an independent section by default.
-
-This protects existing prompts from future component modifications.
-
----
-
-## L2. Explicit linked component option
-
-Allow an advanced user to choose:
-
-```text
-Keep linked
-```
-
-when they genuinely want future component updates to flow into the prompt.
-
----
-
-## L3. Show component origin
-
-A copied component may optionally retain provenance metadata:
-
-```text
-Originally inserted from:
-Security Reviewer
-```
-
-This is informational only.
-
-It must not create automatic synchronisation.
-
----
-
-## L4. Show linked status visually
-
-Linked sections must be clearly identifiable.
-
-Example:
-
-```text
-🔗 Linked: Security Reviewer
-```
-
----
-
-## L5. Warn before modifying a linked component
-
-If a component change will affect multiple prompts, Prompt Builder should report the number of linked prompts before saving.
-
-This applies only if linked components remain supported.
 
 ---
 

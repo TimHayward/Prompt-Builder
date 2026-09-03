@@ -208,6 +208,10 @@ export const parseLoadedData = (
       return {
         id: newPromptId,
         name: prompt.name,
+        // Metadata is optional in a loaded file; an export from before it existed
+        // has neither field.
+        description: typeof prompt.description === 'string' ? prompt.description : '',
+        isFavourite: prompt.isFavourite === true,
         num: prompt.num || (typeof prompt.id === 'number' ? prompt.id : 0),
         sections: prompt.sections.map((section: any): Section => {
           if (

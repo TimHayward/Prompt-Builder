@@ -173,6 +173,58 @@
   .prompt-main-title-container {
     padding: 0 1.5rem; // Align with sections-container horizontal padding
 
+    // The star and the description sit on one line under the title, quiet
+    // until they are used.
+    .prompt-metadata {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0 0.5rem 0.6rem;
+
+      .favourite-toggle {
+        display: flex;
+        align-items: center;
+        background: none;
+        border: none;
+        padding: 0.15rem;
+        border-radius: 3px;
+        cursor: pointer;
+        color: rgba(colors.$text-color, 0.45);
+        transition:
+          color 0.2s ease,
+          background-color 0.2s ease;
+
+        &:hover {
+          color: rgba(colors.$text-color, 0.8);
+          background-color: rgba(colors.$text-color, 0.1);
+        }
+
+        &.is-favourite {
+          color: colors.$accent-color;
+        }
+      }
+
+      .prompt-description-input {
+        flex: 1;
+        font-size: typography.$font-size-sm;
+        color: rgba(colors.$text-color, 0.85);
+        background-color: transparent;
+        border: none;
+        border-bottom: 1px solid transparent;
+        outline: none;
+        padding: 0.15rem 0.25rem;
+
+        &::placeholder {
+          color: rgba(colors.$text-color, 0.4);
+        }
+
+        &:hover,
+        &:focus {
+          border-bottom-color: rgba(colors.$text-color, 0.3);
+        }
+      }
+    }
+
     .prompt-main-title-display {
       font-size: typography.$font-size-xl;
       font-weight: 600;

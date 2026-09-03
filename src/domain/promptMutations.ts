@@ -42,6 +42,18 @@ export const sectionFromComponent = (component: ComponentType): Section => ({
 
 export const renamePrompt = (prompt: Prompt, name: string): Prompt => ({ ...prompt, name });
 
+/** Sets what the prompt is for. */
+export const describePrompt = (prompt: Prompt, description: string): Prompt => ({
+  ...prompt,
+  description,
+});
+
+/** Marks or unmarks a favourite. */
+export const toggleFavourite = (prompt: Prompt): Prompt => ({
+  ...prompt,
+  isFavourite: !prompt.isFavourite,
+});
+
 export const appendSection = (prompt: Prompt, section: Section): Prompt => ({
   ...prompt,
   sections: [...prompt.sections, section],

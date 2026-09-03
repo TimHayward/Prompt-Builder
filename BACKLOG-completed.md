@@ -1481,3 +1481,147 @@ Standardise:
 
 
 **Completed:** 2026-09-03 · `2ca7c34`
+
+---
+
+## I1. Complete prompt duplication
+
+**Priority:** P3  
+**Size:** S
+
+Make duplicate prompt a fully supported and tested workflow.
+
+### Acceptance
+
+Duplicating a prompt creates an independent source prompt with independent section IDs and preserved variable definitions.
+
+
+### How it was met
+
+Duplication was rebuilt in E1 and is now covered by a test that checks the copy gets new section ids with its variable definitions intact.
+
+**Completed:** 2026-09-03 · `c276d61`
+
+---
+
+## J1. Preserve choice variables as source definitions
+
+This is mandatory throughout future variable development.
+
+Choice options must never be replaced by the last selected working value.
+
+
+### How it was met
+
+Working values live in prompt_workspaces, so a selection can never overwrite the option list written in the source. Covered by tests/unit/workspace.test.tsx.
+
+**Completed:** 2026-09-03 · `21ef119`
+
+---
+
+## J5. Improve Custom option behaviour
+
+Choice variables must support:
+
+```text
+Custom…
+```
+
+A custom current value does not modify the persistent option list.
+
+
+### How it was met
+
+The Custom… entry reads and writes only the working value; options come from the section text, so a custom value leaves them alone. Covered by tests/unit/variableUtils.test.ts.
+
+**Completed:** 2026-09-03 · `21ef119`
+
+---
+
+## L1. Default component insertion to Copy
+
+Dragging or inserting a component into a prompt creates an independent section by default.
+
+This protects existing prompts from future component modifications.
+
+
+### How it was met
+
+Every insertion path sets linked: false, so a component is copied unless the user asks otherwise. Covered by tests/unit/componentLinkage.test.ts.
+
+**Completed:** 2026-09-03 · `e0b0b8f`
+
+---
+
+## L2. Explicit linked component option
+
+Allow an advanced user to choose:
+
+```text
+Keep linked
+```
+
+when they genuinely want future component updates to flow into the prompt.
+
+
+### How it was met
+
+The section indicator carries a Link to component / Make a copy button.
+
+**Completed:** 2026-09-03 · `e0b0b8f`
+
+---
+
+## L3. Show component origin
+
+A copied component may optionally retain provenance metadata:
+
+```text
+Originally inserted from:
+Security Reviewer
+```
+
+This is informational only.
+
+It must not create automatic synchronisation.
+
+
+### How it was met
+
+A copied section keeps linkedComponentId for provenance and reads "Copied from <name>"; it does not follow the component.
+
+**Completed:** 2026-09-03 · `e0b0b8f`
+
+---
+
+## L4. Show linked status visually
+
+Linked sections must be clearly identifiable.
+
+Example:
+
+```text
+🔗 Linked: Security Reviewer
+```
+
+
+### How it was met
+
+A linked section reads "Linked to <name> — follows changes to it" in the accent colour, which a copy does not.
+
+**Completed:** 2026-09-03 · `e0b0b8f`
+
+---
+
+## L5. Warn before modifying a linked component
+
+If a component change will affect multiple prompts, Prompt Builder should report the number of linked prompts before saving.
+
+This applies only if linked components remain supported.
+
+
+### How it was met
+
+Confirming a component edit reports how many linked sections and prompts it will change, and waits for a second Confirm.
+
+**Completed:** 2026-09-03 · `c276d61`
