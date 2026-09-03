@@ -91,12 +91,6 @@ New product capabilities.
 
 # I. P3 Prompt Library Features
 
-## I2. Add prompt descriptions
-
-Allow prompts to have a short description explaining intended use.
-
----
-
 ## I3. Add tags
 
 Example:
@@ -110,18 +104,6 @@ Writing
 ```
 
 Allow multiple tags per prompt.
-
----
-
-## I4. Add favourites
-
-Allow prompts to be marked:
-
-```text
-★ Favourite
-```
-
-Provide a favourite filter.
 
 ---
 

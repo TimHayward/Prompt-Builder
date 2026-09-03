@@ -1625,3 +1625,35 @@ This applies only if linked components remain supported.
 Confirming a component edit reports how many linked sections and prompts it will change, and waits for a second Confirm.
 
 **Completed:** 2026-09-03 · `c276d61`
+
+---
+
+## I2. Add prompt descriptions
+
+Allow prompts to have a short description explaining intended use.
+
+
+### How it was met
+
+A prompt carries a description, edited under its title and stored in its own column. Schema version 5; covered by tests/unit/promptMetadata.test.tsx and the metadata cases in tests/integration/promptsApi.test.ts.
+
+**Completed:** 2026-09-03 · `f2ff750`
+
+---
+
+## I4. Add favourites
+
+Allow prompts to be marked:
+
+```text
+★ Favourite
+```
+
+Provide a favourite filter.
+
+
+### How it was met
+
+A star beside the description marks a favourite, stored as is_favourite. The filter this enables belongs with the prompt browser in I6, which is still open.
+
+**Completed:** 2026-09-03 · `f2ff750`
