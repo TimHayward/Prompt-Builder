@@ -1,55 +1,61 @@
 # Prompt Builder 🧩
-The Modular Prompting Tool - Drag, drop, and assemble reusable prompt components to streamline your workflow!
 
-_A demo recording is attached to the [latest release](https://github.com/TimHayward/Prompt-Builder/releases); it lived in the repository as a 31 MB GIF until it was moved out._
+A local-first library and editor for reusable prompts. Assemble a prompt from
+sections and saved components, fill in its variables for the job at hand, and
+copy the result.
 
-## Documentation
-https://github.com/TimHayward/Prompt-Builder
+Prompt Builder does not send prompts to any model. Its responsibility ends when
+the resolved prompt is on your clipboard, which keeps it provider-neutral.
 
-## Getting Started (Self-Hosted) 🚀
+_A demo recording is attached to the [latest release](https://github.com/TimHayward/Prompt-Builder/releases)._
 
-This version of Prompt Builder runs as a local web application on your computer, using a SQLite database to store your prompts and components.
+## How it works
 
-**Installation Steps:**
+```text
+Find → Select → Customise → Resolve → Copy
+```
 
-1.  **Clone the Repository:**
-    Open your terminal or command prompt and run the following command to clone the project files to your local machine:
-    ```bash
-    git clone https://github.com/your-username/Prompt-Builder.git 
-    ```
-    (Replace `https://github.com/your-username/Prompt-Builder.git` with the actual repository URL if different.)
-    Navigate into the cloned directory:
-    ```bash
-    cd Prompt-Builder
-    ```
+Three things are kept apart, which is the idea the rest of the app is built on:
 
-2.  **Install Dependencies:**
-    Install the necessary project dependencies using npm:
-    ```bash
-    npm install
-    ```
+| | |
+| --- | --- |
+| **Source prompt** | The reusable text and its variable definitions. Stored. |
+| **Working prompt** | The values you enter for this use. Stored separately; clearing them never touches the source. |
+| **Resolved prompt** | What lands on the clipboard. The Preview tab shows exactly this. |
 
-3.  **Initialize the Database:**
-    Set up the local SQLite database by running the initialization script:
-    ```bash
-    npm run db:init
-    ```
-    This will create a `database.sqlite` file in the `src/db` directory and set up the required tables.
+[docs/prompt-model.md](docs/prompt-model.md) explains the model in full.
 
-4.  **Run the Application:**
-    Start the development server:
-    ```bash
-    npm run dev
-    ```
+## Getting started
 
-5.  **Access Prompt Builder:**
-    Open your web browser and go to `http://localhost:3000` (or the port indicated in your terminal if 3000 is in use).
+Requires **Node.js 24** or newer — `npm ci` needs npm 11 to install this
+lockfile.
 
-You should now see the Prompt Builder application running locally! Your prompts and component library will be saved in the `database.sqlite` file.
+```bash
+git clone https://github.com/TimHayward/Prompt-Builder.git
+cd Prompt-Builder
+npm install
+npm run db:init     # creates data/prompt_builder.db and runs the migrations
+npm run dev         # http://localhost:3000
+```
+
+Your prompts, components and working values live in `data/prompt_builder.db`,
+which is git-ignored — see [docs/database.md](docs/database.md) for where it
+lives, how migrations work, and how to back it up safely.
+
+### With Docker
+
+```bash
+docker compose up --build
+```
+
+Builds a production image and serves it on port 3000, with the database on a
+named volume. A failed database initialisation stops the container rather than
+serving a half-working application.
 
 ## Variables 🔤
 
-Anything wrapped in double braces becomes an editable field in the Variables pane, and is substituted when you copy the prompt.
+Anything wrapped in double braces becomes an editable field in the Variables
+pane, and is substituted when you copy the prompt.
 
 | Syntax | Pane shows |
 | --- | --- |
@@ -57,24 +63,51 @@ Anything wrapped in double braces becomes an editable field in the Variables pan
 | `{{mail/teams/calendar}}` | A dropdown of the three options, plus `Custom…` for free text |
 | `{{channel: mail/teams/calendar}}` | The same dropdown, labelled `channel` |
 
-A `/` only creates a choice list when there are at least two options and none of them are empty, so `{{https://example.com}}` stays a plain free-text variable. Spacing is ignored — `{{ mail / teams }}` and `{{mail/teams}}` are the same variable. Reuse the same variable across sections by repeating the token; with the labelled form, a bare `{{channel}}` elsewhere shares the value. Leaving a variable empty removes the token from the copied prompt.
+A `/` only creates a choice list when there are at least two options and none of
+them are empty, so `{{https://example.com}}` stays a plain free-text variable.
+Spacing is ignored — `{{ mail / teams }}` and `{{mail/teams}}` are the same
+variable. A variable left empty resolves to nothing, and the copy tells you
+which ones were blank. Full grammar: [docs/variables.md](docs/variables.md).
 
-## Contribute to Prompt Builder 🤝
-We welcome contributions! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
+## Components
 
-- Setting up the development environment (Vite/React/TypeScript).
+The sidebar holds reusable fragments. Inserting one **copies** its text into
+your prompt, so editing the component later leaves existing prompts alone. A
+section can be linked explicitly if you want it to follow the component; the
+editor says which it is.
 
-- Submitting pull requests.
+## Development
 
-- Reporting bugs or suggesting features.
+```bash
+npm test           # unit and integration tests
+npm run typecheck  # tsc --noEmit
+npm run lint
+npm run build
+```
+
+The same four run in CI on every push and pull request. Integration tests
+exercise the real API routes against a throwaway SQLite database, so they never
+touch your library.
+
+Architecture, and where to add things:
+[docs/architecture.md](docs/architecture.md).
+
+## Contributing 🤝
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Backlog 💡
-Planned remediations, enhancements, and new features live in [BACKLOG.md](BACKLOG.md). Finished items are archived in [BACKLOG-completed.md](BACKLOG-completed.md).
 
-## Built With 🔧
-Frontend: Vite, React, TypeScript, SCSS
+Planned remediations, enhancements and new features live in
+[BACKLOG.md](BACKLOG.md). Finished items are archived in
+[BACKLOG-completed.md](BACKLOG-completed.md), each with the commit that closed
+it.
 
-Chrome Extension: Manifest V3
+## Built with 🔧
+
+Next.js (App Router), React, TypeScript, SCSS, SQLite via better-sqlite3, Zod
+for API contracts, Vitest for tests.
 
 ## License 📄
-This project is licensed under the Apache License 2.0. See LICENSE for details.
+
+Apache License 2.0. See [LICENSE](LICENSE).
