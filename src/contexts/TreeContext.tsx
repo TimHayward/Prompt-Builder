@@ -319,11 +319,16 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
       // A better check might be if the treeData reference is different from the initial constant
       // or if it has more than the initial root folder with no children.
       if (!isEffectivelyInitialOrEmpty(treeData)) {
-          saveState.markUnsaved('library');
+          // Reported through the ref, and saveState is deliberately not a
+          // dependency: marking the library unsaved changes the save state,
+          // which would re-run this effect, which would mark it unsaved again.
+          // That loop saved the library every few seconds forever and left the
+          // indicator permanently reading "Unsaved changes".
+          saveStateRef.current.markUnsaved('library');
           saveTreeToApi(treeData);
       }
     }
-  }, [treeData, appInitialized, isTreeLoading, saveTreeToApi, isEffectivelyInitialOrEmpty, saveState]);
+  }, [treeData, appInitialized, isTreeLoading, saveTreeToApi, isEffectivelyInitialOrEmpty]);
 
   const handleAddFolder = (parentId: string, name: string) => {
     const newFolderId = uuidv4();

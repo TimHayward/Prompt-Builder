@@ -69,3 +69,8 @@ prompts and components; columns and JSON blobs stop here.
 `tests/integration` runs the real route handlers against a real SQLite database
 in a temp directory, which is where migrations, constraints and routes are
 checked against each other. Both run under `npm test`.
+
+`tests/e2e` drives a real browser through the whole workflow with
+`npm run test:e2e`: create, edit, reload, fill in a variable, preview, copy,
+compare the clipboard, clear values. It builds into `.next-e2e` against a
+throwaway database, so it can run while a dev server is using `.next`.

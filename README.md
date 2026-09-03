@@ -80,14 +80,15 @@ editor says which it is.
 
 ```bash
 npm test           # unit and integration tests
+npm run test:e2e   # Playwright smoke tests through a real browser
 npm run typecheck  # tsc --noEmit
 npm run lint
 npm run build
 ```
 
-The same four run in CI on every push and pull request. Integration tests
-exercise the real API routes against a throwaway SQLite database, so they never
-touch your library.
+All of these run in CI on every push and pull request. Integration and smoke
+tests build their own throwaway SQLite database, so they never touch your
+library.
 
 Architecture, and where to add things:
 [docs/architecture.md](docs/architecture.md).

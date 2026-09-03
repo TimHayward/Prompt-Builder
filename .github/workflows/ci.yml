@@ -10,11 +10,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Node 24 for npm 11: the lockfile records the peer resolutions npm 10
       # rejects, which is why the Docker image moved off node:22 too.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
@@ -38,3 +38,33 @@ jobs:
       # Routes open the database lazily, so a build needs no database at all.
       - name: Build
         run: npm run build
+
+  # Separate job: the browser download and a production build make this the slow
+  # half, and a failure here should be distinguishable from a unit test failure.
+  e2e:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # The config builds the app and serves it against a throwaway database.
+      - name: Smoke tests
+        run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

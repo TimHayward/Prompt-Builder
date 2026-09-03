@@ -26,13 +26,15 @@ npm run dev         # http://localhost:3000
 
 ```bash
 npm test           # unit and integration tests
+npm run test:e2e   # Playwright smoke tests (first run: npx playwright install chromium)
 npm run typecheck
 npm run lint
 npm run build
 ```
 
-CI runs the same four on every pull request. The integration tests build their
-own SQLite database in a temp directory, so they never touch your library.
+CI runs all of these on every pull request. The integration and smoke tests
+build their own SQLite database in a temp directory, so they never touch your
+library.
 
 ## Coding Standards 📜
 - TypeScript with strict typing; avoid `any`, and map database rows through
