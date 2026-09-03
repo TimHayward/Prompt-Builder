@@ -2002,3 +2002,70 @@ Do not instruct users to casually copy an active WAL database without considerin
 docs/database.md now separates the two kinds of backup — the portable JSON export, and a copy of the database file — and keeps the existing warning that a WAL database must not be casually copied while the app runs, with the .backup command as the safe alternative. README points at both.
 
 **Completed:** 2026-09-03 · `281aeff`
+
+---
+
+## N1. Prompt linting
+
+Provide rule-based feedback such as:
+
+```text
+Unpopulated variable
+Missing linked component
+Duplicate section
+No output format specified
+Conflicting instructions
+```
+
+Start with deterministic rules rather than AI analysis.
+
+
+### How it was met
+
+Four of the five listed rules are implemented as written, all deterministic, in src/domain/promptAnalysis.ts: an unpopulated variable (a warning when required, a suggestion otherwise, silent when the source gives a default), a section following a component the library no longer has, two sections saying the same thing, and nothing describing the shape of the answer. The fifth — conflicting instructions — has no honest deterministic form, since real contradiction needs the model analysis the item defers; what is there instead is a narrow literal rule over a short list of opposing terms (concise/comprehensive, formal/casual, bullets/prose), reported as a suggestion and naming both words. Findings appear in the Check view, warnings first.
+
+**Completed:** 2026-09-03 · `6f1dd8d`
+
+---
+
+## N2. Token estimation
+
+Show approximate prompt size.
+
+Possible output:
+
+```text
+Estimated tokens: 1,842
+```
+
+This should remain provider-neutral where possible.
+
+Provider-specific tokenisers may be optional later.
+
+
+### How it was met
+
+The Check view shows an estimated token count for the resolved prompt — the text the clipboard would get. Four characters per whitespace-separated chunk, provider-neutral and labelled an estimate: adopting one provider’s tokeniser would tie the number to a model the app deliberately knows nothing about. A provider-specific tokeniser remains possible later without changing the callers, since estimateTokens is one function.
+
+**Completed:** 2026-09-03 · `6f1dd8d`
+
+---
+
+## N3. Prompt statistics
+
+Potentially show:
+
+```text
+Characters
+Words
+Sections
+Variables
+Estimated tokens
+```
+
+
+### How it was met
+
+The Check view shows characters, words, sections, variables and estimated tokens, all measured on the resolved prompt. Empty sections are not counted, and a repeated variable counts once.
+
+**Completed:** 2026-09-03 · `6f1dd8d`

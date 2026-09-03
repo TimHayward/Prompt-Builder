@@ -89,54 +89,6 @@ New product capabilities.
 
 ---
 
-# N. P3 Prompt Quality Features
-
-## N1. Prompt linting
-
-Provide rule-based feedback such as:
-
-```text
-Unpopulated variable
-Missing linked component
-Duplicate section
-No output format specified
-Conflicting instructions
-```
-
-Start with deterministic rules rather than AI analysis.
-
----
-
-## N2. Token estimation
-
-Show approximate prompt size.
-
-Possible output:
-
-```text
-Estimated tokens: 1,842
-```
-
-This should remain provider-neutral where possible.
-
-Provider-specific tokenisers may be optional later.
-
----
-
-## N3. Prompt statistics
-
-Potentially show:
-
-```text
-Characters
-Words
-Sections
-Variables
-Estimated tokens
-```
-
----
-
 # O. P3 History and Recovery
 
 ## O1. Prompt revision history
