@@ -1834,3 +1834,88 @@ This must remain distinguishable from the currently selected value.
 The syntax was reviewed before implementation, as the item required, and one grammar was chosen to cover J2, J3 and J4 together: `{{ [!] [label:] name-or-options [=default] [|help] }}`, every part optional. Keeping the metadata in the prompt text follows the product direction — a variable’s name, label, options, syntax and defaults belong to the source prompt — and means it survives Markdown export and import, where a sidecar column would not. Documented in docs/variables.md. A default follows `=`. It is applied at resolution when the working value is empty and never written into the working values, which is what keeps it distinguishable from a value the user chose: the pane shows it as a placeholder, Clear values returns to it rather than past it, and a required variable carrying a default never warns.
 
 **Completed:** 2026-09-03 · `14f90dd`
+
+---
+
+## K1. Temporary section overrides
+
+Support making changes for the current prompt use without immediately modifying the source library prompt.
+
+Example source:
+
+```text
+Produce a comprehensive assessment.
+```
+
+Temporary working change:
+
+```text
+Produce a concise assessment.
+```
+
+Copy uses the temporary version.
+
+Reset returns to the stored source.
+
+
+### How it was met
+
+A change typed while Using is stored as an override in prompt_workspaces, keyed by section id, and applied on the way to the compiler. The preview and the clipboard take it; the stored prompt never does. The section says "Changed for this use", shows what the prompt says, and can be reverted on its own. Typing the source text back in clears the override rather than storing an identical copy. Covered by tests/unit/sectionOverrides.test.ts and tests/unit/workingPrompt.test.tsx, and end to end in tests/e2e/promptWorkflow.spec.ts.
+
+**Completed:** 2026-09-03 · `dff9ad4`
+
+---
+
+## K2. Explicit Edit Source mode
+
+Provide a clear distinction between:
+
+```text
+Edit Source
+```
+
+and:
+
+```text
+Modify Current Copy
+```
+
+This prevents accidental corruption of reusable library prompts.
+
+This requires careful UX design before implementation.
+
+
+### How it was met
+
+The UX was decided before implementation, as the item required: a mode switch beside the Source/Preview toggle, defaulting to Using. Typing changes this use only until you choose Editing source, so the library cannot be edited by accident, and the mode is not persisted — every session starts safe. Two gaps found while building it were fixed with it: the variables pane read only the stored sections, so a variable introduced by a temporary change could not be filled in, and the reset was rendered inside the variables list, so a use that had only changed section text had no way back.
+
+**Completed:** 2026-09-03 · `dff9ad4`
+
+---
+
+## K3. Reset Working Prompt
+
+Provide:
+
+```text
+Reset working prompt
+```
+
+This clears:
+
+- variable values
+- temporary text overrides
+
+while preserving:
+
+- source prompt
+- variable definitions
+- variable option lists
+- component definitions
+
+
+### How it was met
+
+Clear values became Reset working prompt and clears the values and the overrides together, leaving the prompt, its variable definitions and its option lists untouched — the existing DELETE on the workspace already did both. It confirms first when there are overrides, because text changed for this use is not visible from the variables pane, and it names how many sections it would return.
+
+**Completed:** 2026-09-03 · `dff9ad4`
