@@ -46,6 +46,10 @@ const createPrompt = async (page: Page) => {
 
 /** Types into the section, replacing whatever is there. */
 const writeSection = async (page: Page, text: string) => {
+  // The editor opens in Using, where typing changes this use only. Authoring
+  // the prompt means editing the source, so say so first.
+  await page.getByRole('button', { name: 'Editing source' }).click();
+
   const editor = sectionEditor(page);
   await editor.click();
   await page.keyboard.press('ControlOrMeta+A');
@@ -81,7 +85,7 @@ test.describe('the prompt workflow', () => {
     await page.locator('#var-tone').selectOption('formal');
 
     // ── preview the result ────────────────────────────────────────────────
-    await page.getByRole('button', { name: 'Preview' }).click();
+    await page.getByRole('button', { name: 'Preview', exact: true }).click();
     await expect(previewText(page)).toContainText(
       'Review the Intune estate for Contoso in a formal tone.'
     );
@@ -94,8 +98,8 @@ test.describe('the prompt workflow', () => {
     expect(clipboard).toBe(shown);
 
     // ── clear values ──────────────────────────────────────────────────────
-    await page.getByRole('button', { name: 'Source' }).click();
-    await page.getByRole('button', { name: 'Clear values' }).click();
+    await page.getByRole('button', { name: 'Source', exact: true }).click();
+    await page.getByRole('button', { name: 'Reset working prompt' }).click();
 
     // The values are gone...
     await expect(page.locator('#var-technology')).toHaveValue('');
@@ -115,7 +119,7 @@ test.describe('the prompt workflow', () => {
     await createPrompt(page);
     await writeSection(page, 'Hello {{name}}!');
 
-    await page.getByRole('button', { name: 'Preview' }).click();
+    await page.getByRole('button', { name: 'Preview', exact: true }).click();
     await expect(previewText(page)).toHaveText('Hello !');
 
     const shown = (await previewText(page).textContent()) ?? '';
@@ -149,5 +153,38 @@ test.describe('an idle app', () => {
 
     expect(librarySaves.length).toBeLessThanOrEqual(1);
     await expect(page.locator('.save-state')).toHaveText('Saved');
+  });
+});
+
+test.describe('changing a prompt for one use', () => {
+  test('does not touch the stored prompt', async ({ page }) => {
+    await page.goto('/');
+    await createPrompt(page);
+    await writeSection(page, 'Produce a comprehensive assessment.');
+
+    // Back to the default mode, where typing changes this use only.
+    await page.getByRole('button', { name: 'Using' }).click();
+
+    const editor = sectionEditor(page);
+    await editor.click();
+    await page.keyboard.press('ControlOrMeta+A');
+    await page.keyboard.type('Produce a concise assessment.');
+    await expect(page.locator('.save-state')).toHaveText('Saved', { timeout: 15_000 });
+
+    await expect(page.locator('.section-override-indicator')).toContainText('Changed for this use');
+
+    // The copy takes the change...
+    await page.getByRole('button', { name: 'Preview', exact: true }).click();
+    await expect(previewText(page)).toContainText('Produce a concise assessment.');
+
+    // ...and the stored prompt, after a reload, does not have it. Resetting
+    // asks first, because text changed for this use is not visible from the
+    // variables pane.
+    page.on('dialog', dialog => dialog.accept());
+    await page.getByRole('button', { name: 'Source', exact: true }).click();
+    await page.getByRole('button', { name: 'Reset working prompt' }).click();
+    await page.reload();
+
+    await expect(sectionEditor(page)).toContainText('Produce a comprehensive assessment.');
   });
 });

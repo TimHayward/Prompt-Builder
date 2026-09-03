@@ -19,6 +19,7 @@ import ResolvedPreview from './ResolvedPreview';
 import SaveStateIndicator from './SaveStateIndicator';
 import './PromptEditor.scss';
 import { ComponentType as ComponentNodeType, Section as SectionType } from '../../types';
+import { applySectionOverrides } from '@/domain/sectionOverrides';
 import { v4 as uuidv4 } from 'uuid';
 
 const PromptEditor: React.FC = () => {
@@ -36,11 +37,17 @@ const PromptEditor: React.FC = () => {
   } = usePromptContext();
 
   const { settings } = useAppContext();
-  const { getWorkingValues } = useWorkspaceContext();
+  const { getWorkingValues, getSectionOverrides } = useWorkspaceContext();
 
   // Which half of the editor is showing: the prompt as written, or as it will
   // be copied.
   const [view, setView] = useState<'source' | 'preview'>('source');
+
+  // Whether typing changes this use of the prompt or the prompt itself. Using
+  // is the default: customising is the common act, and editing the library
+  // should be something you chose to do. It is not persisted, so every session
+  // starts in the safe mode.
+  const [editMode, setEditMode] = useState<'using' | 'source'>('using');
   const sectionNameInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const mainTitleInputRef = useRef<HTMLInputElement>(null);
 
@@ -307,6 +314,25 @@ const PromptEditor: React.FC = () => {
 
       {/* Source or the resolved text that Copy will produce */}
       <div className="editor-view-toggle">
+        <div className="edit-mode-toggle" role="group" aria-label="What typing changes">
+          <button
+            className={editMode === 'using' ? 'active' : ''}
+            onClick={() => setEditMode('using')}
+            aria-pressed={editMode === 'using'}
+            title="Changes apply to this use only"
+          >
+            Using
+          </button>
+          <button
+            className={editMode === 'source' ? 'active' : ''}
+            onClick={() => setEditMode('source')}
+            aria-pressed={editMode === 'source'}
+            title="Changes are written to the stored prompt"
+          >
+            Editing source
+          </button>
+        </div>
+
         <SaveStateIndicator />
         <button className={view === 'source' ? 'active' : ''} onClick={() => setView('source')}>
           Source
@@ -318,7 +344,10 @@ const PromptEditor: React.FC = () => {
 
       {view === 'preview' && activePrompt && (
         <ResolvedPreview
-          sections={activePrompt.sections}
+          sections={applySectionOverrides(
+            activePrompt.sections,
+            getSectionOverrides(activePrompt.id)
+          )}
           values={getWorkingValues(activePrompt.id)}
           systemPrompt={settings.systemPrompt}
           markdownEnabled={settings.markdownPromptingEnabled}
@@ -363,6 +392,7 @@ const PromptEditor: React.FC = () => {
                 key={section.id}
                 section={section}
                 promptId={activePrompt.id}
+                editMode={editMode}
                 index={index} // Added: pass index to Section component
                 nameInputRefCallback={el => {
                   if (section.id) {

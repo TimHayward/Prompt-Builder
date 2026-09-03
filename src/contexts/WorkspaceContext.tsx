@@ -25,16 +25,33 @@ import { useSaveState } from './SaveStateContext';
 import { apiRequest, apiSend, describeApiFailure } from '@/lib/apiClient';
 import { debounceKeyed } from '@/utils/debounce';
 import type { PromptWorkspace, UpdateWorkspaceRequest } from '@/types/contracts';
+import { clearOverride, setOverride, type SectionOverrides } from '@/domain/sectionOverrides';
+import type { Section } from '@/types';
 
 type WorkspaceContextType = {
   /** Working values for a prompt; empty when it has never been used. */
   getWorkingValues: (promptId: string) => Record<string, string>;
   /** Merges values into a prompt's working state. */
   setWorkingValues: (promptId: string, values: Record<string, string>) => void;
-  /** Drops every working value, leaving the source prompt untouched. */
-  clearWorkingValues: (promptId: string) => Promise<void>;
+  /** Section text changed for this use only, keyed by section id. */
+  getSectionOverrides: (promptId: string) => SectionOverrides;
+  /** Records a change made for this use; text equal to the source clears it. */
+  setSectionOverride: (
+    promptId: string,
+    section: Pick<Section, 'id' | 'content'>,
+    text: string
+  ) => void;
+  /** Returns one section to what the prompt says. */
+  revertSectionOverride: (promptId: string, sectionId: string) => void;
+  /**
+   * Drops every working value and every temporary change, leaving the source
+   * prompt untouched.
+   */
+  resetWorkingPrompt: (promptId: string) => Promise<void>;
   /** True once a prompt has any working value set. */
   hasWorkingValues: (promptId: string) => boolean;
+  /** True once this use has changed any section text. */
+  hasSectionOverrides: (promptId: string) => boolean;
   isWorkspacesLoading: boolean;
 };
 
@@ -49,6 +66,7 @@ export const useWorkspaceContext = (): WorkspaceContextType => {
 };
 
 const EMPTY_VALUES: Record<string, string> = {};
+const EMPTY_OVERRIDES: SectionOverrides = {};
 
 export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const { appInitialized } = useAppContext();
@@ -162,7 +180,50 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     [commitWorkspace, saveWorkspace, saveState]
   );
 
-  const clearWorkingValues = useCallback(
+  const getSectionOverrides = useCallback(
+    (promptId: string) => workspaces[promptId]?.sectionOverrides ?? EMPTY_OVERRIDES,
+    [workspaces]
+  );
+
+  const hasSectionOverrides = useCallback(
+    (promptId: string) => Object.keys(workspaces[promptId]?.sectionOverrides ?? {}).length > 0,
+    [workspaces]
+  );
+
+  /** Writes the whole override map for a prompt, and queues the save. */
+  const commitOverrides = useCallback(
+    (promptId: string, sectionOverrides: SectionOverrides) => {
+      const current = workspacesRef.current[promptId];
+      const updated: PromptWorkspace = {
+        promptId,
+        values: current?.values ?? {},
+        sectionOverrides,
+      };
+
+      commitWorkspace(updated);
+      saveState.markUnsaved(`workspace:${promptId}`);
+      saveWorkspace(updated);
+    },
+    [commitWorkspace, saveWorkspace, saveState]
+  );
+
+  const setSectionOverride = useCallback(
+    (promptId: string, section: Pick<Section, 'id' | 'content'>, text: string) => {
+      const current = workspacesRef.current[promptId]?.sectionOverrides ?? {};
+      commitOverrides(promptId, setOverride(current, section, text));
+    },
+    [commitOverrides]
+  );
+
+  const revertSectionOverride = useCallback(
+    (promptId: string, sectionId: string) => {
+      const current = workspacesRef.current[promptId]?.sectionOverrides ?? {};
+      commitOverrides(promptId, clearOverride(current, sectionId));
+    },
+    [commitOverrides]
+  );
+
+  const resetWorkingPrompt = useCallback(
     async (promptId: string) => {
       // Drop the queued save first: it would otherwise write the values back
       // moments after they were cleared.
@@ -174,8 +235,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       try {
         await apiSend(`/api/workspaces/${promptId}`, 'DELETE');
       } catch (error) {
-        console.error(`Failed to clear working values for ${promptId}:`, error);
-        showToast(describeApiFailure(error, 'Could not clear your working values.'));
+        console.error(`Failed to reset the working prompt for ${promptId}:`, error);
+        showToast(describeApiFailure(error, 'Could not reset your working prompt.'));
       }
     },
     [commitWorkspace, saveWorkspace, showToast, saveState]
@@ -185,11 +246,25 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     () => ({
       getWorkingValues,
       setWorkingValues,
-      clearWorkingValues,
+      getSectionOverrides,
+      setSectionOverride,
+      revertSectionOverride,
+      resetWorkingPrompt,
       hasWorkingValues,
+      hasSectionOverrides,
       isWorkspacesLoading,
     }),
-    [getWorkingValues, setWorkingValues, clearWorkingValues, hasWorkingValues, isWorkspacesLoading]
+    [
+      getWorkingValues,
+      setWorkingValues,
+      getSectionOverrides,
+      setSectionOverride,
+      revertSectionOverride,
+      resetWorkingPrompt,
+      hasWorkingValues,
+      hasSectionOverrides,
+      isWorkspacesLoading,
+    ]
   );
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;

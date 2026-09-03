@@ -11,26 +11,47 @@
 import React, { useEffect, useState } from 'react';
 import { usePromptContext } from '../../contexts/PromptContext';
 import { useWorkspaceContext } from '../../contexts/WorkspaceContext';
-import { VariableSpec } from '../../utils/variableUtils';
+import { extractVariableSpecsFromSections, VariableSpec } from '../../utils/variableUtils';
 import VariableField from './VariableField';
+import {
+  applySectionOverrides,
+  countOverrides,
+  type SectionOverrides,
+} from '@/domain/sectionOverrides';
 import './VariablesPane.scss';
 
+const EMPTY_OVERRIDES: SectionOverrides = {};
+
 const VariablesPane: React.FC = () => {
-  const { activePromptId, prompts, getPromptVariableSpecs } = usePromptContext();
-  const { getWorkingValues, setWorkingValues, clearWorkingValues, hasWorkingValues } =
-    useWorkspaceContext();
+  const { activePromptId, prompts } = usePromptContext();
+  const {
+    getWorkingValues,
+    setWorkingValues,
+    getSectionOverrides,
+    resetWorkingPrompt,
+    hasWorkingValues,
+    hasSectionOverrides,
+  } = useWorkspaceContext();
 
   const [variableSpecs, setVariableSpecs] = useState<VariableSpec[]>([]);
 
   // Get the active prompt
   const activePrompt = prompts.find(p => p.id === activePromptId);
 
-  // The definitions follow the prompt's sections, so they refresh as it is edited
+  // The definitions follow the text this use will resolve — the prompt's
+  // sections with any temporary changes applied — so a variable introduced by a
+  // change made for this use can still be filled in.
+  const sectionOverrides = activePromptId ? getSectionOverrides(activePromptId) : EMPTY_OVERRIDES;
+
   useEffect(() => {
-    if (activePromptId && activePrompt) {
-      setVariableSpecs(getPromptVariableSpecs(activePromptId));
-    }
-  }, [activePromptId, activePrompt?.sections, getPromptVariableSpecs]);
+    if (!activePromptId || !activePrompt) return;
+
+    setVariableSpecs(
+      extractVariableSpecsFromSections(
+        applySectionOverrides(activePrompt.sections, sectionOverrides)
+      )
+    );
+  }, [activePromptId, activePrompt?.sections, sectionOverrides]);
 
   const workingValues = activePromptId ? getWorkingValues(activePromptId) : {};
 
@@ -39,10 +60,19 @@ const VariablesPane: React.FC = () => {
     setWorkingValues(activePromptId, { [variableKey]: value });
   };
 
-  const handleClearValues = () => {
-    if (activePromptId) {
-      void clearWorkingValues(activePromptId);
+  const handleReset = () => {
+    if (!activePromptId) return;
+
+    // Text changed for this use is not visible from this pane, so losing it
+    // would be a surprise. Values on their own are already visible above.
+    if (hasSectionOverrides(activePromptId)) {
+      const confirmed = window.confirm(
+        'This clears the values you entered and the text you changed for this use. The stored prompt is not affected.'
+      );
+      if (!confirmed) return;
     }
+
+    void resetWorkingPrompt(activePromptId);
   };
 
   if (!activePromptId) {
@@ -68,44 +98,51 @@ const VariablesPane: React.FC = () => {
           <span className="hint">Use {`{{mail/teams/calendar}}`} for a list of options</span>
         </div>
       ) : (
-        <>
-          <div className="variables-list">
-            {variableSpecs.map(spec => (
-              <div key={spec.key} className="variable-item">
-                <label htmlFor={`var-${spec.key}`} className="variable-label">
-                  {spec.label}
-                  {spec.required && (
-                    <span className="variable-required" aria-label="required" title="Required">
-                      *
-                    </span>
-                  )}
-                </label>
-                {spec.description && (
-                  <p id={`var-${spec.key}-help`} className="variable-help">
-                    {spec.description}
-                  </p>
+        <div className="variables-list">
+          {variableSpecs.map(spec => (
+            <div key={spec.key} className="variable-item">
+              <label htmlFor={`var-${spec.key}`} className="variable-label">
+                {spec.label}
+                {spec.required && (
+                  <span className="variable-required" aria-label="required" title="Required">
+                    *
+                  </span>
                 )}
-                <VariableField
-                  spec={spec}
-                  value={workingValues[spec.key] || ''}
-                  onChange={value => handleVariableChange(spec.key, value)}
-                />
-              </div>
-            ))}
-          </div>
+              </label>
+              {spec.description && (
+                <p id={`var-${spec.key}-help`} className="variable-help">
+                  {spec.description}
+                </p>
+              )}
+              <VariableField
+                spec={spec}
+                value={workingValues[spec.key] || ''}
+                onChange={value => handleVariableChange(spec.key, value)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
 
-          <div className="variables-actions">
-            {hasWorkingValues(activePromptId) && (
-              <button
-                className="reset-btn"
-                onClick={handleClearValues}
-                title="Clear the values entered for this use; the prompt itself is unchanged"
-              >
-                Clear values
-              </button>
-            )}
-          </div>
-        </>
+      {(hasWorkingValues(activePromptId) || hasSectionOverrides(activePromptId)) && (
+        <div className="variables-actions">
+          <button
+            className="reset-btn"
+            onClick={handleReset}
+            title="Clear the values entered and any text changed for this use; the stored prompt is unchanged"
+          >
+            Reset working prompt
+          </button>
+          {hasSectionOverrides(activePromptId) && (
+            <p className="working-changes-note">
+              This use has changed the text of{' '}
+              {countOverrides(sectionOverrides) === 1
+                ? '1 section'
+                : `${countOverrides(sectionOverrides)} sections`}
+              .
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

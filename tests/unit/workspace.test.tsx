@@ -175,13 +175,13 @@ describe('entering working values', () => {
   });
 });
 
-describe('clearing working values', () => {
+describe('resetting the working prompt', () => {
   it('empties the values and keeps every choice the source declares', async () => {
     const app = await renderApp();
     act(() => app.current.workspace.setWorkingValues('prompt-1', { channel: 'Teams' }));
 
     await act(async () => {
-      await app.current.workspace.clearWorkingValues('prompt-1');
+      await app.current.workspace.resetWorkingPrompt('prompt-1');
     });
 
     expect(app.current.workspace.getWorkingValues('prompt-1')).toEqual({});
@@ -201,7 +201,7 @@ describe('clearing working values', () => {
 
     act(() => app.current.workspace.setWorkingValues('prompt-1', { channel: 'Teams' }));
     await act(async () => {
-      await app.current.workspace.clearWorkingValues('prompt-1');
+      await app.current.workspace.resetWorkingPrompt('prompt-1');
     });
     await flush();
 

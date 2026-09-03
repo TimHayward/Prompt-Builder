@@ -611,3 +611,67 @@
     }
   }
 }
+
+// Whether typing changes this use or the stored prompt. Deliberately quiet:
+// it says which mode you are in without competing with the prompt itself.
+.edit-mode-toggle {
+  display: flex;
+  margin-right: auto;
+
+  button {
+    font-size: typography.$font-size-xs;
+    color: rgba(colors.$text-color, 0.6);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    padding: 0.15rem 0.5rem;
+    cursor: pointer;
+
+    &:hover {
+      color: colors.$text-color;
+    }
+
+    &.active {
+      color: colors.$text-color;
+      background-color: rgba(colors.$accent-color, 0.15);
+      border-color: rgba(colors.$accent-color, 0.4);
+    }
+  }
+}
+
+// A section this use has changed, and the way back to what the prompt says.
+.section-override-indicator {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-size: typography.$font-size-xs;
+  color: rgba(colors.$text-color, 0.75);
+  padding: 0.3rem 0.1rem 0;
+
+  .override-mark {
+    color: colors.$accent-color;
+  }
+
+  button {
+    color: colors.$text-color;
+    background: none;
+    border: 1px solid rgba(colors.$text-color, 0.3);
+    border-radius: 3px;
+    padding: 0.05rem 0.4rem;
+    cursor: pointer;
+
+    &:hover {
+      background-color: rgba(colors.$text-color, 0.1);
+    }
+  }
+
+  .override-source {
+    flex: 1;
+    min-width: 0;
+    color: rgba(colors.$text-color, 0.45);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

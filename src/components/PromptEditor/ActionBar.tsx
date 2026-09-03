@@ -9,6 +9,7 @@ import React from 'react';
 import { usePromptContext } from '@/contexts/PromptContext';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import { compilePrompt } from '@/utils/compilePrompt';
+import { applySectionOverrides } from '@/domain/sectionOverrides';
 import { useToast } from '@/contexts/ToastContext';
 import { useClipboard } from '@/hooks/useClipboard';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -24,7 +25,7 @@ interface ActionBarProps {
 
 const ActionBar: React.FC<ActionBarProps> = ({ activePromptId, systemPrompt, markdownEnabled }) => {
   const { prompts, addNewSectionForEditing, markPromptUsed } = usePromptContext();
-  const { getWorkingValues } = useWorkspaceContext();
+  const { getWorkingValues, getSectionOverrides } = useWorkspaceContext();
   const { copyToClipboard, status, isSupported } = useClipboard();
   const { showToast } = useToast();
 
@@ -38,7 +39,8 @@ const ActionBar: React.FC<ActionBarProps> = ({ activePromptId, systemPrompt, mar
 
     // The resolved prompt is the source with this use's working values applied.
     const { text, unresolved, missingRequired } = compilePrompt({
-      sections: activePrompt.sections,
+      // What this use asks for, which is what the preview shows.
+      sections: applySectionOverrides(activePrompt.sections, getSectionOverrides(activePromptId)),
       values: getWorkingValues(activePromptId),
       systemPrompt,
       markdownEnabled,

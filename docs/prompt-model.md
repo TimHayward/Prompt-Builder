@@ -38,8 +38,36 @@ Stored in `prompt_workspaces`, keyed by prompt id, and owned on the client by
 so nothing here writes to the source. That is what lets **Clear values** empty
 the pane while the choice list stays exactly as written.
 
-The table also has room for temporary section overrides — text changed for this
-use only — which the backlog's K1 will use.
+The same row holds temporary section overrides: text changed for this use
+only, keyed by section id. They are applied on the way to the compiler and
+never written back into the stored sections.
+
+### Using, or editing the source
+
+The editor is in one of two modes, and it opens in **Using**:
+
+| Mode           | Typing in a section writes to              |
+| -------------- | ------------------------------------------ |
+| Using          | the workspace, as an override for this use |
+| Editing source | the stored prompt, as it always did        |
+
+Customising is the common act and editing the library is the rarer, riskier
+one, so the safe mode is the default and editing the source is something you
+choose. The mode is not persisted: every session starts in Using.
+
+A section changed for this use says so, offers what the prompt says, and can be
+reverted on its own. Typing the source text back in clears the override rather
+than storing an identical copy, so a section is never marked as changed while
+saying exactly what the prompt says.
+
+The variables offered in the pane come from the text this use will resolve —
+the stored sections with overrides applied — so a variable introduced by a
+temporary change can still be filled in.
+
+**Reset working prompt** clears the values and the overrides together, leaving
+the prompt, its variable definitions and its option lists untouched. It asks
+first when there are overrides, because text changed for this use is not
+visible from the variables pane.
 
 ## Resolved prompt
 

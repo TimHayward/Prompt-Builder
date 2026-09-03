@@ -187,3 +187,11 @@
   color: rgba(colors.$text-color, 0.55);
   margin: 0 0 0.25rem;
 }
+
+// Says what a reset would take with it, since text changed for this use is not
+// visible from this pane.
+.working-changes-note {
+  font-size: typography.$font-size-xs;
+  color: rgba(colors.$text-color, 0.55);
+  margin: 0.4rem 0 0;
+}

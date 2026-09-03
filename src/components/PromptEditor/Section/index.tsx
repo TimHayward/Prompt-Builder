@@ -9,14 +9,22 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Section as SectionType, ComponentType } from '@/types';
 import { usePromptContext } from '@/contexts/PromptContext';
 import { useTreeContext } from '@/contexts/TreeContext';
+import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import SectionHeader from './SectionHeader';
 import HighlightedTextarea from '@/components/HighlightedTextarea';
 import { usePrompts } from '@/hooks/usePrompts';
 import { getTypeColor } from '@/lib/frameworks';
+import { effectiveContent } from '@/domain/sectionOverrides';
 
 interface SectionProps {
   section: SectionType;
   promptId: string;
+  /**
+   * Whether typing changes this use of the prompt or the prompt itself. In
+   * 'using' the text is an override kept in the workspace; in 'source' it is
+   * written to the stored section, as it always was.
+   */
+  editMode: 'using' | 'source';
   nameInputRefCallback?: (el: HTMLInputElement | null) => void; // Added for focusing
   index: number; // Added: index of the section
 }
@@ -36,7 +44,13 @@ const findComponentById = (treeData: any[], id: string): ComponentType | null =>
   return null;
 };
 
-const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallback, index }) => {
+const Section: React.FC<SectionProps> = ({
+  section,
+  promptId,
+  editMode,
+  nameInputRefCallback,
+  index,
+}) => {
   const {
     updateSection,
     deleteSection,
@@ -47,6 +61,10 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
 
   const { treeData } = useTreeContext();
   const { saveSectionToComponentLibrary } = usePrompts();
+  const { getSectionOverrides, setSectionOverride, revertSectionOverride } = useWorkspaceContext();
+
+  const overrides = getSectionOverrides(promptId);
+  const isOverridden = section.id in overrides;
 
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
@@ -100,6 +118,12 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
   };
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (editMode === 'using') {
+      // The stored prompt is not touched: this is a change to the current use.
+      setSectionOverride(promptId, section, e.target.value);
+      return;
+    }
+
     updateSection(promptId, section.id, {
       content: e.target.value,
     });
@@ -216,7 +240,9 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
         <div className="section-content" onDragOver={handleDragOver} onDragLeave={handleDragLeave}>
           <HighlightedTextarea
             ref={textAreaRef}
-            value={section.content}
+            // Editing the source shows the source, even when this use has
+            // changed the text: that is what is being edited.
+            value={editMode === 'using' ? effectiveContent(section, overrides) : section.content}
             onChange={value => {
               handleContentChange({ target: { value } } as React.ChangeEvent<HTMLTextAreaElement>);
             }}
@@ -227,6 +253,25 @@ const Section: React.FC<SectionProps> = ({ section, promptId, nameInputRefCallba
             autosize={true}
             isOpen={section.open}
           />
+
+          {isOverridden && (
+            <div className="section-override-indicator">
+              <span className="override-mark" aria-hidden="true">
+                ●
+              </span>
+              <span>Changed for this use</span>
+              <button
+                type="button"
+                onClick={() => revertSectionOverride(promptId, section.id)}
+                title="Return this section to what the prompt says"
+              >
+                Revert
+              </button>
+              <span className="override-source" title={section.content}>
+                Source says: {section.content}
+              </span>
+            </div>
+          )}
 
           {section.linkedComponentId && (
             <div
