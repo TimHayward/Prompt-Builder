@@ -1919,3 +1919,86 @@ while preserving:
 Clear values became Reset working prompt and clears the values and the overrides together, leaving the prompt, its variable definitions and its option lists untouched — the existing DELETE on the workspace already did both. It confirms first when there are overrides, because text changed for this use is not visible from the variables pane, and it names how many sections it would return.
 
 **Completed:** 2026-09-03 · `dff9ad4`
+
+---
+
+## M1. Export entire library
+
+Provide:
+
+```text
+Export library
+```
+
+Create a JSON backup containing:
+
+- prompts
+- sections
+- component hierarchy
+- variable definitions
+- relevant settings
+- schema version
+
+
+### How it was met
+
+Settings → Library backup → Export library writes one JSON document: the prompts with their sections — which is where the variable definitions live — the flat component tree with its parents and sibling order, the settings, and the format version. Working values are deliberately excluded: they belong to a use of a prompt, not to the library.
+
+**Completed:** 2026-09-03 · `281aeff`
+
+---
+
+## M2. Import library backup
+
+Support restoring the application-level JSON backup.
+
+### Acceptance
+
+Export a library from one clean installation and import it into another.
+
+The resulting prompt library is functionally equivalent.
+
+
+### How it was met
+
+Import library restores such a file, replacing the library rather than merging into it: a backup is a picture of a library at a moment, and merging two would need answers about colliding ids that a restore has no way to ask. The whole restore runs in one transaction and the file is validated before anything is deleted. The acceptance is tested as written — tests/integration/backupApi.test.ts builds a library in one temp database, exports it, switches to a second empty one, imports, and compares both sides through the API. The real library was also round-tripped on copies (32 items, 31 nested) and came back identical.
+
+**Completed:** 2026-09-03 · `281aeff`
+
+---
+
+## M3. Add backup schema version
+
+Every exported JSON backup must contain:
+
+```json
+{
+  "schemaVersion": 1
+}
+```
+
+This is not intended to create an external standard.
+
+It exists solely to allow Prompt Builder to migrate its own historical exports.
+
+
+### How it was met
+
+Every export carries schemaVersion, separate from the database schema version, which is recorded alongside it as databaseVersion for information. migrateBackup is the single place a future step belongs, and refuses a file written by a newer Prompt Builder by name rather than half-reading it. Every field added since the format was defined has a default, so an older export still reads.
+
+**Completed:** 2026-09-03 · `281aeff`
+
+---
+
+## M4. Document database backup
+
+Because Prompt Builder is local first, document safe SQLite backup behaviour.
+
+Do not instruct users to casually copy an active WAL database without considering transaction state.
+
+
+### How it was met
+
+docs/database.md now separates the two kinds of backup — the portable JSON export, and a copy of the database file — and keeps the existing warning that a WAL database must not be casually copied while the app runs, with the .backup command as the safe alternative. README points at both.
+
+**Completed:** 2026-09-03 · `281aeff`
