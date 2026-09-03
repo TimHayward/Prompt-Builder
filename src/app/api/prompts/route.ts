@@ -3,10 +3,8 @@
  * Handles fetching all prompts and creating new prompts.
  */
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { v4 as uuidv4 } from 'uuid';
 import { createPromptRequestSchema } from '@/types/contracts';
-import { toPrompt, type PromptRow } from '@/lib/promptRows';
+import { createPrompt, listPrompts } from '@/lib/repositories/promptsRepository';
 import { errorResponse, parseRequestBody } from '@/lib/apiValidation';
 
 /**
@@ -15,18 +13,7 @@ import { errorResponse, parseRequestBody } from '@/lib/apiValidation';
  */
 export async function GET() {
     try {
-        // Use COALESCE to handle NULL values for variables column (for backward compatibility with existing records)
-        // Ordered so tab order is the same on every load: by num where a prompt
-        // has one, then oldest first. num is nullable, and SQLite would otherwise
-        // sort those nulls to the front, so they are pushed last explicitly.
-        const stmt = db.prepare(`
-            SELECT id, name, sections, COALESCE(variables, '{}') as variables, num, created_at, updated_at
-            FROM prompts
-            ORDER BY num IS NULL, num, created_at, id
-        `);
-        const rows = stmt.all() as PromptRow[];
-
-        return NextResponse.json(rows.map(toPrompt));
+        return NextResponse.json(listPrompts());
     } catch (error) {
         console.error('Error fetching prompts:', error);
         return errorResponse('Failed to fetch prompts', 500);
@@ -42,32 +29,14 @@ export async function POST(request: Request) {
         const parsed = await parseRequestBody(request, createPromptRequestSchema);
         if (!parsed.ok) return parsed.response;
 
-        const { name, sections, variables, num } = parsed.data;
+        const created = createPrompt(parsed.data);
 
-        const newPromptId = uuidv4();
-        const sectionsJson = JSON.stringify(sections || []); // Default to empty array if sections are not provided
-        const variablesJson = JSON.stringify(variables || {}); // Default to empty object if variables are not provided
-        const currentTimestamp = new Date().toISOString();
-
-        const stmt = db.prepare(
-            'INSERT INTO prompts (id, name, sections, variables, num, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
-        );
-        stmt.run(newPromptId, name, sectionsJson, variablesJson, num ?? null, currentTimestamp, currentTimestamp);
-
-        // Retrieve the newly created prompt to return it in the response
-        const newPromptStmt = db.prepare(`
-            SELECT id, name, sections, COALESCE(variables, '{}') as variables, num, created_at, updated_at 
-            FROM prompts WHERE id = ?
-        `);
-        const newPrompt = newPromptStmt.get(newPromptId) as PromptRow | undefined;
-
-        if (newPrompt) {
-            return NextResponse.json(toPrompt(newPrompt), { status: 201 });
-        } else {
-            // Should not happen if insert was successful
+        if (!created) {
+            // Should not happen if the insert succeeded
             return errorResponse('Failed to create prompt or retrieve it after creation', 500);
         }
 
+        return NextResponse.json(created, { status: 201 });
     } catch (error) {
         console.error('Error creating prompt:', error);
         return errorResponse('Failed to create prompt', 500);

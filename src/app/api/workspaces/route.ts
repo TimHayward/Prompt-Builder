@@ -6,9 +6,8 @@
  * is using a prompt, not editing it.
  */
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { listWorkspaces } from '@/lib/repositories/workspacesRepository';
 import { errorResponse } from '@/lib/apiValidation';
-import { toWorkspace, type WorkspaceRow } from '@/lib/workspaceRows';
 
 /**
  * GET /api/workspaces
@@ -16,11 +15,7 @@ import { toWorkspace, type WorkspaceRow } from '@/lib/workspaceRows';
  */
 export async function GET() {
     try {
-        const rows = db
-            .prepare('SELECT prompt_id, values_json, section_overrides_json FROM prompt_workspaces')
-            .all() as WorkspaceRow[];
-
-        return NextResponse.json(rows.map(toWorkspace));
+        return NextResponse.json(listWorkspaces());
     } catch (error) {
         console.error('Error fetching workspaces:', error);
         return errorResponse('Failed to fetch working values', 500);

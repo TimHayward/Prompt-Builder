@@ -3,9 +3,9 @@
  * Handles fetching and updating application settings and active prompt ID.
  */
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
 import { Settings } from '@/types';
 import { updateSettingsRequestSchema } from '@/types/contracts';
+import { getConfig, saveConfig } from '@/lib/repositories/settingsRepository';
 import { errorResponse, parseRequestBody } from '@/lib/apiValidation';
 
 // Default settings - consider moving to a shared constants file if used elsewhere
@@ -24,17 +24,12 @@ const DEFAULT_SETTINGS: Settings = {
  */
 export async function GET() {
     try {
-        const stmt = db.prepare('SELECT settings_json, active_prompt_id FROM app_config WHERE id = 1');
-        const result = stmt.get() as { settings_json?: string; active_prompt_id?: string | null } | undefined;
+        const config = getConfig();
 
-        if (result && result.settings_json) {
-            const settings = JSON.parse(result.settings_json);
-            return NextResponse.json({ settings, activePromptId: result.active_prompt_id });
-        } else {
-            // No settings found, return default settings and null activePromptId
-            // Optionally, insert default settings here if preferred
-            return NextResponse.json({ settings: DEFAULT_SETTINGS, activePromptId: null });
-        }
+        return NextResponse.json({
+            settings: config.settings ?? DEFAULT_SETTINGS,
+            activePromptId: config.activePromptId,
+        });
     } catch (error) {
         console.error('Error fetching settings:', error);
         return errorResponse('Failed to fetch settings', 500);
@@ -50,37 +45,13 @@ export async function POST(request: Request) {
         const parsed = await parseRequestBody(request, updateSettingsRequestSchema);
         if (!parsed.ok) return parsed.response;
 
-        const { settings, activePromptId } = parsed.data;
+        const saved = saveConfig(parsed.data, DEFAULT_SETTINGS);
 
-        const currentTimestamp = new Date().toISOString();
-
-        // Fetch existing settings to merge if only one part is provided
-        const stmtGet = db.prepare('SELECT settings_json, active_prompt_id FROM app_config WHERE id = 1');
-        const existingConfig = stmtGet.get() as { settings_json?: string; active_prompt_id?: string | null } | undefined;
-
-        const newSettingsJson = settings ? JSON.stringify(settings) : existingConfig?.settings_json;
-        let newActivePromptId = typeof activePromptId !== 'undefined' ? activePromptId : existingConfig?.active_prompt_id;
-
-        // Validate activePromptId if it's not null
-        if (newActivePromptId !== null && typeof newActivePromptId !== 'undefined') {
-            const promptCheckStmt = db.prepare('SELECT id FROM prompts WHERE id = ?');
-            const existingPrompt = promptCheckStmt.get(newActivePromptId);
-            if (!existingPrompt) {
-                console.warn(`Active prompt ID ${newActivePromptId} not found in prompts table. Setting to null.`);
-                newActivePromptId = null; // Set to null if prompt doesn't exist
-            }
-        }
-
-        const finalSettingsJson = newSettingsJson || JSON.stringify(DEFAULT_SETTINGS);
-
-        const stmt = db.prepare(
-            'INSERT OR REPLACE INTO app_config (id, settings_json, active_prompt_id, updated_at) VALUES (1, ?, ?, ?)'
-        );
-        // Ensure newActivePromptId is explicitly passed, even if it became null
-        stmt.run(finalSettingsJson, newActivePromptId, currentTimestamp);
-
-        return NextResponse.json({ message: 'Settings updated successfully', settings: JSON.parse(finalSettingsJson), activePromptId: newActivePromptId });
-
+        return NextResponse.json({
+            message: 'Settings updated successfully',
+            settings: saved.settings,
+            activePromptId: saved.activePromptId,
+        });
     } catch (error) {
         console.error('Error updating settings:', error);
         return errorResponse('Failed to update settings', 500);

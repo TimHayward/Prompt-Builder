@@ -3,9 +3,14 @@
  * Handles fetching, updating, and deleting a single item from component_library by its ID.
  */
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
 import { FolderType, ComponentType } from '@/types';
-import { toComponentResponse, type ComponentRow } from '@/lib/promptRows';
+import {
+    deleteLibraryItem,
+    getItemType,
+    getLibraryItem,
+    libraryItemExists,
+    updateLibraryItem,
+} from '@/lib/repositories/componentsRepository';
 import { errorResponse } from '@/lib/apiValidation';
 
 interface RouteParams {
@@ -21,14 +26,8 @@ export async function GET(request: Request, { params }: RouteParams) {
     const { id } = await params;
 
     try {
-        const stmt = db.prepare('SELECT id, parent_id, name, item_type, content, component_type, is_expanded, created_at, updated_at FROM component_library WHERE id = ?');
-        const row = stmt.get(id) as ComponentRow | undefined;
-
-        if (row) {
-            return NextResponse.json(toComponentResponse(row));
-        } else {
-            return errorResponse('Item not found', 404);
-        }
+        const item = getLibraryItem(id);
+        return item ? NextResponse.json(item) : errorResponse('Item not found', 404);
     } catch (error) {
         console.error(`Error fetching item ${id}:`, error);
         return errorResponse('Failed to fetch item', 500);
@@ -44,104 +43,63 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     try {
         const body = await request.json();
-        // Add is_expanded to destructuring, and ensure expanded from FolderType is mapped to is_expanded
-        const { name, parent_id, item_type, content, component_type, expanded } = body as Partial<FolderType & ComponentType & { expanded: boolean }>;
+        const { name, parent_id, item_type, content, component_type, expanded } =
+            body as Partial<FolderType & ComponentType & { expanded: boolean }>;
 
-        // Check if the item exists
-        const checkStmt = db.prepare('SELECT item_type FROM component_library WHERE id = ?');
-        const existingItem = checkStmt.get(id) as { item_type: string } | undefined;
-        if (!existingItem) {
+        const existingType = getItemType(id);
+        if (!existingType) {
             return errorResponse('Item not found', 404);
         }
 
-        // Validate item_type specific fields if item_type is being changed or if it's a component
-        const effectiveItemType = item_type ?? existingItem.item_type;
+        // A folder and a component disagree about which columns may be set, so
+        // the incoming body is checked against whichever type the item will be.
+        const effectiveItemType = item_type ?? existingType;
 
-        let is_expanded_db: number | null = null;
         if (effectiveItemType === 'folder') {
-            if (body.hasOwnProperty('expanded')) {
-                is_expanded_db = expanded ? 1 : 0;
+            if ('content' in body && content !== null) {
+                return errorResponse('Content must be null for folders', 400);
             }
-            if (body.hasOwnProperty('content') && content !== null) {
-                 return errorResponse('Content must be null for folders', 400);
+            if ('component_type' in body && component_type !== null) {
+                return errorResponse('Component type must be null for folders', 400);
             }
-            if (body.hasOwnProperty('component_type') && component_type !== null) {
-                 return errorResponse('Component type must be null for folders', 400);
-            }
-        } else if (effectiveItemType === 'component') {
-            // Content and component_type checks remain the same
-            if (body.hasOwnProperty('content') && content === null) {
+        } else {
+            if ('content' in body && content === null) {
                 return errorResponse('Content cannot be null for a component', 400);
             }
-            if (body.hasOwnProperty('component_type') && component_type === null) {
+            if ('component_type' in body && component_type === null) {
                 return errorResponse('Component type cannot be null for a component', 400);
             }
-            // is_expanded should be null for components
-            if (body.hasOwnProperty('expanded') && typeof expanded !== 'undefined') {
-                // Or simply ignore it, but for clarity, ensure DB stores null
-            }
         }
-        
-        const currentTimestamp = new Date().toISOString();
 
-        // Build the update query dynamically based on provided fields
-        const updates: string[] = [];
-        const values: any[] = [];
+        const updates: { column: string; value: unknown }[] = [];
 
-        if (typeof name !== 'undefined') {
-            updates.push('name = ?');
-            values.push(name);
+        if (name !== undefined) updates.push({ column: 'name', value: name });
+        if (parent_id !== undefined) updates.push({ column: 'parent_id', value: parent_id });
+        if (item_type !== undefined) updates.push({ column: 'item_type', value: item_type });
+        if (content !== undefined) {
+            updates.push({ column: 'content', value: effectiveItemType === 'component' ? content : null });
         }
-        if (typeof parent_id !== 'undefined') { // parent_id can be null
-            updates.push('parent_id = ?');
-            values.push(parent_id);
+        if (component_type !== undefined) {
+            updates.push({
+                column: 'component_type',
+                value: effectiveItemType === 'component' ? component_type : null,
+            });
         }
-        if (typeof item_type !== 'undefined') {
-            updates.push('item_type = ?');
-            values.push(item_type);
-        }
-        if (typeof content !== 'undefined') { // content can be null for folders
-            updates.push('content = ?');
-            values.push(effectiveItemType === 'component' ? content : null);
-        }
-        if (typeof component_type !== 'undefined') { // component_type can be null for folders
-            updates.push('component_type = ?');
-            values.push(effectiveItemType === 'component' ? component_type : null);
-        }
-        // Add is_expanded to updates if provided for a folder
-        if (effectiveItemType === 'folder' && body.hasOwnProperty('expanded')) {
-            updates.push('is_expanded = ?');
-            values.push(is_expanded_db);
-        } else if (effectiveItemType === 'component') {
-            // Ensure is_expanded is set to NULL if item_type is component or being changed to component
-            if (item_type === 'component' || (existingItem.item_type !== 'component' && effectiveItemType === 'component')) {
-                updates.push('is_expanded = NULL');
-            }
+
+        // is_expanded belongs to folders; a component always stores null.
+        if (effectiveItemType === 'folder' && 'expanded' in body) {
+            updates.push({ column: 'is_expanded', value: expanded ? 1 : 0 });
+        } else if (effectiveItemType === 'component' && existingType !== 'component') {
+            updates.push({ column: 'is_expanded', value: null });
         }
 
         if (updates.length === 0) {
             return errorResponse('No fields to update provided', 400);
         }
 
-        updates.push('updated_at = ?');
-        values.push(currentTimestamp);
-        values.push(id); // For the WHERE clause
+        const updated = updateLibraryItem(id, updates);
 
-        const query = `UPDATE component_library SET ${updates.join(', ')} WHERE id = ?`;
-        const stmt = db.prepare(query);
-        stmt.run(...values);
-
-        // Retrieve the updated item to return it
-        const updatedItemStmt = db.prepare('SELECT id, parent_id, name, item_type, content, component_type, is_expanded, created_at, updated_at FROM component_library WHERE id = ?');
-        const updatedRow = updatedItemStmt.get(id) as ComponentRow | undefined;
-
-        if (updatedRow) {
-            return NextResponse.json(toComponentResponse(updatedRow));
-        } else {
-            // Should not happen if update was successful and item existed
-            return errorResponse('Failed to retrieve updated item', 500);
-        }
-
+        return updated ? NextResponse.json(updated) : errorResponse('Failed to retrieve updated item', 500);
     } catch (error) {
         console.error(`Error updating item ${id}:`, error);
         return errorResponse('Failed to update item', 500);
@@ -156,22 +114,13 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     const { id } = await params;
 
     try {
-
-        // Check if the item exists
-        const checkStmt = db.prepare('SELECT id FROM component_library WHERE id = ?');
-        const existingItem = checkStmt.get(id);
-        if (!existingItem) {
+        if (!libraryItemExists(id)) {
             return errorResponse('Item not found', 404);
         }
 
-        const stmt = db.prepare('DELETE FROM component_library WHERE id = ?');
-        const result = stmt.run(id);
-
-        if (result.changes > 0) {
-            return NextResponse.json({ message: 'Item deleted successfully' });
-        } else {
-            return errorResponse('Item not found or already deleted', 404);
-        }
+        return deleteLibraryItem(id)
+            ? NextResponse.json({ message: 'Item deleted successfully' })
+            : errorResponse('Item not found or already deleted', 404);
     } catch (error) {
         console.error(`Error deleting item ${id}:`, error);
         return errorResponse('Failed to delete item', 500);

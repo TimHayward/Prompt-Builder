@@ -58,6 +58,17 @@ const openDatabase = (): Database.Database => {
   }
 };
 
+/**
+ * Runs work inside one transaction
+ *
+ * Lets a caller group repository calls atomically without reaching for the
+ * connection itself — the transaction boundary is the caller's decision, the
+ * database handle is not its business.
+ *
+ * @param work - Called once; its result is returned
+ */
+export const runInTransaction = <T>(work: () => T): T => openDatabase().transaction(work)();
+
 /** Closes the connection so the next query opens the database afresh. */
 export const closeDatabase = (): void => {
   dbInstance?.close();
