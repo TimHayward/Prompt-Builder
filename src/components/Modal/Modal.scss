@@ -635,3 +635,39 @@ small {
     margin: 0;
   }
 }
+
+// Export and import, which is a restore: destructive, so it reads plainly.
+.library-backup {
+  .backup-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+
+    button {
+      @include mixins.flex(row, center, center);
+      gap: 0.3rem;
+      color: colors.$text-color;
+      background-color: rgba(0, 0, 0, 0.25);
+      border: 1px solid colors.$dark-gray;
+      border-radius: 4px;
+      padding: 0.4rem 0.75rem;
+      cursor: pointer;
+
+      &:hover:not(:disabled) {
+        background-color: rgba(0, 0, 0, 0.4);
+        border-color: colors.$accent-color;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+    }
+  }
+
+  .backup-note {
+    font-size: typography.$font-size-xs;
+    color: rgba(colors.$text-color, 0.55);
+    margin: 0.5rem 0 0;
+  }
+}

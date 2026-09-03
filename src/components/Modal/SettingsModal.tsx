@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import ModalBase from './ModalBase';
+import LibraryBackup from './LibraryBackup';
 import { useAppContext } from '../../contexts/AppContext';
 import Switch from '@mui/material/Switch';
 import { SectionTypeValue } from '../../lib/frameworks';
@@ -89,6 +90,8 @@ const SettingsModal: React.FC = () => {
             placeholder="Optional system prompt to include..."
           />
         </div>
+
+        <LibraryBackup />
 
         <div className="form-actions">
           <button type="button" onClick={() => setSettingsModalOpen(false)}>

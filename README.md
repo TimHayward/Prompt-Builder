@@ -42,6 +42,13 @@ Your prompts, components and working values live in `data/prompt_builder.db`,
 which is git-ignored — see [docs/database.md](docs/database.md) for where it
 lives, how migrations work, and how to back it up safely.
 
+Settings → **Library backup** exports the whole library as JSON and imports one
+back. Importing replaces the library rather than adding to it, so export first
+if what you have still matters. Copying the database file is the other kind of
+backup, and needs care while the app is running: WAL keeps recent transactions
+in a sidecar file, so read
+[docs/database.md](docs/database.md#backing-up) before copying anything.
+
 ### With Docker
 
 ```bash

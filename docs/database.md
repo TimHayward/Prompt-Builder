@@ -58,6 +58,25 @@ renumber a released migration — installations that ran it will not run it agai
 
 ## Backing up
 
+There are two kinds of backup, and they are not interchangeable.
+
+**Export library** — Settings → Library backup → Export library — writes a JSON
+file holding the prompts with their sections and variable definitions, the
+component tree and the settings. It is the portable one: it survives a schema
+change, can be read on another machine, and can be inspected in a text editor.
+It does **not** hold the values entered while using a prompt, because those
+belong to a use rather than to the library. **Import library** restores such a
+file, replacing the whole library — it is a restore, not a merge, so export
+first if the current library still matters.
+
+The file carries a `schemaVersion` of its own, separate from the database's,
+so Prompt Builder can read the exports it wrote before.
+
+**A database file copy** is the whole installation, working values included.
+It is exact, and tied to the schema version it was taken at.
+
+### Copying the database safely
+
 Do not copy `prompt_builder.db` on its own while the app is running: with WAL,
 recent transactions may live in the `-wal` file, and a copy without it can be
 missing them or be inconsistent.

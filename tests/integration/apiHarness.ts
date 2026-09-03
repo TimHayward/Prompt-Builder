@@ -18,6 +18,8 @@ import path from 'node:path';
 export type ApiResult<T = any> = {
   status: number;
   body: T;
+  /** The response itself, for the routes whose headers are part of the answer. */
+  response: Response;
 };
 
 type RouteHandler = (request: Request, context: { params: Promise<any> }) => Promise<Response>;
@@ -102,7 +104,7 @@ const readResponse = async <T>(response: Response): Promise<ApiResult<T>> => {
     body = text;
   }
 
-  return { status: response.status, body: body as T };
+  return { status: response.status, body: body as T, response };
 };
 
 /**
