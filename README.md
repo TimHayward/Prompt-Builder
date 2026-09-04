@@ -59,6 +59,29 @@ Builds a production image and serves it on port 3000, with the database on a
 named volume. A failed database initialisation stops the container rather than
 serving a half-working application.
 
+The image is built locally and never published, so `promptbuilder:latest` is a
+name for the build on this host — there is no registry behind it. Anything that
+tries to _pull_ it fails with:
+
+```text
+pull access denied for promptbuilder, repository does not exist
+```
+
+### With Portainer
+
+Portainer pulls before it brings a stack up, which is what used to produce the
+error above. The compose file sets `pull_policy: build` so that a pull skips
+this image instead of failing — deploy the stack with building enabled and it
+comes up.
+
+`pull_policy` needs Compose v2.22 or newer. On an older Portainer the pull will
+still fail, in which case either leave the **re-pull image** option off when
+redeploying, or build the tag on the host first so it already exists locally:
+
+```bash
+docker compose build
+```
+
 ## Variables 🔤
 
 Anything wrapped in double braces becomes an editable field in the Variables

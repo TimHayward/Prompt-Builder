@@ -44,6 +44,49 @@ jobs:
       - name: Build
         run: npm run build
 
+  # The image is the one thing the jobs above cannot speak for: they all run
+  # from the repository, where every path resolves. The container copies a
+  # subset, and has shipped unable to start because of it.
+  container:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build the image
+        run: docker build -t prompt-builder:ci .
+
+      # Building is not the test. The image that could not resolve its migration
+      # module built perfectly and then died on its first command.
+      - name: Start it
+        run: docker run -d --name prompt-builder-ci -p 3000:3000 prompt-builder:ci
+
+      # /api/settings opens the database, so an answer here means db:init ran and
+      # the schema is usable. A static page would reply without touching SQLite.
+      - name: Wait for the app to answer
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/api/settings > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "The application never answered on port 3000."
+          exit 1
+
+      - name: Check the database was initialised
+        run: docker logs prompt-builder-ci 2>&1 | grep -q 'Database initialization complete'
+
+      # Printed whatever happened: on a failure this is the only account of why
+      # the container stopped.
+      - name: Container logs
+        if: always()
+        run: docker logs prompt-builder-ci 2>&1 || true
+
+      - name: Stop it
+        if: always()
+        run: docker rm -f prompt-builder-ci || true
+
   # Separate job: the browser download and a production build make this the slow
   # half, and a failure here should be distinguishable from a unit test failure.
   e2e:

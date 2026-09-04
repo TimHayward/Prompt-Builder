@@ -4,7 +4,12 @@ services:
       context: .
       dockerfile: Dockerfile
 
+    # Built here, never fetched: this tag names the local build and has no
+    # registry behind it. A deploy that tries to pull it fails with "pull access
+    # denied for promptbuilder", which is why Portainer has to build the stack
+    # rather than re-pull it.
     image: promptbuilder:latest
+    pull_policy: build
     container_name: prompt-builder
 
     restart: always

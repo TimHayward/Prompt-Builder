@@ -30,6 +30,11 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/scripts ./scripts
+# db:init runs the same migration list the application does, and resolves it as
+# ../src/lib/migrations.mjs, so that one shared module has to travel with the
+# script. Nothing else from src belongs here: Next inlines the migrations into
+# the server bundle at build time, so the running app never reads this copy.
+COPY --from=builder /app/src/lib/migrations.mjs ./src/lib/migrations.mjs
 COPY --from=builder /app/next.config.ts ./next.config.ts
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --from=builder /app/package.json ./package.json
