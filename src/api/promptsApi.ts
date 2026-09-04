@@ -25,15 +25,27 @@ export const fetchPrompts = async (): Promise<Prompt[]> => {
   return stored.map(withEditorState);
 };
 
-/** The prompt that was open last time, from app_config. */
-export const fetchActivePromptId = async (): Promise<string | null> => {
-  const { activePromptId } = await apiRequest<{ activePromptId: string | null }>('/api/settings');
-  return activePromptId;
+/** Which prompts were open as tabs, and which of them was showing. */
+export type OpenTabs = {
+  activePromptId: string | null;
+  openPromptIds: string[];
 };
 
-/** Records which prompt is open. */
-export const saveActivePromptId = (activePromptId: string | null): Promise<unknown> =>
-  apiSend('/api/settings', 'POST', { activePromptId });
+/** The tabs that were open last time, from app_config. */
+export const fetchOpenTabs = async (): Promise<OpenTabs> => {
+  const { activePromptId, openPromptIds } = await apiRequest<{
+    activePromptId: string | null;
+    openPromptIds?: string[];
+  }>('/api/settings');
+
+  // openPromptIds is optional on the way in: a database migrating from before
+  // version 8 has no tab list yet, and the caller decides what to open instead.
+  return { activePromptId, openPromptIds: openPromptIds ?? [] };
+};
+
+/** Records which prompts are open, and which one is showing. */
+export const saveOpenTabs = ({ activePromptId, openPromptIds }: OpenTabs): Promise<unknown> =>
+  apiSend('/api/settings', 'POST', { activePromptId, openPromptIds });
 
 export const createPrompt = async (prompt: CreatePromptRequest): Promise<Prompt> =>
   withEditorState(await apiSend<Prompt>('/api/prompts', 'POST', prompt));

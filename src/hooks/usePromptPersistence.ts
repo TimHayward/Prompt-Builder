@@ -16,7 +16,7 @@ import { useToast } from '@/contexts/ToastContext';
 import { useSaveState } from '@/contexts/SaveStateContext';
 import { describeApiFailure } from '@/lib/apiClient';
 import { debounce, debounceKeyed } from '@/utils/debounce';
-import { saveActivePromptId, savePrompt } from '@/api/promptsApi';
+import { saveOpenTabs, savePrompt, type OpenTabs } from '@/api/promptsApi';
 import type { Prompt } from '@/types';
 
 const SAVE_DELAY_MS = 1000;
@@ -26,8 +26,11 @@ export type PromptPersistence = {
   queueSave: (prompt: Prompt) => void;
   /** Drops a queued save, e.g. for a prompt being deleted. */
   cancelSave: (promptId: string) => void;
-  /** Queues a write of which prompt is open. */
-  queueActivePromptId: (promptId: string | null) => void;
+  /**
+   * Queues a write of which prompts are open and which one is showing. Both
+   * travel together so one POST records the tab strip.
+   */
+  queueOpenTabs: (tabs: OpenTabs) => void;
 };
 
 /**
@@ -81,17 +84,17 @@ export const usePromptPersistence = (
     []
   );
 
-  const saveActiveDebounced = useMemo(
+  const saveTabsDebounced = useMemo(
     () =>
-      debounce(async (promptId: string | null) => {
+      debounce(async (tabs: OpenTabs) => {
         if (!isReadyRef.current() || suppressRef.current()) return;
 
         try {
-          await saveActivePromptId(promptId);
+          await saveOpenTabs(tabs);
         } catch (error) {
-          console.error('Failed to save active prompt ID:', error);
+          console.error('Failed to save the open tabs:', error);
           showToastRef.current(
-            describeApiFailure(error, 'Could not remember which prompt is open.')
+            describeApiFailure(error, 'Could not remember which prompts are open.')
           );
         }
       }, SAVE_DELAY_MS),
@@ -113,8 +116,8 @@ export const usePromptPersistence = (
         savePromptDebounced.cancel(promptId);
         saveStateRef.current.markSaved(`prompt:${promptId}`);
       },
-      queueActivePromptId: (promptId: string | null) => saveActiveDebounced(promptId),
+      queueOpenTabs: (tabs: OpenTabs) => saveTabsDebounced(tabs),
     }),
-    [savePromptDebounced, saveActiveDebounced]
+    [savePromptDebounced, saveTabsDebounced]
   );
 };

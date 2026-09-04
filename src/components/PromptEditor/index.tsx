@@ -26,6 +26,7 @@ import { v4 as uuidv4 } from 'uuid';
 const PromptEditor: React.FC = () => {
   const {
     prompts,
+    openPromptIds,
     activePromptId,
     setActivePromptId,
     addPrompt,
@@ -69,6 +70,11 @@ const PromptEditor: React.FC = () => {
 
   // Get active prompt
   const activePrompt = prompts.find(p => p.id === activePromptId);
+
+  // The tabs show what is open, in tab order — not the whole library.
+  const openPrompts = openPromptIds
+    .map(id => prompts.find(prompt => prompt.id === id))
+    .filter((prompt): prompt is NonNullable<typeof prompt> => prompt !== undefined);
 
   // Effect to focus main title input when it becomes editable
   useEffect(() => {
@@ -234,10 +240,18 @@ const PromptEditor: React.FC = () => {
   }, [activePromptId, activePrompt?.sections, getPromptVariableNames]);
 
   if (!activePrompt) {
+    // Two different nothings: an empty tab strip over a full library, and a
+    // library with nothing in it yet. Only the second one means "get started".
+    const hasSavedPrompts = prompts.length > 0;
+
     return (
       <div id="content">
         <div className="empty-state">
-          <p>No prompts available. Create a new prompt to get started.</p>
+          <p>
+            {hasSavedPrompts
+              ? 'No prompt is open. Open one from Saved Prompts, or create a new prompt.'
+              : 'No prompts yet. Create a new prompt to get started.'}
+          </p>
           <button onClick={() => addPrompt()}>Create Prompt</button>
         </div>
       </div>
@@ -248,7 +262,7 @@ const PromptEditor: React.FC = () => {
     <div id="content">
       {/* Tabs for prompt navigation */}
       <PromptTabs
-        prompts={prompts}
+        prompts={openPrompts}
         activePromptId={activePromptId}
         setActivePromptId={setActivePromptId}
         // Props for tab-specific editing

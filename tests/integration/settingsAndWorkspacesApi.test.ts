@@ -103,6 +103,74 @@ describe('settings', () => {
   });
 });
 
+describe('open tabs', () => {
+  it('are empty until a tab is recorded', async () => {
+    const read = await call(settings.GET);
+
+    expect(read.body.openPromptIds).toEqual([]);
+  });
+
+  it('round-trip in the order they were sent', async () => {
+    const first = await createPrompt('Tab one');
+    const second = await createPrompt('Tab two');
+
+    await call(settings.POST, {
+      method: 'POST',
+      body: { openPromptIds: [second.id, first.id] },
+    });
+
+    // Tab order is the user's arrangement, so it is stored as given.
+    expect((await call(settings.GET)).body.openPromptIds).toEqual([second.id, first.id]);
+  });
+
+  it('drop ids for prompts that do not exist', async () => {
+    const kept = await createPrompt('Still here');
+
+    const saved = await call(settings.POST, {
+      method: 'POST',
+      body: { openPromptIds: [kept.id, 'no-such-prompt'] },
+    });
+
+    // A JSON column cannot cascade, so the repository filters instead — a tab
+    // that cannot open is worse than a tab that is missing.
+    expect(saved.body.openPromptIds).toEqual([kept.id]);
+  });
+
+  it('lose a tab when its prompt is deleted', async () => {
+    const doomed = await createPrompt('Doomed tab');
+    const kept = await createPrompt('Kept tab');
+    await call(settings.POST, {
+      method: 'POST',
+      body: { openPromptIds: [doomed.id, kept.id] },
+    });
+
+    await callWithParams(prompt.DELETE, { method: 'DELETE', params: { id: doomed.id } });
+
+    expect((await call(settings.GET)).body.openPromptIds).toEqual([kept.id]);
+  });
+
+  it('keep the stored tabs when only the settings are sent', async () => {
+    const open = await createPrompt('Untouched tab');
+    await call(settings.POST, { method: 'POST', body: { openPromptIds: [open.id] } });
+
+    await call(settings.POST, {
+      method: 'POST',
+      body: {
+        settings: {
+          autoSave: true,
+          defaultPromptName: 'New Prompt',
+          defaultSectionType: 'instruction',
+          theme: 'dark',
+          markdownPromptingEnabled: false,
+          systemPrompt: 'Guide',
+        },
+      },
+    });
+
+    expect((await call(settings.GET)).body.openPromptIds).toEqual([open.id]);
+  });
+});
+
 describe('working values', () => {
   it('are empty for a prompt that has never been used', async () => {
     const created = await createPrompt('Unused');

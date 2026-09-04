@@ -11,6 +11,7 @@ import { useTreeContext } from '@/contexts/TreeContext';
 import { useAppContext } from '@/contexts/AppContext';
 import TreeView from './TreeView';
 import FileControls from './FileControls';
+import SavedPrompts from './SavedPrompts';
 import './SideBar.scss';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
@@ -147,10 +148,10 @@ const Sidebar: React.FC = () => {
         <button
           className="import-prompt-btn"
           onClick={() => mdInputRef.current?.click()}
-          title="Import a Markdown prompt"
+          title="Import a Markdown file as prompt components"
         >
           <UploadFileIcon fontSize="inherit" />
-          <span>Import Prompt</span>
+          <span>Import Prompt Component</span>
         </button>
       </div>
       <div className="tree-container">
@@ -173,6 +174,7 @@ const Sidebar: React.FC = () => {
           handleMoveNodeDown={handleMoveNodeDown}
         />
       </div>
+      <SavedPrompts />
       <FileControls />
     </div>
   );

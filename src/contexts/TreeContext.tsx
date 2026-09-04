@@ -45,6 +45,19 @@ const INITIAL_TREE_DATA: FolderType[] = [
   },
 ];
 
+/**
+ * Text on its way to becoming a component, when the component editor is opened
+ * with something already in hand rather than blank — a section being saved to
+ * the library, say. `source` records where it came from, so that section can be
+ * told which component it produced.
+ */
+export type ComponentDraft = {
+  name: string;
+  content: string;
+  componentType: ComponentType['componentType'];
+  source?: { promptId: string; sectionId: string };
+};
+
 // Context type definition
 type TreeContextType = {
   treeData: FolderType[];
@@ -55,8 +68,14 @@ type TreeContextType = {
   setComponentModalOpen: (open: boolean) => void;
   componentBeingEdited: ComponentType | null;
   setComponentBeingEdited: React.Dispatch<React.SetStateAction<ComponentType | null>>;
+  /** What a newly opened component editor should start from, if not blank. */
+  componentDraft: ComponentDraft | null;
+  setComponentDraft: React.Dispatch<React.SetStateAction<ComponentDraft | null>>;
   handleAddFolder: (parentId: string, name: string) => void;
-  handleAddComponent: (parentId: string, componentData: Omit<ComponentType, 'id' | 'type'>) => void;
+  handleAddComponent: (
+    parentId: string,
+    componentData: Omit<ComponentType, 'id' | 'type'>
+  ) => ComponentType;
   handleUpdateComponent: (component: ComponentType) => void;
   handleDeleteNode: (nodeId: string) => void;
   handleNodeDrop: (draggedNodeId: string, targetNodeId: string) => void;
@@ -87,6 +106,7 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
   const [isComponentModalOpen, setComponentModalOpen] = useState(false);
   const [componentBeingEdited, setComponentBeingEdited] = useState<ComponentType | null>(null);
+  const [componentDraft, setComponentDraft] = useState<ComponentDraft | null>(null);
   const { appInitialized } = useAppContext();
   const { showToast } = useToast();
   const saveState = useSaveState();
@@ -401,10 +421,16 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
     // saveTreeToApi will be called by the useEffect watching treeData
   };
 
+  /**
+   * Adds a component to a folder
+   *
+   * @returns The component as created, so a caller that needs to refer to it —
+   *   a section recording which component it was saved as — has its id.
+   */
   const handleAddComponent = (
     parentId: string,
     componentData: Omit<ComponentType, 'id' | 'type'>
-  ) => {
+  ): ComponentType => {
     const newComponent: ComponentType = {
       ...componentData,
       id: uuidv4(),
@@ -414,6 +440,7 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
     const newTreeData = insertNode(treeDataRef.current, parentId, newComponent);
     setTreeData(newTreeData);
     // saveTreeToApi will be called by the useEffect watching treeData
+    return newComponent;
   };
 
   const handleUpdateComponent = (componentToUpdate: ComponentType) => {
@@ -516,6 +543,8 @@ export const TreeProvider = ({ children }: TreeProviderProps) => {
         setComponentModalOpen,
         componentBeingEdited,
         setComponentBeingEdited,
+        componentDraft,
+        setComponentDraft,
         handleAddFolder,
         handleAddComponent,
         handleUpdateComponent,

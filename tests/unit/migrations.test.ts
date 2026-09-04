@@ -79,6 +79,36 @@ describe('migrate', () => {
     expect(database.prepare('SELECT name FROM prompts').get()).toEqual({ name: 'Kept' });
   });
 
+  it('restores the prompt that was open as the one tab, for a database with no tab list', () => {
+    const database = legacyDatabase();
+    database.prepare("INSERT INTO prompts (id, name, sections) VALUES ('p1', 'Kept', '[]')").run();
+    database
+      .prepare(
+        "INSERT INTO app_config (id, settings_json, active_prompt_id) VALUES (1, '{}', 'p1')"
+      )
+      .run();
+
+    migrate(database);
+
+    // Version 8's alternative was reopening every prompt that exists, which is
+    // the behaviour the open-tab set was introduced to end.
+    expect(columnsOf(database, 'app_config')).toContain('open_prompt_ids');
+    expect(database.prepare('SELECT open_prompt_ids FROM app_config WHERE id = 1').get()).toEqual({
+      open_prompt_ids: '["p1"]',
+    });
+  });
+
+  it('leaves the tab list empty when no prompt was open', () => {
+    const database = legacyDatabase();
+    database.prepare("INSERT INTO app_config (id, settings_json) VALUES (1, '{}')").run();
+
+    migrate(database);
+
+    expect(database.prepare('SELECT open_prompt_ids FROM app_config WHERE id = 1').get()).toEqual({
+      open_prompt_ids: '[]',
+    });
+  });
+
   it('reports the version through PRAGMA user_version, so any client can read it', () => {
     const database = freshDatabase();
     migrate(database);

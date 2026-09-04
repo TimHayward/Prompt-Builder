@@ -329,6 +329,34 @@ const mergeTreeDataRecursive = (
   return mergedChildren;
 };
 
+/** A folder, and how deep it sits, for a picker that shows the hierarchy. */
+export type FolderChoice = {
+  id: string;
+  name: string;
+  /** 0 for a root folder, 1 for its children, and so on. */
+  depth: number;
+};
+
+/**
+ * Lists every folder in the tree, depth first, in the order it is displayed
+ *
+ * Components are skipped: this exists to answer "which folder should this go
+ * in", and only folders can hold anything.
+ *
+ * @param tree The folder tree, roots included
+ * @param depth Depth of the nodes passed in; callers use the default
+ * @returns One entry per folder, parents before their children
+ */
+export const listFolders = (
+  tree: (FolderType | ComponentType)[],
+  depth: number = 0
+): FolderChoice[] =>
+  tree.flatMap(node =>
+    node.type === 'folder'
+      ? [{ id: node.id, name: node.name, depth }, ...listFolders(node.children, depth + 1)]
+      : []
+  );
+
 // Helper function to find a node by ID in the tree
 export const findNodeById = (tree: FolderType[], nodeId: string): TreeNode | null => {
   for (const node of tree) {

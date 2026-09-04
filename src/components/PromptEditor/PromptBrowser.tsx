@@ -47,7 +47,7 @@ const describeMatch = (fields: MatchField[]): string => {
 };
 
 const PromptBrowser: React.FC<PromptBrowserProps> = ({ isOpen, onClose }) => {
-  const { prompts, setActivePromptId } = usePromptContext();
+  const { prompts, openPrompt } = usePromptContext();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<PromptFilter>('all');
   const [tag, setTag] = useState<string | null>(null);
@@ -71,7 +71,8 @@ const PromptBrowser: React.FC<PromptBrowserProps> = ({ isOpen, onClose }) => {
   const tags = useMemo(() => collectTags(prompts), [prompts]);
 
   const choose = (promptId: string) => {
-    setActivePromptId(promptId);
+    // A result may not be open, so this opens as well as activates.
+    openPrompt(promptId);
     onClose();
   };
 

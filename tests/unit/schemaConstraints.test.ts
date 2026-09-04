@@ -63,3 +63,29 @@ describe('app_config.active_prompt_id', () => {
     });
   });
 });
+
+describe('app_config.open_prompt_ids', () => {
+  it('defaults to an empty tab strip', () => {
+    db.prepare("INSERT INTO app_config (id, settings_json) VALUES (1, '{}')").run();
+
+    expect(db.prepare('SELECT open_prompt_ids FROM app_config WHERE id = 1').get()).toEqual({
+      open_prompt_ids: '[]',
+    });
+  });
+
+  it('cannot cascade, which is why the repository filters what it reads', () => {
+    db.prepare("INSERT INTO prompts (id, name, sections) VALUES ('p1', 'One', '[]')").run();
+    db.prepare(
+      `INSERT INTO app_config (id, settings_json, open_prompt_ids)
+       VALUES (1, '{}', '["p1"]')`
+    ).run();
+
+    db.prepare('DELETE FROM prompts WHERE id = ?').run('p1');
+
+    // Documents the reason settingsRepository drops unknown ids on read: a JSON
+    // array carries no foreign key, so the stale id is still sitting here.
+    expect(db.prepare('SELECT open_prompt_ids FROM app_config WHERE id = 1').get()).toEqual({
+      open_prompt_ids: '["p1"]',
+    });
+  });
+});

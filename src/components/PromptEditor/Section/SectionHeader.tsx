@@ -8,9 +8,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Section } from '@/types';
 import { usePromptContext } from '@/contexts/PromptContext';
+import { useTreeContext } from '@/contexts/TreeContext';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import CloseIcon from '@mui/icons-material/Close';
+import LibraryAddOutlinedIcon from '@mui/icons-material/LibraryAddOutlined';
 import {
   FRAMEWORKS,
   getFramework,
@@ -22,6 +24,12 @@ import {
 interface SectionHeaderProps {
   section: Section;
   promptId: string;
+  /**
+   * The text the section is showing, which in 'using' mode is this use's
+   * override rather than the stored content. What saving to the library acts
+   * on, so the button follows what the user can see.
+   */
+  shownContent: string;
   onToggle: () => void;
   onDelete: () => void;
   nameInputRefCallback?: (el: HTMLInputElement | null) => void; // Added for focusing
@@ -30,11 +38,13 @@ interface SectionHeaderProps {
 const SectionHeader: React.FC<SectionHeaderProps> = ({
   section,
   promptId,
+  shownContent,
   onToggle,
   onDelete,
   nameInputRefCallback, // Added for focusing
 }) => {
   const { updateSection } = usePromptContext();
+  const { setComponentBeingEdited, setComponentDraft, setComponentModalOpen } = useTreeContext();
   const [isEditing, setIsEditing] = useState(section.editingHeader || false); // Initialize with section.editingHeader
   const [editName, setEditName] = useState(section.name);
   const [editType, setEditType] = useState(section.type);
@@ -158,6 +168,29 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
     setIsEditing(false);
   };
 
+  /**
+   * Opens the component editor on this section's text, so it can be saved into
+   * the library and reused. The section is not linked to what comes out — the
+   * modal records it as a copy origin, and linking stays an explicit choice.
+   *
+   * The text taken is what the section is showing. In 'using' mode — the
+   * default — a section is typed into as an override, so reading the stored
+   * content here would offer to save text the user cannot see, and would treat
+   * a section they had just filled in as empty.
+   */
+  const saveAsComponent = (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    setComponentBeingEdited(null);
+    setComponentDraft({
+      name: section.name,
+      content: shownContent,
+      componentType: section.type,
+      source: { promptId, sectionId: section.id },
+    });
+    setComponentModalOpen(true);
+  };
+
   // Handle key press in edit mode
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -227,6 +260,15 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
 
       {!isEditing && (
         <div className="section-actions" onClick={e => e.stopPropagation()}>
+          <button
+            className="action-btn save-component-btn"
+            onClick={saveAsComponent}
+            title="Save as prompt component"
+            aria-label={`Save ${section.name || 'section'} as a prompt component`}
+            disabled={!shownContent.trim()}
+          >
+            <LibraryAddOutlinedIcon fontSize="small" />
+          </button>
           <button className="action-btn delete-btn" onClick={onDelete} title="Delete Section">
             <CloseIcon fontSize="small" />
           </button>

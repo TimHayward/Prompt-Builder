@@ -413,6 +413,22 @@
             color: colors.$text-color;
           }
         }
+
+        .save-component-btn {
+          color: colors.$light-gray;
+          margin-right: 0.25rem;
+
+          &:hover:not(:disabled) {
+            color: colors.$accent-color;
+          }
+
+          // An empty section has nothing worth saving, so the button says so
+          // rather than creating a blank component.
+          &:disabled {
+            opacity: 0.35;
+            cursor: default;
+          }
+        }
       }
 
       .section-content {

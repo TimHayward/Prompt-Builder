@@ -203,7 +203,7 @@ const ImportPromptModal: React.FC = () => {
     <ModalBase
       isOpen={isOpen}
       onClose={handleClose}
-      title="Import Prompt from Markdown"
+      title="Import Prompt Component from Markdown"
       className="import-prompt-modal"
     >
       {error && <div className="error-message">{error}</div>}

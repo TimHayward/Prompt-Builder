@@ -51,9 +51,129 @@
 
   .tree-container {
     flex: 1;
+    // Without a floor the component tree collapses to nothing as the saved
+    // prompt list grows, which is the one thing this section must not do.
+    min-height: 6rem;
     overflow-y: auto;
     padding: 0.5rem;
     @include mixins.custom-scrollbar();
+  }
+
+  // Saved prompts: the library the tabs are a working set over
+  .saved-prompts {
+    display: flex;
+    flex-direction: column;
+    // Takes what it needs up to a share of the sidebar, then scrolls its own
+    // list rather than pushing the tree off the screen.
+    flex: 0 1 auto;
+    max-height: 40%;
+    border-top: 1px solid colors.$dark-gray;
+
+    .saved-prompts-filter {
+      padding: 0 0.5rem 0.4rem;
+
+      input {
+        width: 100%;
+        padding: 0.3rem 0.5rem;
+        background-color: colors.$dark-gray;
+        color: colors.$text-color;
+        border: 1px solid transparent;
+        border-radius: 0.25rem;
+        font-size: typography.$font-size-sm;
+
+        &:focus {
+          outline: none;
+          border-color: colors.$accent-color;
+        }
+      }
+    }
+
+    .saved-prompts-list {
+      flex: 1;
+      overflow-y: auto;
+      margin: 0;
+      padding: 0 0.5rem 0.5rem;
+      list-style: none;
+      @include mixins.custom-scrollbar();
+    }
+
+    .saved-prompt {
+      @include mixins.flex(row, space-between, center);
+      border-radius: 4px;
+      border: 1px solid transparent;
+
+      &:hover {
+        background-color: colors.$hover-gray;
+      }
+
+      &.is-active {
+        background-color: colors.$dark-gray;
+        border-color: rgba(colors.$accent-color, 0.5);
+      }
+
+      .saved-prompt-open {
+        @include mixins.btn();
+        @include mixins.flex(row, flex-start, center);
+        gap: 0.3rem;
+        flex: 1;
+        min-width: 0;
+        padding: 0.2rem 0.4rem;
+        color: colors.$text-color;
+        text-align: left;
+        font-size: typography.$font-size-sm;
+      }
+
+      // A fixed-width mark keeps the names aligned whether a prompt is open
+      // or not, so the list does not shift as tabs come and go.
+      .saved-prompt-open-mark {
+        flex: 0 0 0.6rem;
+        color: colors.$accent-color;
+        font-size: 0.6rem;
+        line-height: 1;
+      }
+
+      .saved-prompt-star {
+        flex: 0 0 auto;
+        color: colors.$role-color;
+      }
+
+      .saved-prompt-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .saved-prompt-actions {
+        display: none;
+        align-items: center;
+
+        .action-btn {
+          @include mixins.btn();
+          padding: 0.15rem;
+          margin-right: 0.15rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+
+          &:hover {
+            background-color: colors.$hover-gray-light;
+            color: colors.$warning-color;
+          }
+        }
+      }
+
+      &:hover .saved-prompt-actions {
+        display: flex;
+      }
+    }
+
+    .saved-prompts-empty {
+      margin: 0;
+      padding: 0 0.75rem 0.6rem;
+      color: colors.$light-gray;
+      font-size: typography.$font-size-sm;
+    }
   }
 
   // Tree view styles

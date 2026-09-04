@@ -152,14 +152,16 @@ export const settingsSchema = z.object({
   systemPrompt: z.string(),
 });
 
-/** Either half may be sent on its own; the route merges with what is stored. */
+/** Any part may be sent on its own; the route merges with what is stored. */
 export const updateSettingsRequestSchema = z
   .object({
     settings: settingsSchema.optional(),
     activePromptId: z.string().nullable().optional(),
+    /** The prompts open as tabs, in tab order. */
+    openPromptIds: z.array(z.string().min(1)).optional(),
   })
-  .refine(body => 'settings' in body || 'activePromptId' in body, {
-    message: 'Settings or activePromptId must be provided',
+  .refine(body => 'settings' in body || 'activePromptId' in body || 'openPromptIds' in body, {
+    message: 'Settings, activePromptId or openPromptIds must be provided',
   });
 
 export type PromptWorkspace = z.infer<typeof workspaceSchema>;
@@ -173,6 +175,7 @@ export type PromptResponse = z.infer<typeof promptSchema>;
 export type SettingsResponse = {
   settings: z.infer<typeof settingsSchema>;
   activePromptId: string | null;
+  openPromptIds: string[];
 };
 
 /** The shape every failing route returns. */

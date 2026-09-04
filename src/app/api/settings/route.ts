@@ -20,7 +20,7 @@ const DEFAULT_SETTINGS: Settings = {
 
 /**
  * GET /api/settings
- * Fetches the current application settings and active_prompt_id.
+ * Fetches the application settings, the active prompt, and the open tabs.
  */
 export async function GET() {
   try {
@@ -29,6 +29,7 @@ export async function GET() {
     return NextResponse.json({
       settings: config.settings ?? DEFAULT_SETTINGS,
       activePromptId: config.activePromptId,
+      openPromptIds: config.openPromptIds,
     });
   } catch (error) {
     console.error('Error fetching settings:', error);
@@ -38,7 +39,7 @@ export async function GET() {
 
 /**
  * POST /api/settings
- * Creates or updates the application settings and active_prompt_id.
+ * Creates or updates the settings, the active prompt, and the open tabs.
  */
 export async function POST(request: Request) {
   try {
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
       message: 'Settings updated successfully',
       settings: saved.settings,
       activePromptId: saved.activePromptId,
+      openPromptIds: saved.openPromptIds,
     });
   } catch (error) {
     console.error('Error updating settings:', error);

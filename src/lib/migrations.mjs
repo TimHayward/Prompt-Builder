@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS app_config (
     id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
     settings_json TEXT,
     active_prompt_id TEXT,
+    open_prompt_ids TEXT NOT NULL DEFAULT '[]',
     updated_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')),
     FOREIGN KEY (active_prompt_id) REFERENCES prompts(id) ON DELETE SET NULL
 );
@@ -217,6 +218,31 @@ export const MIGRATIONS = [
       // deleted prompt takes its revisions with it.
       database.exec(createPromptRevisionsTable);
       database.exec(createComponentRevisionsTable);
+    },
+  },
+  {
+    version: 8,
+    name: 'open prompt tabs',
+    apply(database) {
+      // Tabs used to be the whole library, so closing one had to delete the
+      // prompt. The open set becomes its own thing, and is remembered here so a
+      // restart restores the tabs rather than every prompt that exists.
+      //
+      // A JSON array cannot carry the ON DELETE SET NULL that active_prompt_id
+      // has, so settingsRepository drops ids with no prompt on read and write.
+      if (!hasColumn(database, 'app_config', 'open_prompt_ids')) {
+        database.exec(
+          "ALTER TABLE app_config ADD COLUMN open_prompt_ids TEXT NOT NULL DEFAULT '[]'"
+        );
+      }
+
+      // The prompt that was open is the one tab worth restoring for a database
+      // migrating in; anything else would reopen the whole library at once.
+      database.exec(
+        `UPDATE app_config
+         SET open_prompt_ids = JSON_ARRAY(active_prompt_id)
+         WHERE active_prompt_id IS NOT NULL AND open_prompt_ids = '[]'`
+      );
     },
   },
 ];

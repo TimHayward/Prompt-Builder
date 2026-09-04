@@ -36,6 +36,15 @@ import type { CreatePromptRequest } from '@/types/contracts';
 // Context type definition
 type PromptContextType = {
   prompts: Prompt[];
+  /**
+   * The prompts open as tabs, in tab order. A working set over the library:
+   * closing a tab takes an id out of here and leaves the prompt alone.
+   */
+  openPromptIds: string[];
+  /** Opens a prompt as a tab and makes it active; re-opening just activates. */
+  openPrompt: (promptId: string) => void;
+  /** Closes a tab. The prompt stays saved and stays in Saved Prompts. */
+  closePrompt: (promptId: string) => void;
   activePromptId: string | null;
   setActivePromptId: React.Dispatch<React.SetStateAction<string | null>>;
   addPrompt: (
@@ -98,6 +107,7 @@ type PromptProviderProps = {
 
 export const PromptProvider = ({ children }: PromptProviderProps) => {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [openPromptIds, setOpenPromptIds] = useState<string[]>([]);
   const [activePromptId, setActivePromptId] = useState<string | null>(null);
   const [newlyAddedSectionIdForFocus, setNewlyAddedSectionIdForFocus] = useState<string | null>(
     null
@@ -111,6 +121,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
   // commitPrompts, so a mutation always sees the result of the one before it —
   // React state is not readable again until the next render.
   const promptsRef = useRef(prompts);
+  const openPromptIdsRef = useRef(openPromptIds);
   const activePromptIdRef = useRef(activePromptId);
   const appInitializedRef = useRef(appInitialized);
   // Set while a new prompt is being created, so the temporary client id is not
@@ -132,6 +143,10 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
   }, [activePromptId]);
 
   useEffect(() => {
+    openPromptIdsRef.current = openPromptIds;
+  }, [openPromptIds]);
+
+  useEffect(() => {
     appInitializedRef.current = appInitialized;
   }, [appInitialized]);
 
@@ -140,6 +155,46 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     promptsRef.current = nextPrompts;
     setPrompts(nextPrompts);
   }, []);
+
+  /** Applies a new tab list to both the ref and React state. */
+  const commitOpenPromptIds = useCallback((nextOpenPromptIds: string[]) => {
+    openPromptIdsRef.current = nextOpenPromptIds;
+    setOpenPromptIds(nextOpenPromptIds);
+  }, []);
+
+  const openPrompt = useCallback(
+    (promptId: string) => {
+      if (!openPromptIdsRef.current.includes(promptId)) {
+        commitOpenPromptIds([...openPromptIdsRef.current, promptId]);
+      }
+      setActivePromptId(promptId);
+    },
+    [commitOpenPromptIds]
+  );
+
+  /**
+   * Closes a tab without touching the prompt.
+   *
+   * When the closed tab was the active one, the neighbour to its left takes
+   * over — closing a tab should land you next to where you were, not at the
+   * start of the strip. Closing the last tab leaves nothing active, which is a
+   * legitimate state now that the library outlives the tabs.
+   */
+  const closePrompt = useCallback(
+    (promptId: string) => {
+      const closingIndex = openPromptIdsRef.current.indexOf(promptId);
+      if (closingIndex === -1) return;
+
+      const remaining = openPromptIdsRef.current.filter(id => id !== promptId);
+      commitOpenPromptIds(remaining);
+
+      if (activePromptIdRef.current === promptId) {
+        const neighbour = remaining[Math.max(0, closingIndex - 1)] ?? null;
+        setActivePromptId(neighbour);
+      }
+    },
+    [commitOpenPromptIds]
+  );
 
   // Load prompts and activePromptId once the app has its settings. Deliberately
   // not keyed on the settings object: re-fetching on every settings change would
@@ -154,24 +209,37 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
         const fetchedPrompts = await promptsApi.fetchPrompts();
         commitPrompts(fetchedPrompts);
 
+        const exists = (id: string | null): boolean =>
+          id !== null && fetchedPrompts.some(prompt => prompt.id === id);
         const firstPromptId = fetchedPrompts.length > 0 ? fetchedPrompts[0].id : null;
 
         try {
-          const storedActivePromptId = await promptsApi.fetchActivePromptId();
-          const stillExists = fetchedPrompts.some(prompt => prompt.id === storedActivePromptId);
-          setActivePromptId(stillExists ? storedActivePromptId : firstPromptId);
+          const stored = await promptsApi.fetchOpenTabs();
+
+          // Ids for prompts that have since gone are dropped rather than
+          // restored as tabs that cannot open.
+          const restored = stored.openPromptIds.filter(id => exists(id));
+          const active = exists(stored.activePromptId) ? stored.activePromptId : null;
+
+          // An empty tab list beside a library that has prompts means a
+          // database from before tab persistence: open the prompt that was
+          // known to be showing, rather than all of them or none.
+          const fallback = active ?? firstPromptId;
+          const opened = restored.length > 0 ? restored : fallback ? [fallback] : [];
+
+          commitOpenPromptIds(opened);
+          setActivePromptId(active && opened.includes(active) ? active : (opened[0] ?? null));
         } catch (error) {
-          // Not fatal: fall back to the first prompt rather than losing the library.
-          console.warn(
-            'Failed to fetch the active prompt ID; defaulting to the first prompt.',
-            error
-          );
+          // Not fatal: open the first prompt rather than losing the library.
+          console.warn('Failed to fetch the open tabs; opening the first prompt.', error);
+          commitOpenPromptIds(firstPromptId ? [firstPromptId] : []);
           setActivePromptId(firstPromptId);
         }
       } catch (error) {
         console.error('Error loading initial data:', error);
         showToast(describeApiFailure(error, 'Could not load your prompts.'));
         commitPrompts([]);
+        commitOpenPromptIds([]);
         setActivePromptId(null);
       } finally {
         setIsPromptsLoading(false);
@@ -179,24 +247,33 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     };
 
     fetchInitialData();
-  }, [appInitialized, commitPrompts, showToast]);
+  }, [appInitialized, commitPrompts, commitOpenPromptIds, showToast]);
 
-  // Keep a prompt selected while any exist.
+  // Keep the tab strip honest: a tab may only name a prompt that exists, and
+  // the active prompt must be one of the open ones. No tab open is a valid
+  // state — the library is reachable from Saved Prompts either way — so this
+  // deliberately does not reopen anything to fill the gap.
   useEffect(() => {
     if (isPromptsLoading) return;
 
-    if (prompts.length === 0) {
-      setActivePromptId(null);
-    } else if (!prompts.find(prompt => prompt.id === activePromptId)) {
-      setActivePromptId(prompts[0].id);
+    const stillOpen = openPromptIds.filter(id => prompts.some(prompt => prompt.id === id));
+    // Only written when something actually went, or the effect would set state
+    // on every render and re-run itself.
+    if (stillOpen.length !== openPromptIds.length) {
+      commitOpenPromptIds(stillOpen);
+      return;
     }
-  }, [prompts, activePromptId, isPromptsLoading]);
+
+    if (activePromptId !== null && !stillOpen.includes(activePromptId)) {
+      setActivePromptId(stillOpen[0] ?? null);
+    }
+  }, [prompts, openPromptIds, activePromptId, isPromptsLoading, commitOpenPromptIds]);
 
   useEffect(() => {
     if (appInitialized && !isPromptsLoading) {
-      persistence.queueActivePromptId(activePromptId);
+      persistence.queueOpenTabs({ activePromptId, openPromptIds });
     }
-  }, [activePromptId, appInitialized, isPromptsLoading, persistence]);
+  }, [activePromptId, openPromptIds, appInitialized, isPromptsLoading, persistence]);
 
   /**
    * Applies a mutation to one prompt and persists that exact result.
@@ -260,6 +337,8 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
       };
 
       commitPrompts([...promptsRef.current, tempPrompt]);
+      // A prompt you just made should be the tab you are looking at.
+      commitOpenPromptIds([...openPromptIdsRef.current, tempClientId]);
       setActivePromptId(tempClientId);
 
       try {
@@ -267,13 +346,20 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
         commitPrompts(
           promptsRef.current.map(prompt => (prompt.id === tempClientId ? createdPrompt : prompt))
         );
+        // The temporary id is swapped in place, so the new tab keeps its
+        // position in the strip rather than jumping to the end.
+        commitOpenPromptIds(
+          openPromptIdsRef.current.map(id => (id === tempClientId ? createdPrompt.id : id))
+        );
         setActivePromptId(createdPrompt.id);
         return createdPrompt;
       } catch (error) {
         const remaining = promptsRef.current.filter(prompt => prompt.id !== tempClientId);
         commitPrompts(remaining);
+        const remainingTabs = openPromptIdsRef.current.filter(id => id !== tempClientId);
+        commitOpenPromptIds(remainingTabs);
         if (activePromptIdRef.current === tempClientId) {
-          setActivePromptId(remaining.length > 0 ? remaining[0].id : null);
+          setActivePromptId(remainingTabs[0] ?? null);
         }
         showToast(describeApiFailure(error, failureMessage));
         throw error;
@@ -281,7 +367,7 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
         isCreatingPrompt.current = false;
       }
     },
-    [commitPrompts, showToast]
+    [commitPrompts, commitOpenPromptIds, showToast]
   );
 
   const addPrompt = useCallback(
@@ -370,14 +456,13 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
         return;
       }
 
-      const remaining = promptsRef.current.filter(prompt => prompt.id !== promptId);
-      commitPrompts(remaining);
-      if (activePromptIdRef.current === promptId) {
-        // Reads the list the deletion produced, not the one before it.
-        setActivePromptId(remaining.length > 0 ? remaining[0].id : null);
-      }
+      commitPrompts(promptsRef.current.filter(prompt => prompt.id !== promptId));
+
+      // A deleted prompt cannot stay open. closePrompt reads the tab list the
+      // deletion left behind and picks the next active tab from it.
+      closePrompt(promptId);
     },
-    [commitPrompts, persistence, showToast]
+    [commitPrompts, closePrompt, persistence, showToast]
   );
 
   const reloadPrompt = useCallback(
@@ -556,6 +641,9 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
     <PromptContext.Provider
       value={{
         prompts,
+        openPromptIds,
+        openPrompt,
+        closePrompt,
         activePromptId,
         setActivePromptId,
         addPrompt,

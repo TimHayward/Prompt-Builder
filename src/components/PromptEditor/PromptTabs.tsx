@@ -2,7 +2,10 @@
 
 /**
  * PromptTabs component
- * Tab navigation between different prompts
+ *
+ * Tab navigation across the prompts that are open. The strip is a working set,
+ * not the library: closing a tab closes it, and the prompt stays in Saved
+ * Prompts. Deleting one is a deliberate act, and lives there.
  */
 
 import React from 'react';
@@ -36,24 +39,18 @@ const PromptTabs: React.FC<PromptTabsProps> = ({
   savePromptName,
   openBrowser,
 }) => {
-  const { addPrompt, deletePrompt, duplicatePrompt } = usePromptContext(); // Add duplicatePrompt
+  const { addPrompt, closePrompt, duplicatePrompt } = usePromptContext(); // Add duplicatePrompt
 
   // Handle adding a new prompt (no blank starter section)
   const handleAddPrompt = async () => {
-    const newPrompt = await addPrompt(undefined, { sections: [] });
-    setActivePromptId(newPrompt.id); // newPrompt.id is string
+    // addPrompt opens the prompt it creates, so there is nothing to activate.
+    await addPrompt(undefined, { sections: [] });
   };
 
-  // Handle deleting a prompt
-  const handleDeletePrompt = (promptId: string, e: React.MouseEvent) => {
-    // Changed promptId to string
+  // Close a tab. The prompt is untouched; it stays under Saved Prompts.
+  const handleClosePrompt = (promptId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-
-    if (prompts.length <= 1) {
-      alert('Cannot delete the only prompt. Create another prompt first.');
-      return;
-    }
-    deletePrompt(promptId); // deletePrompt expects string
+    closePrompt(promptId);
   };
 
   // Handle duplicating the current prompt
@@ -113,9 +110,10 @@ const PromptTabs: React.FC<PromptTabsProps> = ({
                 <span className="prompt-name">{prompt.name}</span>
                 <div className="tab-actions">
                   <button
-                    className="action-btn delete-btn"
-                    onClick={e => handleDeletePrompt(prompt.id, e)}
-                    title="Delete Prompt"
+                    className="action-btn close-btn"
+                    onClick={e => handleClosePrompt(prompt.id, e)}
+                    title="Close Tab"
+                    aria-label={`Close ${prompt.name}`}
                   >
                     <CloseIcon fontSize="small" />
                   </button>

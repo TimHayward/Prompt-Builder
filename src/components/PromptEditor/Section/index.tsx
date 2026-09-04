@@ -66,6 +66,13 @@ const Section: React.FC<SectionProps> = ({
   const overrides = getSectionOverrides(promptId);
   const isOverridden = section.id in overrides;
 
+  // What the textarea is showing. In 'using' mode that is the text this use
+  // asks for, which is not the stored section — so anything acting on "this
+  // section's text", such as saving it to the library, has to read this rather
+  // than section.content.
+  const shownContent =
+    editMode === 'using' ? effectiveContent(section, overrides) : section.content;
+
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -231,6 +238,7 @@ const Section: React.FC<SectionProps> = ({
       <SectionHeader
         section={section}
         promptId={promptId}
+        shownContent={shownContent}
         onToggle={() => toggleSectionOpen(promptId, section.id)}
         onDelete={() => deleteSection(promptId, section.id)}
         nameInputRefCallback={nameInputRefCallback}
@@ -242,7 +250,7 @@ const Section: React.FC<SectionProps> = ({
             ref={textAreaRef}
             // Editing the source shows the source, even when this use has
             // changed the text: that is what is being edited.
-            value={editMode === 'using' ? effectiveContent(section, overrides) : section.content}
+            value={shownContent}
             onChange={value => {
               handleContentChange({ target: { value } } as React.ChangeEvent<HTMLTextAreaElement>);
             }}

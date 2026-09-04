@@ -12,6 +12,7 @@ import RevisionHistoryModal from './RevisionHistoryModal';
 import { useTreeContext } from '../../contexts/TreeContext';
 import { usePromptContext } from '../../contexts/PromptContext';
 import { describeComponentUsage, findComponentUsage } from '../../domain/componentLinks';
+import { listFolders } from '../../utils/treeUtils';
 import {
   FRAMEWORKS,
   DEFAULT_FRAMEWORK_ID,
@@ -22,12 +23,24 @@ import {
   SectionTypeValue,
 } from '../../lib/frameworks';
 
+/**
+ * One level of indentation in the folder picker, as two non-breaking spaces.
+ *
+ * A select collapses ordinary spaces, so the hierarchy would not read. Built
+ * from the code point rather than typed, so an editor cannot quietly normalise
+ * it back into something that does not indent.
+ */
+const FOLDER_INDENT = String.fromCharCode(160, 160);
+
 const ComponentModal: React.FC = () => {
   const {
     isComponentModalOpen,
     setComponentModalOpen,
     componentBeingEdited,
+    componentDraft,
+    setComponentDraft,
     selectedNode,
+    treeData,
     handleAddComponent,
     handleUpdateComponent,
   } = useTreeContext();
@@ -36,13 +49,17 @@ const ComponentModal: React.FC = () => {
   const [componentContent, setComponentContent] = useState('');
   const [componentType, setComponentType] = useState<SectionTypeValue>(DEFAULT_TYPE);
   const [frameworkId, setFrameworkId] = useState<string>(DEFAULT_FRAMEWORK_ID);
+  const [folderId, setFolderId] = useState<string>('');
   const [error, setError] = useState('');
   // Set when a save would change linked sections, so the user is told before it
   // reaches prompts they are not looking at.
   const [pendingWarning, setPendingWarning] = useState<string | null>(null);
   const [isHistoryOpen, setHistoryOpen] = useState(false);
 
-  const { prompts } = usePromptContext();
+  const { prompts, updateSection } = usePromptContext();
+
+  // Every folder the component could go in, parents before children.
+  const folders = listFolders(treeData);
 
   // Reset form when modal opens/closes or editing component changes
   useEffect(() => {
@@ -53,6 +70,12 @@ const ComponentModal: React.FC = () => {
         setComponentContent(componentBeingEdited.content);
         setComponentType(componentBeingEdited.componentType);
         setFrameworkId(getFrameworkForType(componentBeingEdited.componentType).id);
+      } else if (componentDraft) {
+        // Opened with text already in hand, e.g. a section being saved
+        setComponentName(componentDraft.name);
+        setComponentContent(componentDraft.content);
+        setComponentType(componentDraft.componentType);
+        setFrameworkId(getFrameworkForType(componentDraft.componentType).id);
       } else {
         // Adding a new component
         setComponentName('');
@@ -60,10 +83,27 @@ const ComponentModal: React.FC = () => {
         setComponentType(DEFAULT_TYPE);
         setFrameworkId(DEFAULT_FRAMEWORK_ID);
       }
+
+      // Where it lands: the selected folder when there is one, otherwise the
+      // root — which is the only sensible default when the modal was opened
+      // from the editor rather than from a folder in the tree.
+      const selectedFolderId =
+        selectedNode?.type === 'folder' ? selectedNode.id : (treeData[0]?.id ?? '');
+      setFolderId(selectedFolderId);
+
       setError('');
       setPendingWarning(null);
     }
-  }, [isComponentModalOpen, componentBeingEdited]);
+    // Keyed on what the editor is opened with, not on treeData or selectedNode:
+    // those are read once as the form is seeded, and reseeding it because the
+    // library saved in the background would discard what the user has typed.
+  }, [isComponentModalOpen, componentBeingEdited, componentDraft]);
+
+  /** Closes the editor and forgets any draft it was seeded with. */
+  const closeModal = () => {
+    setComponentModalOpen(false);
+    setComponentDraft(null);
+  };
 
   const handleFrameworkChange = (id: string) => {
     const framework = getFramework(id);
@@ -83,16 +123,30 @@ const ComponentModal: React.FC = () => {
         content: componentContent,
         componentType: componentType,
       });
-    } else if (selectedNode && selectedNode.type === 'folder') {
-      // Add new component
-      handleAddComponent(selectedNode.id, {
+    } else if (folderId) {
+      // Add new component to the chosen folder
+      const created = handleAddComponent(folderId, {
         name: componentName.trim(),
         content: componentContent,
         componentType: componentType,
       });
+
+      // A section that produced this component records where it came from, but
+      // is not linked to it: inserting a component copies by default, and
+      // following one has to be asked for. The section keeps offering "Link to
+      // component" from here.
+      if (componentDraft?.source) {
+        const { promptId, sectionId } = componentDraft.source;
+        updateSection(promptId, sectionId, {
+          linkedComponentId: created.id,
+          originalContent: componentContent,
+          linked: false,
+          dirty: false,
+        });
+      }
     }
 
-    setComponentModalOpen(false);
+    closeModal();
   };
 
   // Submit handler
@@ -102,6 +156,11 @@ const ComponentModal: React.FC = () => {
     // Validation
     if (!componentName.trim()) {
       setError('Component name is required');
+      return;
+    }
+
+    if (!componentBeingEdited && !folderId) {
+      setError('Choose a folder to save the component in');
       return;
     }
 
@@ -121,7 +180,7 @@ const ComponentModal: React.FC = () => {
   return (
     <ModalBase
       isOpen={isComponentModalOpen}
-      onClose={() => setComponentModalOpen(false)}
+      onClose={closeModal}
       title={componentBeingEdited ? 'Edit Component' : 'Add Component'}
       className="component-modal"
     >
@@ -143,6 +202,25 @@ const ComponentModal: React.FC = () => {
             autoFocus
           />
         </div>
+
+        {/* Only when adding: an existing component is edited where it lives,
+            and moving one is the tree's job. */}
+        {!componentBeingEdited && (
+          <div className="form-group">
+            <label htmlFor="componentFolder">Folder:</label>
+            <select
+              id="componentFolder"
+              value={folderId}
+              onChange={e => setFolderId(e.target.value)}
+            >
+              {folders.map(folder => (
+                <option key={folder.id} value={folder.id}>
+                  {`${FOLDER_INDENT.repeat(folder.depth)}${folder.name}`}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="form-group">
           <label htmlFor="componentFramework">Framework:</label>
@@ -196,7 +274,7 @@ const ComponentModal: React.FC = () => {
               History
             </button>
           )}
-          <button type="button" onClick={() => setComponentModalOpen(false)}>
+          <button type="button" onClick={closeModal}>
             Cancel
           </button>
           <button type="submit" className="primary">

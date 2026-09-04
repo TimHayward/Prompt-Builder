@@ -124,6 +124,18 @@ describe('updateSettingsRequestSchema', () => {
     expect(updateSettingsRequestSchema.safeParse({ activePromptId: null }).success).toBe(true);
   });
 
+  it('accepts openPromptIds on its own, including an empty strip', () => {
+    expect(updateSettingsRequestSchema.safeParse({ openPromptIds: ['p1', 'p2'] }).success).toBe(
+      true
+    );
+    // Closing the last tab is a legitimate state to record.
+    expect(updateSettingsRequestSchema.safeParse({ openPromptIds: [] }).success).toBe(true);
+  });
+
+  it('rejects a blank id in openPromptIds', () => {
+    expect(updateSettingsRequestSchema.safeParse({ openPromptIds: [''] }).success).toBe(false);
+  });
+
   it('rejects an empty body', () => {
     expect(updateSettingsRequestSchema.safeParse({}).success).toBe(false);
   });
