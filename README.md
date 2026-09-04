@@ -59,6 +59,13 @@ Builds a production image and serves it on port 3000, with the database on a
 named volume. A failed database initialisation stops the container rather than
 serving a half-working application.
 
+The container starts as root only long enough to take ownership of the data
+volume, then drops to the unprivileged `node` user before running anything —
+a volume created by an older build of this image belongs to root, and SQLite
+reports that as `attempt to write a readonly database`. If it is started as a
+fixed non-root user and cannot write the volume, it says so and stops instead
+of failing further in.
+
 The image is built locally and never published, so `promptbuilder:latest` is a
 name for the build on this host — there is no registry behind it. Anything that
 tries to _pull_ it fails with:

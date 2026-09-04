@@ -1,0 +1,4 @@
+# Shell scripts run inside the Linux container, where a CRLF line ending
+# breaks the interpreter line. Development happens on Windows with
+# core.autocrlf=true, so this is what keeps them usable in the image.
+*.sh text eol=lf

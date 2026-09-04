@@ -41,11 +41,19 @@ COPY --from=builder /app/package.json ./package.json
 
 # The data directory is the volume mount point, and .next holds the caches
 # next start writes. Nothing else needs to be writable, so node_modules — by far
-# the largest tree — keeps its build-time ownership.
-RUN mkdir -p /app/data && chown -R node:node /app/data /app/.next
-USER node
+# the largest tree — keeps its build-time ownership. Chowning data matters at
+# build time too: Docker seeds a new named volume from the image, ownership
+# included, so a fresh deployment needs no correcting at all.
+RUN mkdir -p /app/data \
+    && chown -R node:node /app/data /app/.next \
+    && chmod +x /app/scripts/docker-entrypoint.sh
 
 EXPOSE 3000
+
+# No USER on purpose. The entrypoint needs root to correct the ownership of a
+# volume left behind by an older build of this image, and gives it up before
+# running the command below, so the application itself never runs as root.
+ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
 
 # db:init exits non-zero on failure, so a broken database stops the container
 # here instead of being swallowed and serving a half-working application.

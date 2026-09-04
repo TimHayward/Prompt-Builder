@@ -77,15 +77,46 @@ jobs:
       - name: Check the database was initialised
         run: docker logs prompt-builder-ci 2>&1 | grep -q 'Database initialization complete'
 
-      # Printed whatever happened: on a failure this is the only account of why
-      # the container stopped.
+      # A volume left by a build of this image from before it ran as node is
+      # owned by root, and SQLite reported that only as "attempt to write a
+      # readonly database". The entrypoint corrects the ownership; this is the
+      # guard on it, because a fresh volume never reproduces the fault.
+      - name: Start against a volume owned by root
+        run: |
+          docker volume create prompt-builder-ci-data
+          docker run --rm -v prompt-builder-ci-data:/data alpine sh -c "touch /data/prompt_builder.db && chown -R 0:0 /data"
+          docker run -d --name prompt-builder-ci-vol -v prompt-builder-ci-data:/app/data -p 3001:3000 prompt-builder:ci
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://localhost:3001/api/settings > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "The application never answered against a root-owned volume."
+          docker logs prompt-builder-ci-vol 2>&1
+          exit 1
+
+      # Whatever the entrypoint needed root for, the application itself must
+      # not still be root once it is serving.
+      - name: Check it dropped to node
+        run: |
+          uid=$(docker exec prompt-builder-ci-vol stat -c %u /proc/1)
+          echo "PID 1 runs as uid $uid"
+          test "$uid" = 1000
+
+      # Printed whatever happened: on a failure these are the only account of
+      # why a container stopped.
       - name: Container logs
         if: always()
-        run: docker logs prompt-builder-ci 2>&1 || true
+        run: |
+          docker logs prompt-builder-ci 2>&1 || true
+          docker logs prompt-builder-ci-vol 2>&1 || true
 
-      - name: Stop it
+      - name: Clean up
         if: always()
-        run: docker rm -f prompt-builder-ci || true
+        run: |
+          docker rm -f prompt-builder-ci prompt-builder-ci-vol || true
+          docker volume rm -f prompt-builder-ci-data || true
 
   # Separate job: the browser download and a production build make this the slow
   # half, and a failure here should be distinguishable from a unit test failure.
