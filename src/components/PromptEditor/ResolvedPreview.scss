@@ -40,7 +40,9 @@
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0 1rem 0.5rem;
+  // The top padding keeps these controls off the rule that closes the title
+  // block above them; without it they sit flush against it.
+  padding: 0.6rem 1rem 0.5rem;
 
   .save-state {
     margin-right: auto;

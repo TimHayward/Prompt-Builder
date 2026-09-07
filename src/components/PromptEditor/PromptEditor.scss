@@ -175,6 +175,17 @@
   .prompt-main-title-container {
     padding: 0 1.5rem; // Align with sections-container horizontal padding
 
+    // What the prompt is called, is for and is filed under ends here;
+    // everything below the line is the prompt itself. The padding above sits
+    // inside the border box, so the rule spans the full width without help.
+    //
+    // Not $dark-gray, which is what .prompt-tabs rules itself off with: that
+    // strip has $side-bar-bg behind it, while this sits on $bg-color, and
+    // #444444 on #454346 differs by one value per channel — a line nobody can
+    // see. This is the alpha the view-toggle buttons just below already use for
+    // their own borders, so the boundary carries their weight exactly.
+    border-bottom: 1px solid rgba(colors.$text-color, 0.15);
+
     // The star and the description sit on one line under the title, quiet
     // until they are used.
     .prompt-metadata {
