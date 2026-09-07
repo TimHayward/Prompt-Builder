@@ -5,13 +5,21 @@
 
 // Variables pane container
 #variables-pane {
-  flex: 0 0 25vw;
+  // As with the sidebar: the divider drives this through main, and the old
+  // fixed width remains the fallback.
+  flex: 0 0 var(--variables-width, 25vw);
   background-color: colors.$side-bar-bg;
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
   border-left: 1px solid colors.$dark-gray;
+
+  // At zero width the border is all that is left of the pane, and it would sit
+  // beside the divider as a stray line. Nothing showing means no edge to draw.
+  main[data-variables-collapsed='true'] & {
+    border-left-width: 0;
+  }
 
   header {
     @include mixins.flex(row, space-between, center);

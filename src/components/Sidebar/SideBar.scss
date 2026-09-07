@@ -4,7 +4,11 @@
 
 // Side bar container
 #side-bar {
-  flex: 0 0 25vw;
+  // Width comes from the layout state on main, which the divider drives. The
+  // fallback is what this was before it could be dragged, so the pane is still
+  // the right size if nothing has been stored or measured yet. Collapsing sets
+  // the property to 0, and the overflow rule below hides the contents.
+  flex: 0 0 var(--sidebar-width, 25vw);
   background-color: colors.$side-bar-bg;
   display: flex;
   flex-direction: column;
@@ -345,6 +349,8 @@
 
 @media (max-width: 1200px) {
   #side-bar {
-    flex: 0 0 35vw; // Adjust width for smaller screens
+    // Only the fallback changes on a narrow screen: a width the user has
+    // chosen still wins, because they can see the window they chose it in.
+    flex: 0 0 var(--sidebar-width, 35vw);
   }
 }

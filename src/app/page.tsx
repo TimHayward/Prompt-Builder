@@ -15,6 +15,9 @@ import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
 import Sidebar from '@/components/Sidebar';
 import PromptEditor from '@/components/PromptEditor';
 import VariablesPane from '@/components/VariablesPane';
+import PaneDivider from '@/components/PaneDivider';
+import { usePaneLayout } from '@/hooks/usePaneLayout';
+import { maxPaneWidth, renderedWidth } from '@/domain/paneLayout';
 import ComponentModal from '@/components/Modal/ComponentModal';
 import SettingsModal from '@/components/Modal/SettingsModal';
 import ImportPromptModal from '@/components/Modal/ImportPromptModal';
@@ -25,6 +28,9 @@ import './App.scss';
 const AppContent: React.FC = () => {
   const { settings, setSettingsModalOpen } = useAppContext();
   const { handleNodeDrop } = useTreeContext();
+  const { layout, viewport, hydrated, setPaneWidth, togglePane, resetPane } = usePaneLayout();
+  // Derived from the hook's viewport state, never from window during render.
+  const paneMax = maxPaneWidth(viewport);
 
   // Set up event listeners for drag and drop operations between tree and sections
   useEffect(() => {
@@ -48,9 +54,47 @@ const AppContent: React.FC = () => {
   }, [settings.theme]);
 
   return (
-    <main>
+    <main
+      // The panes read their own width from these, so neither component needs
+      // to know it is resizable. Same idiom as --section-color in Section.
+      //
+      // Nothing is published until the stored layout has been read: the
+      // properties are absent for the first paint, so the stylesheet's own
+      // 25vw/35vw fallbacks govern it. Publishing a width guessed without a
+      // window to measure would show it and then correct it.
+      style={
+        hydrated
+          ? ({
+              '--sidebar-width': `${renderedWidth(layout, 'sidebar')}px`,
+              '--variables-width': `${renderedWidth(layout, 'variables')}px`,
+            } as React.CSSProperties)
+          : undefined
+      }
+      data-sidebar-collapsed={layout.sidebarCollapsed}
+      data-variables-collapsed={layout.variablesCollapsed}
+    >
       <Sidebar />
+      <PaneDivider
+        side="sidebar"
+        label="Library"
+        width={layout.sidebar}
+        max={paneMax}
+        collapsed={layout.sidebarCollapsed}
+        onResize={width => setPaneWidth('sidebar', width)}
+        onToggle={() => togglePane('sidebar')}
+        onReset={() => resetPane('sidebar')}
+      />
       <PromptEditor />
+      <PaneDivider
+        side="variables"
+        label="Variables"
+        width={layout.variables}
+        max={paneMax}
+        collapsed={layout.variablesCollapsed}
+        onResize={width => setPaneWidth('variables', width)}
+        onToggle={() => togglePane('variables')}
+        onReset={() => resetPane('variables')}
+      />
       <VariablesPane />
       <MenuBar openSettings={() => setSettingsModalOpen(true)} />
       <ComponentModal />
