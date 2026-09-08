@@ -13,15 +13,8 @@ import { useTreeContext } from '../../contexts/TreeContext';
 import { usePromptContext } from '../../contexts/PromptContext';
 import { describeComponentUsage, findComponentUsage } from '../../domain/componentLinks';
 import { listFolders } from '../../utils/treeUtils';
-import {
-  FRAMEWORKS,
-  DEFAULT_FRAMEWORK_ID,
-  DEFAULT_TYPE,
-  getFramework,
-  getFrameworkForType,
-  getTypeLabel,
-  SectionTypeValue,
-} from '../../lib/frameworks';
+import { DEFAULT_FRAMEWORK_ID, SectionTypeValue } from '../../lib/frameworks';
+import { useFrameworkContext } from '../../contexts/FrameworkContext';
 
 /**
  * One level of indentation in the folder picker, as two non-breaking spaces.
@@ -47,7 +40,9 @@ const ComponentModal: React.FC = () => {
 
   const [componentName, setComponentName] = useState('');
   const [componentContent, setComponentContent] = useState('');
-  const [componentType, setComponentType] = useState<SectionTypeValue>(DEFAULT_TYPE);
+  // Set by the reset effect below when the modal opens: the default depends
+  // on the loaded frameworks, and initial state cannot read a hook's value.
+  const [componentType, setComponentType] = useState<SectionTypeValue>('');
   const [frameworkId, setFrameworkId] = useState<string>(DEFAULT_FRAMEWORK_ID);
   const [folderId, setFolderId] = useState<string>('');
   const [error, setError] = useState('');
@@ -57,6 +52,10 @@ const ComponentModal: React.FC = () => {
   const [isHistoryOpen, setHistoryOpen] = useState(false);
 
   const { prompts, updateSection } = usePromptContext();
+  // The frameworks as stored, so an edit in the sidebar is reflected here
+  // rather than in a copy compiled into the bundle.
+  const { frameworks, getFramework, getFrameworkForType, getComponent, typeLabel, defaultTypeFor } =
+    useFrameworkContext();
 
   // Every folder the component could go in, parents before children.
   const folders = listFolders(treeData);
@@ -77,10 +76,11 @@ const ComponentModal: React.FC = () => {
         setComponentType(componentDraft.componentType);
         setFrameworkId(getFrameworkForType(componentDraft.componentType).id);
       } else {
-        // Adding a new component
+        // Adding a new component: the default framework, and the component at
+        // the top of it.
         setComponentName('');
         setComponentContent('');
-        setComponentType(DEFAULT_TYPE);
+        setComponentType(defaultTypeFor(DEFAULT_FRAMEWORK_ID));
         setFrameworkId(DEFAULT_FRAMEWORK_ID);
       }
 
@@ -108,8 +108,8 @@ const ComponentModal: React.FC = () => {
   const handleFrameworkChange = (id: string) => {
     const framework = getFramework(id);
     setFrameworkId(framework.id);
-    if (!framework.types.includes(componentType)) {
-      setComponentType(framework.types[0]);
+    if (!framework.components.some(component => component.id === componentType)) {
+      setComponentType(defaultTypeFor(framework.id));
     }
   };
 
@@ -229,7 +229,7 @@ const ComponentModal: React.FC = () => {
             value={frameworkId}
             onChange={e => handleFrameworkChange(e.target.value)}
           >
-            {FRAMEWORKS.map(framework => (
+            {frameworks.map(framework => (
               <option key={framework.id} value={framework.id}>
                 {framework.label}
               </option>
@@ -244,12 +244,26 @@ const ComponentModal: React.FC = () => {
             value={componentType}
             onChange={e => setComponentType(e.target.value as SectionTypeValue)}
           >
-            {getFramework(frameworkId).types.map(type => (
-              <option key={type} value={type}>
-                {getTypeLabel(type)}
+            {getFramework(frameworkId).components.map(component => (
+              <option key={component.id} value={component.id}>
+                {component.label}
               </option>
             ))}
           </select>
+
+          {/* What the chosen component is for, as the framework editor
+              describes it. Shown where the choice is made rather than only in
+              the editor, which is the point of describing it at all. */}
+          {(getComponent(componentType)?.description || getComponent(componentType)?.example) && (
+            <p className="component-type-guidance">
+              {getComponent(componentType)?.description}
+              {getComponent(componentType)?.example && (
+                <span className="component-type-example">
+                  e.g. {getComponent(componentType)?.example}
+                </span>
+              )}
+            </p>
+          )}
         </div>
 
         <div className="form-group">

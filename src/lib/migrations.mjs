@@ -95,6 +95,107 @@ CREATE TABLE IF NOT EXISTS component_revisions (
 CREATE INDEX IF NOT EXISTS idx_component_revisions ON component_revisions(component_id, created_at DESC);
 `;
 
+const createFrameworksTable = `
+CREATE TABLE IF NOT EXISTS frameworks (
+    id TEXT PRIMARY KEY,
+    label TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    updated_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+`;
+
+/**
+ * A framework component.
+ *
+ * The id is what a prompt section stores in its `type` column, so it is
+ * immutable once seeded; the label beside it is the editable half. That
+ * separation is the whole point — renaming or reordering a component can then
+ * never orphan a section that references it.
+ */
+const createFrameworkComponentsTable = `
+CREATE TABLE IF NOT EXISTS framework_components (
+    id TEXT PRIMARY KEY,
+    framework_id TEXT NOT NULL,
+    label TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    example TEXT NOT NULL DEFAULT '',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    updated_at TEXT DEFAULT (STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    FOREIGN KEY (framework_id) REFERENCES frameworks(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_framework_components
+    ON framework_components(framework_id, sort_order);
+`;
+
+/**
+ * The five frameworks as they stood when this migration was written.
+ *
+ * Inlined deliberately. This file is plain ESM, run by scripts/init-db.mjs
+ * under bare node, so it cannot import the TypeScript registry — and it should
+ * not want to: a migration that read live application constants would change
+ * what it did retroactively every time those constants were edited. This is a
+ * snapshot, and it stays one.
+ */
+const SEED_FRAMEWORKS = [
+  {
+    id: 'standard',
+    label: 'Standard',
+    components: [
+      ['role', 'Role'],
+      ['instruction', 'Instruction'],
+      ['context', 'Context'],
+      ['format', 'Format'],
+      ['style', 'Style'],
+    ],
+  },
+  {
+    id: 'rctcso',
+    label: 'R-C-T-C-S-O',
+    components: [
+      ['role', 'Role'],
+      ['context', 'Context'],
+      ['task', 'Task'],
+      ['constraints', 'Constraints'],
+      ['style', 'Style'],
+      ['output', 'Output'],
+    ],
+  },
+  {
+    id: 'gcse',
+    label: 'GCSE',
+    components: [
+      ['goal', 'Goal'],
+      ['context', 'Context'],
+      ['source', 'Source'],
+      ['expectations', 'Expectations'],
+    ],
+  },
+  {
+    id: 'rise',
+    label: 'RISE',
+    components: [
+      ['role', 'Role'],
+      ['input', 'Input'],
+      ['steps', 'Steps'],
+      ['expectation', 'Expectation'],
+    ],
+  },
+  {
+    id: 'risen',
+    label: 'RISEN',
+    components: [
+      ['role', 'Role'],
+      ['instructions', 'Instructions'],
+      ['steps', 'Steps'],
+      ['end-goal', 'End Goal'],
+      ['narrowing', 'Narrowing'],
+    ],
+  },
+];
+
 /** Tables every migrated database must have. */
 export const REQUIRED_TABLES = [
   'component_library',
@@ -103,6 +204,8 @@ export const REQUIRED_TABLES = [
   'prompt_workspaces',
   'prompt_revisions',
   'component_revisions',
+  'frameworks',
+  'framework_components',
 ];
 
 /**
@@ -129,6 +232,8 @@ export const MIGRATIONS = [
       database.exec(createPromptWorkspacesTable);
       database.exec(createPromptRevisionsTable);
       database.exec(createComponentRevisionsTable);
+      database.exec(createFrameworksTable);
+      database.exec(createFrameworkComponentsTable);
     },
   },
   {
@@ -243,6 +348,45 @@ export const MIGRATIONS = [
          SET open_prompt_ids = JSON_ARRAY(active_prompt_id)
          WHERE active_prompt_id IS NOT NULL AND open_prompt_ids = '[]'`
       );
+    },
+  },
+  {
+    version: 9,
+    name: 'frameworks as data',
+    apply(database) {
+      // Frameworks were a const array in the source, so nobody could add one,
+      // rename one or reorder its components without editing TypeScript. They
+      // become rows here, seeded so an existing installation keeps the five it
+      // already has, under the ids its prompts already store.
+      database.exec(createFrameworksTable);
+      database.exec(createFrameworkComponentsTable);
+
+      // Idempotent beyond the version stamp: a database seeded by some other
+      // route must not gain a second copy of everything.
+      const { count } = database.prepare('SELECT COUNT(*) AS count FROM frameworks').get();
+      if (count > 0) return;
+
+      const addFramework = database.prepare(
+        `INSERT INTO frameworks (id, label, description, sort_order)
+         VALUES (?, ?, '', ?)`
+      );
+      const addComponent = database.prepare(
+        `INSERT INTO framework_components
+           (id, framework_id, label, description, example, sort_order)
+         VALUES (?, ?, ?, '', '', ?)
+         ON CONFLICT(id) DO NOTHING`
+      );
+
+      SEED_FRAMEWORKS.forEach((framework, order) => {
+        addFramework.run(framework.id, framework.label, order);
+        framework.components.forEach(([id, label], componentOrder) => {
+          // A type key belongs to several frameworks — role is in four of them
+          // — and the id is the primary key, so the first framework to claim it
+          // owns the row. Which frameworks a type appears in is derived from
+          // membership, exactly as getFrameworkForType already derives it.
+          addComponent.run(id, framework.id, label, componentOrder);
+        });
+      });
     },
   },
 ];

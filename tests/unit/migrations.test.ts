@@ -109,6 +109,88 @@ describe('migrate', () => {
     });
   });
 
+  it('seeds the five built-in frameworks, in order', () => {
+    const database = freshDatabase();
+
+    migrate(database);
+
+    const frameworks = database
+      .prepare('SELECT id, label FROM frameworks ORDER BY sort_order')
+      .all() as { id: string; label: string }[];
+
+    expect(frameworks.map(f => f.id)).toEqual(['standard', 'rctcso', 'gcse', 'rise', 'risen']);
+    expect(frameworks.map(f => f.label)).toEqual([
+      'Standard',
+      'R-C-T-C-S-O',
+      'GCSE',
+      'RISE',
+      'RISEN',
+    ]);
+  });
+
+  it('seeds the Standard components under the ids prompts already store, Role first', () => {
+    // The ids are what a stored section's `type` column holds. Seeding them as
+    // anything else would orphan every prompt in an existing database.
+    const database = freshDatabase();
+
+    migrate(database);
+
+    const components = database
+      .prepare(
+        `SELECT id, label FROM framework_components
+         WHERE framework_id = 'standard' ORDER BY sort_order`
+      )
+      .all() as { id: string; label: string }[];
+
+    expect(components.map(c => c.id)).toEqual([
+      'role',
+      'instruction',
+      'context',
+      'format',
+      'style',
+    ]);
+    expect(components[0].label).toBe('Role');
+  });
+
+  it('gives a component shared by several frameworks a single row', () => {
+    // role belongs to four of the five. The id is the primary key, so the first
+    // framework to claim it owns the row rather than the seed failing.
+    const database = freshDatabase();
+
+    migrate(database);
+
+    const rows = database
+      .prepare("SELECT framework_id FROM framework_components WHERE id = 'role'")
+      .all();
+
+    expect(rows).toHaveLength(1);
+  });
+
+  it('does not seed a second copy when run against an already-seeded database', () => {
+    const database = freshDatabase();
+    migrate(database);
+    const before = database.prepare('SELECT COUNT(*) AS count FROM frameworks').get();
+
+    // The version stamp already prevents this; the guard covers a database
+    // stamped by some other tool.
+    migrate(database);
+
+    expect(database.prepare('SELECT COUNT(*) AS count FROM frameworks').get()).toEqual(before);
+  });
+
+  it("takes a framework's components with it when the framework is deleted", () => {
+    const database = freshDatabase();
+    database.pragma('foreign_keys = ON');
+    migrate(database);
+
+    database.prepare("DELETE FROM frameworks WHERE id = 'gcse'").run();
+
+    const orphans = database
+      .prepare("SELECT COUNT(*) AS count FROM framework_components WHERE framework_id = 'gcse'")
+      .get() as { count: number };
+    expect(orphans.count).toBe(0);
+  });
+
   it('reports the version through PRAGMA user_version, so any client can read it', () => {
     const database = freshDatabase();
     migrate(database);

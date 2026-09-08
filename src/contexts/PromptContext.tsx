@@ -26,6 +26,7 @@ import { describeApiFailure } from '@/lib/apiClient';
 import * as promptsApi from '@/api/promptsApi';
 import * as mutations from '@/domain/promptMutations';
 import { usePromptPersistence } from '@/hooks/usePromptPersistence';
+import { DEFAULT_FRAMEWORK_ID, defaultTypeForFramework } from '@/lib/sectionTypes';
 import {
   extractVariablesFromSections,
   extractVariableSpecsFromSections,
@@ -527,7 +528,12 @@ export const PromptProvider = ({ children }: PromptProviderProps) => {
 
   const addSectionToPrompt = useCallback(
     (promptId: string, type?: Settings['defaultSectionType']): string | undefined => {
-      const section = mutations.newSection(type || settings.defaultSectionType || 'instruction');
+      // The last resort is the default framework's top component, matching the
+      // shipped setting, so an unset or blank preference lands where the Type
+      // dropdown does rather than somewhere else.
+      const section = mutations.newSection(
+        type || settings.defaultSectionType || defaultTypeForFramework(DEFAULT_FRAMEWORK_ID)
+      );
       const updated = mutatePrompt(promptId, prompt => mutations.appendSection(prompt, section));
 
       return updated ? section.id : undefined;

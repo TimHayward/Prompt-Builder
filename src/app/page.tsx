@@ -12,6 +12,7 @@ import { PromptProvider } from '@/contexts/PromptContext';
 import { ToastProvider } from '@/contexts/ToastContext';
 import { SaveStateProvider } from '@/contexts/SaveStateContext';
 import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
+import { FrameworkProvider } from '@/contexts/FrameworkContext';
 import Sidebar from '@/components/Sidebar';
 import PromptEditor from '@/components/PromptEditor';
 import VariablesPane from '@/components/VariablesPane';
@@ -111,13 +112,18 @@ const App: React.FC = () => {
     <ToastProvider>
       <SaveStateProvider>
         <AppProvider>
-          <TreeProvider>
-            <PromptProvider>
-              <WorkspaceProvider>
-                <AppContent />
-              </WorkspaceProvider>
-            </PromptProvider>
-          </TreeProvider>
+          {/* Above TreeProvider and PromptProvider: the editor reads both to
+              decide whether removing a component would orphan anything, and
+              the type dropdowns read the frameworks. */}
+          <FrameworkProvider>
+            <TreeProvider>
+              <PromptProvider>
+                <WorkspaceProvider>
+                  <AppContent />
+                </WorkspaceProvider>
+              </PromptProvider>
+            </TreeProvider>
+          </FrameworkProvider>
         </AppProvider>
       </SaveStateProvider>
     </ToastProvider>

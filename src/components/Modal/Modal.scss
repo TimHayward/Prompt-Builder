@@ -178,6 +178,22 @@ small {
   font-family: monospace;
 }
 
+/* What the chosen type is for, as the framework editor describes it. */
+.component-modal .component-type-guidance {
+  margin: 0.3rem 0 0;
+  font-size: typography.$font-size-xs;
+  color: rgba(colors.$text-color, 0.7);
+
+  /* Its own line: run inline, the description and the example read as one
+     sentence with the words jammed together. */
+  .component-type-example {
+    display: block;
+    margin-top: 0.15rem;
+    color: rgba(colors.$text-color, 0.5);
+    font-style: italic;
+  }
+}
+
 /* Settings modal specific styles */
 .settings-modal input[type='checkbox'] {
   margin-bottom: 1rem;

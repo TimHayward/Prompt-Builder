@@ -44,6 +44,7 @@ export {
   ALL_TYPE_VALUES,
   DEFAULT_FRAMEWORK_ID,
   DEFAULT_TYPE,
+  defaultTypeForFramework,
   isValidSectionType,
   normalizeHeader,
   suggestSectionType,

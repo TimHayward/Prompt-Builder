@@ -7,6 +7,7 @@ import { createContext, useContext, useState, ReactNode, useEffect } from 'react
 import { Settings } from '@/types';
 import { useToast } from './ToastContext';
 import { apiRequest, apiSend, describeApiFailure } from '@/lib/apiClient';
+import { DEFAULT_FRAMEWORK_ID, defaultTypeForFramework } from '@/lib/sectionTypes';
 
 const LOCAL_STORAGE_SETTINGS_KEY = 'promptBuilderSettings'; // May still be used for temporary or non-critical settings
 
@@ -14,7 +15,7 @@ const LOCAL_STORAGE_SETTINGS_KEY = 'promptBuilderSettings'; // May still be used
 const DEFAULT_SETTINGS: Settings = {
   autoSave: true,
   defaultPromptName: 'New Prompt',
-  defaultSectionType: 'instruction',
+  defaultSectionType: defaultTypeForFramework(DEFAULT_FRAMEWORK_ID),
   theme: 'dark',
   markdownPromptingEnabled: false,
   systemPrompt:

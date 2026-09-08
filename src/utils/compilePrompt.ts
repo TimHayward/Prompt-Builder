@@ -8,7 +8,7 @@
  * Pure: no React, no persistence, no clipboard.
  */
 
-import { SECTION_TYPE_LABELS, type SectionTypeValue } from '@/lib/sectionTypes';
+import { builtInTypeLabel, type SectionTypeValue } from '@/lib/sectionTypes';
 import { resolveVariables } from './variableUtils';
 
 /** Blank line between the system prompt and each section. */
@@ -46,7 +46,7 @@ export type CompiledPrompt = {
  * guide describes.
  */
 const headingFor = (section: CompilableSection): string =>
-  `# ${SECTION_TYPE_LABELS[section.type] ?? section.type}: ${section.name}`;
+  `# ${builtInTypeLabel(section.type) ?? section.type}: ${section.name}`;
 
 /**
  * Whether the section's text already opens with its own heading.

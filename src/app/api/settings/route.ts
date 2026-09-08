@@ -7,12 +7,13 @@ import { Settings } from '@/types';
 import { updateSettingsRequestSchema } from '@/types/contracts';
 import { getConfig, saveConfig } from '@/lib/repositories/settingsRepository';
 import { errorResponse, parseRequestBody } from '@/lib/apiValidation';
+import { DEFAULT_FRAMEWORK_ID, defaultTypeForFramework } from '@/lib/sectionTypes';
 
 // Default settings - consider moving to a shared constants file if used elsewhere
 const DEFAULT_SETTINGS: Settings = {
   autoSave: true,
   defaultPromptName: 'New Prompt',
-  defaultSectionType: 'instruction',
+  defaultSectionType: defaultTypeForFramework(DEFAULT_FRAMEWORK_ID),
   theme: 'dark',
   markdownPromptingEnabled: false,
   systemPrompt: '# Prompt Structure/System Guide...', // Keep it concise or load from a file if very long

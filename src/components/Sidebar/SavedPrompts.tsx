@@ -16,6 +16,7 @@ import StarIcon from '@mui/icons-material/Star';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { usePromptContext } from '@/contexts/PromptContext';
 import { searchPrompts } from '@/domain/promptSearch';
+import CollapsibleSection from './CollapsibleSection';
 
 const SavedPrompts: React.FC = () => {
   const { prompts, openPromptIds, activePromptId, openPrompt, deletePrompt } = usePromptContext();
@@ -39,11 +40,9 @@ const SavedPrompts: React.FC = () => {
   };
 
   return (
-    <div className="saved-prompts">
-      <header>
-        <h2>Saved Prompts</h2>
-      </header>
-
+    // Open by default: this is the list a session is spent reaching into, so
+    // folding it away should be a choice rather than the starting point.
+    <CollapsibleSection title="Saved Prompts" className="saved-prompts" defaultOpen>
       <div className="saved-prompts-filter">
         <input
           type="text"
@@ -106,7 +105,7 @@ const SavedPrompts: React.FC = () => {
           {prompts.length === 0 ? 'No prompts saved yet.' : 'No prompt matches that.'}
         </p>
       )}
-    </div>
+    </CollapsibleSection>
   );
 };
 

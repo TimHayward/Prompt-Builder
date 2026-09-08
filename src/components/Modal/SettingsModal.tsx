@@ -10,7 +10,11 @@ import ModalBase from './ModalBase';
 import LibraryBackup from './LibraryBackup';
 import { useAppContext } from '../../contexts/AppContext';
 import Switch from '@mui/material/Switch';
-import { SectionTypeValue } from '../../lib/frameworks';
+import {
+  DEFAULT_FRAMEWORK_ID,
+  defaultTypeForFramework,
+  SectionTypeValue,
+} from '../../lib/frameworks';
 
 const SettingsModal: React.FC = () => {
   const { settings, updateSettings, isSettingsModalOpen, setSettingsModalOpen } = useAppContext();
@@ -18,7 +22,7 @@ const SettingsModal: React.FC = () => {
   const [formData, setFormData] = useState({
     autoSave: true,
     defaultPromptName: '',
-    defaultSectionType: 'instruction' as SectionTypeValue,
+    defaultSectionType: defaultTypeForFramework(DEFAULT_FRAMEWORK_ID),
     theme: 'dark' as 'dark' | 'light',
     markdownPromptingEnabled: false,
     systemPrompt: '',

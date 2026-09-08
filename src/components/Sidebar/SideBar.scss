@@ -15,7 +15,9 @@
   height: 100%;
   overflow: hidden;
 
-  header {
+  // The sidebar’s own title. Deliberately a direct child, so it does not
+  // also style the header of every collapsible section inside it.
+  > header {
     @include mixins.flex(row, space-between, center);
     padding: 0.5rem 1rem;
     padding-bottom: 0;
@@ -31,6 +33,76 @@
     button {
       color: colors.$text-color;
     }
+  }
+
+  // A titled band that folds away. Three of them share this: Frameworks,
+  // Prompt Components and Saved Prompts. Folding one is how the other two
+  // get the room, so a collapsed section costs only its header.
+  .sidebar-section {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-top: 1px solid colors.$dark-gray;
+
+    &.is-collapsed {
+      flex: 0 0 auto;
+    }
+
+    > header {
+      flex: 0 0 auto;
+      padding: 0.15rem 0.4rem;
+
+      h2 {
+        margin: 0;
+        font-size: inherit;
+        font-weight: 500;
+      }
+    }
+
+    .sidebar-section-toggle {
+      @include mixins.btn();
+      @include mixins.flex(row, flex-start, center);
+      gap: 0.2rem;
+      width: 100%;
+      padding: 0.3rem 0.25rem;
+      color: colors.$text-color;
+      font-size: typography.$font-size-lg;
+      font-weight: 500;
+
+      &:hover {
+        color: colors.$accent-color;
+      }
+
+      &:focus-visible {
+        outline: 1px solid colors.$accent-color;
+      }
+    }
+
+    .sidebar-section-body {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      @include mixins.custom-scrollbar();
+    }
+  }
+
+  // The component tree is the sidebar’s main business, so it takes the
+  // room the other two are not using.
+  .components-section.is-open {
+    flex: 1 1 auto;
+
+    // The tree scrolls; the import button stays at the foot of the section
+    // rather than scrolling away with it.
+    .sidebar-section-body {
+      overflow: hidden;
+    }
+  }
+
+  .saved-prompts.is-open {
+    flex: 0 1 auto;
+    max-height: 40%;
   }
 
   .import-controls {
@@ -55,8 +127,8 @@
 
   .tree-container {
     flex: 1;
-    // Without a floor the component tree collapses to nothing as the saved
-    // prompt list grows, which is the one thing this section must not do.
+    // Without a floor the tree collapses to nothing when the sections above
+    // and below it are both open, which is the one thing it must not do.
     min-height: 6rem;
     overflow-y: auto;
     padding: 0.5rem;
@@ -65,14 +137,6 @@
 
   // Saved prompts: the library the tabs are a working set over
   .saved-prompts {
-    display: flex;
-    flex-direction: column;
-    // Takes what it needs up to a share of the sidebar, then scrolls its own
-    // list rather than pushing the tree off the screen.
-    flex: 0 1 auto;
-    max-height: 40%;
-    border-top: 1px solid colors.$dark-gray;
-
     .saved-prompts-filter {
       padding: 0 0.5rem 0.4rem;
 
@@ -313,11 +377,18 @@
 
   // File controls
   .file-controls {
+    // Pinned to the foot of the sidebar. `margin-top: auto` in a flex column
+    // takes whatever space the sections above are not using and puts it above
+    // this, so Load and Save stay where they are whether every section is open
+    // or all three are folded away. Without it they ride up under the headers.
+    margin-top: auto;
+    flex: 0 0 auto;
     padding: 0.5rem;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     gap: 0.5rem;
+    border-top: 1px solid colors.$dark-gray;
 
     .load-save-controls {
       display: flex;
@@ -352,5 +423,227 @@
     // Only the fallback changes on a narrow screen: a width the user has
     // chosen still wins, because they can see the window they chose it in.
     flex: 0 0 var(--sidebar-width, 35vw);
+  }
+}
+
+// Framework editor: manages the frameworks the Type dropdowns offer. Sits
+// above the component tree, collapsed until it is wanted, because most sessions
+// do not touch it.
+// Only the editor’s own contents; the band around it is .sidebar-section.
+#side-bar .framework-editor {
+  &.is-open {
+    flex: 0 1 auto;
+    max-height: 55%;
+  }
+
+  .sidebar-section-toggle {
+    @include mixins.btn();
+    @include mixins.flex(row, flex-start, center);
+    gap: 0.2rem;
+    width: 100%;
+    padding: 0.25rem;
+    color: colors.$text-color;
+    font-size: typography.$font-size-lg;
+    font-weight: 500;
+
+    &:hover {
+      color: colors.$accent-color;
+    }
+  }
+
+  .sidebar-section-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 0.5rem 0.5rem;
+    @include mixins.custom-scrollbar();
+
+    h3 {
+      margin: 0.6rem 0 0.2rem;
+      font-size: typography.$font-size-sm;
+      font-weight: 500;
+      color: colors.$text-color;
+    }
+  }
+
+  .framework-editor-hint {
+    margin: 0 0 0.4rem;
+    font-size: typography.$font-size-xs;
+    color: rgba(colors.$text-color, 0.55);
+  }
+
+  .framework-editor-error {
+    margin-bottom: 0.4rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: 3px;
+    border: 1px solid colors.$warning-color;
+    background-color: rgba(colors.$warning-color, 0.12);
+    color: colors.$text-color;
+    font-size: typography.$font-size-xs;
+  }
+
+  .framework-editor-pick {
+    @include mixins.flex(row, flex-start, center);
+    gap: 0.3rem;
+    padding-bottom: 0.4rem;
+
+    label {
+      font-size: typography.$font-size-xs;
+      color: rgba(colors.$text-color, 0.7);
+    }
+
+    select {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
+  .framework-editor-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding-bottom: 0.4rem;
+
+    label {
+      font-size: typography.$font-size-xs;
+      color: rgba(colors.$text-color, 0.7);
+    }
+  }
+
+  // One shared treatment for every field in here, so the editor reads as one
+  // form rather than a pile of inputs.
+  select,
+  input[type='text'],
+  textarea {
+    width: 100%;
+    padding: 0.25rem 0.4rem;
+    background-color: colors.$dark-gray;
+    color: colors.$text-color;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    font-size: typography.$font-size-xs;
+    font-family: inherit;
+    box-sizing: border-box;
+
+    &:focus {
+      outline: none;
+      border-color: colors.$accent-color;
+    }
+  }
+
+  textarea {
+    resize: vertical;
+    // Modal.scss sets `textarea { min-height: 200px }` without scoping it to a
+    // modal, so it reaches every textarea in the application including these.
+    // Overridden here rather than fixed there, because narrowing that rule
+    // would change the height of every modal field at once.
+    min-height: 0;
+    height: auto;
+  }
+
+  .framework-component-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .framework-component {
+    padding: 0.35rem;
+    margin-bottom: 0.35rem;
+    border: 1px solid rgba(colors.$text-color, 0.12);
+    border-radius: 4px;
+
+    .framework-component-head {
+      @include mixins.flex(row, space-between, center);
+      gap: 0.25rem;
+      padding-bottom: 0.25rem;
+    }
+
+    .framework-component-name {
+      font-weight: 500;
+    }
+
+    .framework-component-actions {
+      @include mixins.flex(row, flex-end, center);
+      flex: 0 0 auto;
+
+      .action-btn {
+        @include mixins.btn();
+        padding: 0.1rem;
+        color: rgba(colors.$text-color, 0.6);
+        display: flex;
+
+        &:hover:not(:disabled) {
+          color: colors.$text-color;
+        }
+
+        &:disabled {
+          opacity: 0.3;
+          cursor: default;
+        }
+
+        &.delete-btn:hover:not(:disabled) {
+          color: colors.$warning-color;
+        }
+      }
+    }
+
+    .framework-component-description {
+      margin-bottom: 0.25rem;
+    }
+  }
+
+  .framework-editor-add {
+    @include mixins.btn();
+    @include mixins.flex(row, center, center);
+    gap: 0.2rem;
+    width: 100%;
+    padding: 0.3rem;
+    color: colors.$text-color;
+    background-color: colors.$dark-gray;
+    border-radius: 3px;
+    font-size: typography.$font-size-xs;
+
+    &:hover {
+      background-color: colors.$hover-gray;
+    }
+  }
+
+  .framework-editor-actions {
+    @include mixins.flex(row, space-between, center);
+    gap: 0.4rem;
+    padding-top: 0.5rem;
+
+    button {
+      @include mixins.btn();
+      flex: 1;
+      padding: 0.35rem;
+      border-radius: 3px;
+      font-size: typography.$font-size-xs;
+    }
+
+    .framework-editor-save {
+      background-color: #2a5d8c;
+      color: colors.$text-color;
+
+      &:hover:not(:disabled) {
+        background-color: colors.$accent-color;
+        color: black;
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+    }
+
+    .framework-editor-delete {
+      background-color: colors.$dark-gray;
+      color: rgba(colors.$text-color, 0.8);
+
+      &:hover {
+        background-color: colors.$warning-color;
+        color: colors.$text-color;
+      }
+    }
   }
 }

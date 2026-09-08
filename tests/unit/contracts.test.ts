@@ -40,13 +40,34 @@ describe('createPromptRequestSchema', () => {
     expect(result.error?.issues[0].path).toEqual(['name']);
   });
 
-  it('rejects a section with an unknown type', () => {
+  it('accepts a section type the built-in frameworks do not define', () => {
+    // This replaces a test that required the type to be one of seventeen known
+    // values, and it is a deliberate loss of that guarantee. Frameworks are
+    // editable data since migration 9, so a section may legitimately use a
+    // component the user created minutes ago — an enum fixed at build time
+    // would refuse to save it.
+    //
+    // What still holds the line: nothing branches on a type value, and
+    // getTypeMeta answers for an unrecognised one with the default label and
+    // colour, so an unknown type degrades rather than breaking the prompt.
     const result = createPromptRequestSchema.safeParse({
       name: 'My prompt',
-      sections: [{ ...section, type: 'not-a-section-type' }],
+      sections: [{ ...section, type: 'a-component-the-user-invented' }],
     });
 
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+  });
+
+  it('still rejects a section with no type at all', () => {
+    // The check that survived: a type has to be something.
+    ['', undefined].forEach(type => {
+      const result = createPromptRequestSchema.safeParse({
+        name: 'My prompt',
+        sections: [{ ...section, type }],
+      });
+
+      expect(result.success).toBe(false);
+    });
   });
 
   it('rejects variable values that are not strings', () => {

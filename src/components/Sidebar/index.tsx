@@ -12,6 +12,8 @@ import { useAppContext } from '@/contexts/AppContext';
 import TreeView from './TreeView';
 import FileControls from './FileControls';
 import SavedPrompts from './SavedPrompts';
+import FrameworkEditor from './FrameworkEditor';
+import CollapsibleSection from './CollapsibleSection';
 import './SideBar.scss';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
@@ -137,43 +139,52 @@ const Sidebar: React.FC = () => {
           <MoreVertIcon fontSize="inherit" />
         </button>
       </header>
-      <div className="import-controls">
-        <input
-          type="file"
-          accept=".md,.markdown"
-          ref={mdInputRef}
-          style={{ display: 'none' }}
-          onChange={handleMdFileChange}
-        />
-        <button
-          className="import-prompt-btn"
-          onClick={() => mdInputRef.current?.click()}
-          title="Import a Markdown file as prompt components"
-        >
-          <UploadFileIcon fontSize="inherit" />
-          <span>Import Prompt Component</span>
-        </button>
-      </div>
-      <div className="tree-container">
-        <TreeView
-          treeData={treeData}
-          selectedNode={selectedNode}
-          setSelectedNode={setSelectedNode}
-          isAddingFolder={isAddingFolder}
-          newFolderName={newFolderName}
-          setNewFolderName={setNewFolderName}
-          newFolderInputRef={newFolderInputRef as React.RefObject<HTMLInputElement>} // Corrected type assertion
-          handleKeyDown={handleKeyDown}
-          submitNewFolder={submitNewFolder}
-          startAddFolder={startAddFolder}
-          openAddComponentModal={openAddComponentModal}
-          openEditComponentModal={openEditComponentModal}
-          handleDeleteNode={handleDeleteNode}
-          handleToggleFolderExpand={handleToggleFolderExpand}
-          handleMoveNodeUp={handleMoveNodeUp}
-          handleMoveNodeDown={handleMoveNodeDown}
-        />
-      </div>
+      <FrameworkEditor />
+
+      {/* Open by default: the component tree is the sidebar's main business.
+          Importing sits at the foot of this section rather than above every
+          section, because what it produces is prompt components. */}
+      <CollapsibleSection title="Prompt Components" className="components-section" defaultOpen>
+        <div className="tree-container">
+          <TreeView
+            treeData={treeData}
+            selectedNode={selectedNode}
+            setSelectedNode={setSelectedNode}
+            isAddingFolder={isAddingFolder}
+            newFolderName={newFolderName}
+            setNewFolderName={setNewFolderName}
+            newFolderInputRef={newFolderInputRef as React.RefObject<HTMLInputElement>} // Corrected type assertion
+            handleKeyDown={handleKeyDown}
+            submitNewFolder={submitNewFolder}
+            startAddFolder={startAddFolder}
+            openAddComponentModal={openAddComponentModal}
+            openEditComponentModal={openEditComponentModal}
+            handleDeleteNode={handleDeleteNode}
+            handleToggleFolderExpand={handleToggleFolderExpand}
+            handleMoveNodeUp={handleMoveNodeUp}
+            handleMoveNodeDown={handleMoveNodeDown}
+          />
+        </div>
+
+        <div className="import-controls">
+          <input
+            type="file"
+            accept=".md,.markdown"
+            ref={mdInputRef}
+            style={{ display: 'none' }}
+            onChange={handleMdFileChange}
+          />
+          <button
+            className="import-prompt-btn"
+            onClick={() => mdInputRef.current?.click()}
+            title="Import a Markdown file as prompt components"
+          >
+            <UploadFileIcon fontSize="inherit" />
+            <span>Import Prompt Component</span>
+          </button>
+        </div>
+      </CollapsibleSection>
+
       <SavedPrompts />
       <FileControls />
     </div>

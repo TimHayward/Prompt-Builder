@@ -10,13 +10,25 @@
  */
 
 import { z } from 'zod';
-import { ALL_TYPE_VALUES, type SectionTypeValue } from '@/lib/frameworks';
 import type { ComponentType, FolderType } from '@/types';
 
-/** Section type values come from the framework definitions, not a second list. */
-export const sectionTypeSchema = z.enum(
-  ALL_TYPE_VALUES as [SectionTypeValue, ...SectionTypeValue[]]
-);
+/**
+ * A section's type: the id of a framework component.
+ *
+ * Any non-empty string, not a closed list. Frameworks are editable data now
+ * (migration 9), so the set of valid types is a table someone can add to — an
+ * enum built at module load could only ever describe the five frameworks that
+ * shipped, and would refuse to save a section using a component the user had
+ * just created.
+ *
+ * This is a real loss of a guarantee, and worth being explicit about: a typo or
+ * a stale id can now be persisted where before it could not. What makes it
+ * acceptable is that nothing branches on a type value — there is no switch over
+ * them anywhere — and getTypeMeta already answers for an unknown type with the
+ * default label and colour. An unrecognised type degrades to a plain-looking
+ * section rather than breaking the prompt that holds it.
+ */
+export const sectionTypeSchema = z.string().min(1);
 
 /**
  * A section as stored. Editor state — open, dirty, the header-rename fields —
@@ -128,6 +140,28 @@ export const saveLibraryRequestSchema = z.object({
 });
 
 /**
+ * A framework component.
+ *
+ * The id is what a section's `type` stores, so a client editing a framework
+ * must send back the ids it was given — inventing a new one for an existing
+ * component renames the immutable half and orphans every section using it.
+ */
+export const frameworkComponentSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1, 'A component needs a name'),
+  description: z.string(),
+  example: z.string(),
+});
+
+/** A framework, with its components in the order they are read. */
+export const frameworkSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1, 'A framework needs a name'),
+  description: z.string(),
+  components: z.array(frameworkComponentSchema),
+});
+
+/**
  * Working state for one prompt: the values entered for this use, and any
  * temporary section edits. Separate from the prompt itself, so using a prompt
  * never rewrites it.
@@ -165,6 +199,8 @@ export const updateSettingsRequestSchema = z
   });
 
 export type PromptWorkspace = z.infer<typeof workspaceSchema>;
+export type FrameworkComponentPayload = z.infer<typeof frameworkComponentSchema>;
+export type FrameworkPayload = z.infer<typeof frameworkSchema>;
 export type UpdateWorkspaceRequest = z.infer<typeof updateWorkspaceRequestSchema>;
 export type CreatePromptRequest = z.infer<typeof createPromptRequestSchema>;
 export type UpdatePromptRequest = z.infer<typeof updatePromptRequestSchema>;

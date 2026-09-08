@@ -9,6 +9,7 @@
 import {
   FRAMEWORKS,
   DEFAULT_FRAMEWORK_ID,
+  DEFAULT_TYPE,
   Framework,
   FrameworkId,
   SectionTypeValue,
@@ -53,8 +54,8 @@ export interface ResolvedType {
 
 /**
  * Resolve a suggested type to a type available within the given framework.
- * Falls back to the framework's first type with `matched: false` when nothing
- * lines up, so the UI can flag the row for the user to set manually.
+ * Falls back with `matched: false` when nothing lines up, so the UI can flag
+ * the row for the user to set manually.
  */
 export const resolveTypeForFramework = (
   suggested: SectionTypeValue | null,
@@ -72,7 +73,17 @@ export const resolveTypeForFramework = (
       }
     }
   }
-  return { type: types[0], matched: false };
+
+  // Nothing matched, so this is prose the parser could not identify — far more
+  // likely an instruction than anything else. Deliberately not the framework's
+  // first type: that used to amount to the same thing under Standard, until
+  // Role was moved to the front of the list for the Type dropdown's sake.
+  // Frameworks without a general instruction type still fall back to their own
+  // first type, which is the best available guess for them.
+  return {
+    type: types.includes(DEFAULT_TYPE) ? DEFAULT_TYPE : types[0],
+    matched: false,
+  };
 };
 
 /**

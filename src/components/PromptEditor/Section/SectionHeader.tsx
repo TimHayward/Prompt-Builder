@@ -13,13 +13,8 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import CloseIcon from '@mui/icons-material/Close';
 import LibraryAddOutlinedIcon from '@mui/icons-material/LibraryAddOutlined';
-import {
-  FRAMEWORKS,
-  getFramework,
-  getFrameworkForType,
-  getTypeLabel,
-  SectionTypeValue,
-} from '@/lib/frameworks';
+import { SectionTypeValue } from '@/lib/frameworks';
+import { useFrameworkContext } from '@/contexts/FrameworkContext';
 
 interface SectionHeaderProps {
   section: Section;
@@ -45,6 +40,10 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
 }) => {
   const { updateSection } = usePromptContext();
   const { setComponentBeingEdited, setComponentDraft, setComponentModalOpen } = useTreeContext();
+  // The stored frameworks, so a component renamed in the editor renames the
+  // label shown on every section already using it.
+  const { frameworks, getFramework, getFrameworkForType, typeLabel, defaultTypeFor } =
+    useFrameworkContext();
   const [isEditing, setIsEditing] = useState(section.editingHeader || false); // Initialize with section.editingHeader
   const [editName, setEditName] = useState(section.name);
   const [editType, setEditType] = useState(section.type);
@@ -138,12 +137,13 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
     setEditFrameworkId(getFrameworkForType(section.type).id);
   };
 
-  // Switch framework while editing; keep the type if the new framework shares it
+  // Switch framework while editing; keep the type if the new framework shares
+  // it, otherwise land on the component at the top of the new one.
   const handleFrameworkChange = (id: string) => {
     const framework = getFramework(id);
     setEditFrameworkId(framework.id);
-    if (!framework.types.includes(editType)) {
-      setEditType(framework.types[0]);
+    if (!framework.components.some(component => component.id === editType)) {
+      setEditType(defaultTypeFor(framework.id));
     }
   };
 
@@ -222,7 +222,7 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
               onClick={e => e.stopPropagation()}
               title="Framework"
             >
-              {FRAMEWORKS.map(framework => (
+              {frameworks.map(framework => (
                 <option key={framework.id} value={framework.id}>
                   {framework.label}
                 </option>
@@ -237,9 +237,9 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
               onClick={e => e.stopPropagation()}
               title="Type"
             >
-              {getFramework(editFrameworkId).types.map(type => (
-                <option key={type} value={type}>
-                  {getTypeLabel(type)}
+              {getFramework(editFrameworkId).components.map(component => (
+                <option key={component.id} value={component.id}>
+                  {component.label}
                 </option>
               ))}
             </select>
@@ -253,7 +253,7 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
             }}
             className="section-display"
           >
-            {section.name} • {section.type ? getTypeLabel(section.type) : 'Section'}
+            {section.name} • {section.type ? typeLabel(section.type) : 'Section'}
           </div>
         )}
       </div>

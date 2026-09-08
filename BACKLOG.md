@@ -303,9 +303,24 @@ These separate the tab strip from the saved library, so that closing a tab stops
 
 ---
 
+## Phase 11. User-editable frameworks
+
+Complete:
+
+```text
+R2
+R3
+R4
+R5
+```
+
+R2 comes first and alone: it moves frameworks from source into the database and relaxes the section-type contract, and the other three have nothing to edit until it lands.
+
+---
+
 # Open items
 
-## Q1. Closing a tab should close it, not delete the prompt
+## R2. Persist frameworks as editable data
 
 **Priority:** P1  
 **Model:** Opus 4.8  
@@ -313,131 +328,136 @@ These separate the tab strip from the saved library, so that closing a tab stops
 
 ### Problem
 
-Tabs and the saved library are the same list. `PromptContext` holds every persisted prompt in `prompts`, `PromptTabs` renders a tab for each one, and the tab's X calls `deletePrompt` with no confirmation — so the only way to tidy the tab strip is to permanently destroy a prompt and its workspace, which `prompt_workspaces` cascades away with it. The guard in `PromptTabs` only prevents this for the last remaining prompt.
+Frameworks are hard-coded. `FRAMEWORK_DEFINITIONS` in `src/lib/sectionTypes.ts` is a `const` array, and `SECTION_TYPE_LABELS` beside it is a closed object whose keys are the section types. Nobody can add a framework, rename one, reorder its components or say what a component is for without editing TypeScript and rebuilding.
 
-There is also no persistent view of what has been saved. `PromptBrowser` finds a prompt by search, but nothing lists the library, and nothing offers a deliberate delete.
+Two things stand in the way of making them data:
+
+1. `SectionTypeValue` is `keyof typeof SECTION_TYPE_LABELS` — a static union of seventeen literals, and `TYPE_PRESENTATION` in `src/lib/frameworks.ts` is an exhaustive `Record` over it.
+2. `sectionTypeSchema` in `src/types/contracts.ts` is `z.enum(ALL_TYPE_VALUES)`, and it gates three persisted fields: `section.type`, `component.componentType` and `settings.defaultSectionType`. Until that is relaxed, the API refuses to save a section using any component the user invented.
 
 ### Action
 
-Introduce an open-tab set distinct from the saved library.
+Move frameworks into the database and derive the registry from what is stored.
 
-**Context and state** — `src/contexts/PromptContext.tsx`
+**Schema** — a migration adding two tables, seeded from `FRAMEWORK_DEFINITIONS` so an existing installation keeps the five frameworks it has, with the ids it already stores:
 
-- Add `openPromptIds: string[]` plus `openPrompt(promptId)` and `closePrompt(promptId)` to the context value. Order is the tab order; opening an already-open prompt just activates it.
-- Tabs render from `openPromptIds`, not from `prompts`.
-- `addPrompt`, `duplicatePrompt` and the markdown import path open the prompt they create. `createOptimistically` already sets the new prompt active — it must also add it to the open set, and take the temporary client id back out when the create fails.
-- `deletePrompt` closes the prompt as well as deleting it.
-- Rework the keep-a-prompt-selected effect: it must fall back to another **open** prompt, and allow "no prompt open" as a valid state rather than forcing `prompts[0]`.
+```text
+frameworks            id, label, description, sort_order
+framework_components  id, framework_id, label, description, example, sort_order
+```
 
-**Persistence** — migration 8, `app_config.open_prompt_ids`
+**The load-bearing rule: a component id is immutable, its label is not.** Stored sections reference the id, so renaming, re-describing and reordering all propagate without touching a single prompt. This is the same constraint `sectionTypes.ts` already states as "Legacy values — stored in existing DBs, must not be renamed"; the migration must therefore seed the built-in components under their current keys (`role`, `instruction`, `end-goal`, and the rest), never under fresh ones.
 
-- Add `open_prompt_ids TEXT` to `createAppConfigTable` in `src/lib/migrations.mjs` and a `version: 8` migration guarded by the existing `hasColumn` helper, following the comment pattern established by migration 2: the baseline carries the column, so the migration is a no-op on a fresh install.
-- A JSON array cannot carry the `ON DELETE SET NULL` foreign key that `active_prompt_id` has, so `settingsRepository.ts` must filter out ids with no row in `prompts` on both read and write. Reuse the existence check `saveConfig` already performs for `active_prompt_id`.
-- Extend `StoredConfig` and `saveConfig` with `openPromptIds`, `updateSettingsRequestSchema` in `src/types/contracts.ts`, both handlers in `src/app/api/settings/route.ts`, and `fetchActivePromptId` / `saveActivePromptId` in `src/api/promptsApi.ts` — renamed, since they now carry both halves.
-- Queue the write through the existing debounced saver: widen `queueActivePromptId` in `src/hooks/usePromptPersistence.ts` to take the active id and the open list together, so one POST carries both.
-- On load, drop stored ids whose prompt no longer exists. If the open list is empty but prompts exist, open the stored active prompt, or the first prompt, so the app never starts with a blank editor over a full library.
+**Contract** — relax `sectionTypeSchema` from `z.enum` to `z.string().min(1)`, and make `SectionTypeValue` a `string` alias.
 
-**Tab strip** — `src/components/PromptEditor/PromptTabs.tsx`
+Record in the code why this is acceptable, because it is a deliberate loss: the enum guaranteed a stored type was one of seventeen known values, and after this it does not. What makes it safe is that no code branches on a type value — there is no `switch` and no exhaustive `Record` outside `TYPE_PRESENTATION` — and `getTypeMeta` already falls back to the default type for anything it does not recognise. An unknown type degrades to a default label and colour rather than breaking a prompt.
 
-- The X becomes Close: `title="Close Tab"`, a matching `aria-label`, and `closePrompt`. Remove the `prompts.length <= 1` guard and its `alert`.
-- Accept the open prompts as the `prompts` prop from `PromptEditor/index.tsx`.
+**Registry** — `getTypeLabel`, `getTypeColor` and `getFrameworkForType` read the loaded frameworks instead of the static maps, keeping their present signatures so the seventeen call sites do not change. `getFrameworkForType` must keep resolving a legacy type to the framework it resolves to today.
 
-**Saved Prompts sidebar section** — new `src/components/Sidebar/SavedPrompts.tsx`
-
-- Renders beneath `.tree-container` and above `FileControls` in `Sidebar/index.tsx`, with its own `<h2>Saved Prompts</h2>` header matching the existing Library header.
-- A flat list of every prompt: favourite star, as `PromptBrowser` shows one; name; click to open and activate; and a delete button that appears on hover, as `.node-actions` does in `SideBar.scss`.
-- A name filter input. Reuse `searchPrompts` from `src/domain/promptSearch.ts` with `{ filter: 'all', query, tag: null }` rather than writing new matching.
-- Mark the prompts that are already open — a dot, or bold — so the list says what is in the tab strip.
-- Delete confirms with `window.confirm`, as `TreeNode` does for a component, naming the prompt and saying that its saved working values go with it.
-- Styles alongside the sidebar rules in `SideBar.scss`. The section scrolls independently and must not squeeze the component tree out of view.
-
-**Empty state** — `PromptEditor/index.tsx`
-
-- Distinguish "no prompt open" — offer to open one from Saved Prompts, plus Create Prompt — from "no prompts exist at all", where Create Prompt is the only move. The current copy, "No prompts available", is wrong once the tabs can be empty while the library is full.
+**Backups** — frameworks travel in a library export (`src/domain/backup.ts`, `src/lib/repositories/backupRepository.ts`). Without this an imported library arrives holding sections whose types nothing can name, which is the orphaning this item exists to prevent.
 
 ### Acceptance
 
-- Closing a tab leaves the prompt in Saved Prompts, and `GET /api/prompts` still returns it
-- Reopening it from Saved Prompts restores its sections and its working values unchanged
-- Closing every tab shows an empty state offering to open a saved prompt or create one, with the library intact
-- Deleting from Saved Prompts asks for confirmation, removes the prompt from SQLite, and closes its tab if it is open
-- Open tabs, their order, and the active tab survive a restart; ids for deleted prompts are dropped silently on load
-- Creating, duplicating or importing a prompt opens it as a tab
-- No path in the UI deletes a prompt without confirmation; the `prompts.length <= 1` guard and its `alert` are gone
-- `tests/unit/migrations.test.ts` and `tests/unit/schemaConstraints.test.ts` pass against schema version 8
-- A unit test covers close-then-reopen preserving the prompt, and delete removing it
+- The five built-in frameworks survive the migration with their existing ids, labels and component order
+- A prompt stored before the migration opens with every section labelled and coloured as it was
+- A section whose type belongs to a user-created component saves and reloads intact
+- A section whose type matches no component still renders, with the default label and colour
+- A library export contains the frameworks, and importing it into an empty install reproduces them
+- A migration test asserts the seeded rows, and the existing suite passes unchanged
 
 ---
 
-## Q2. Relabel "Import Prompt" as "Import Prompt Component"
+## R3. Framework editor above the Library pane
+
+**Priority:** P3  
+**Model:** Opus 4.8  
+**Size:** L
+
+*Depends on R2.*
+
+### Problem
+
+Once frameworks are data there is still nothing to edit them with.
+
+### Action
+
+A collapsible **Frameworks** section above `.tree-container` in `src/components/Sidebar/index.tsx`, with its own `<h2>` header matching the `Saved Prompts` idiom Q1 introduced, so the sidebar reads as one design.
+
+It must offer:
+
+- Select an existing framework to edit
+- Create a new framework
+- Edit the framework name and description
+- Add, remove and reorder its components. Reuse the up/down pattern of `moveNodeUp` and `moveNodeDown` in `src/utils/treeUtils.ts` rather than introducing drag-and-drop
+- Edit each component name, description and example
+
+The pane sits inside the resizable sidebar, so it must stay usable at the 200px floor `MIN_PANE_WIDTH` sets, and must not squeeze the component tree out of view — the same constraint `Saved Prompts` works under.
+
+### Acceptance
+
+- A new framework appears in the Framework dropdowns in `ComponentModal` and `SectionHeader`
+- Reordering a framework, components reorders the Type dropdown to match
+- **Renaming `R-C-T-C-S-O` to `RCTCSO` changes the name shown against existing prompt components, and no stored prompt changes.** This is what nothing storing a framework reference buys: a component records only its `componentType`, and the framework is derived from it. A future change must not denormalise a framework name onto a component
+- Editing a component name relabels every section already using it, again with no stored prompt changing
+- A component description and example are readable where someone is choosing a type
+- The section is usable at the sidebar minimum width
+
+---
+
+## R4. Refuse to delete a framework component in use
+
+**Priority:** P1  
+**Model:** Sonnet 5  
+**Size:** M
+
+*Depends on R2.*
+
+### Problem
+
+Editing a framework can orphan data. Deleting a component whose id is stored on sections leaves those sections pointing at something that no longer exists; they would render with the default label and colour, silently losing what the section was for.
+
+### Action
+
+Refuse the deletion and say what is still using it.
+
+Reuse `findComponentUsage` and `describeComponentUsage` in `src/domain/componentLinks.ts`. They exist to name what a change would reach and already phrase it for a user — the same machinery behind the warning shown when editing a library component that prompts follow.
+
+Deleting a whole framework is refused while any of its components are in use.
+
+### Acceptance
+
+- Deleting a component used by a prompt section is refused, and the message names what uses it
+- Deleting a component used by a library component is refused the same way
+- Deleting an unused component succeeds
+- Deleting a framework with any component in use is refused
+- No path through the editor can leave a stored section referencing a component that does not exist
+
+---
+
+## R5. Appearance for user-created framework components
 
 **Priority:** P2  
 **Model:** Sonnet 5  
 **Size:** S
 
-### Problem
-
-The sidebar button labelled "Import Prompt" sits under the component Library, and what it creates is a folder of library components plus a prompt whose sections are linked to them. The label reads as a prompt-only import, which hides what the control adds to the library.
-
-### Action
-
-- Change the button text in `src/components/Sidebar/index.tsx` to `Import Prompt Component`, and its `title` to match.
-- Change the modal title in `src/components/Modal/ImportPromptModal.tsx` from `Import Prompt from Markdown` to `Import Prompt Component from Markdown`.
-- Leave the class names `.import-prompt-btn` and `.import-prompt-modal`, the context field `importPromptPayload`, and all behaviour untouched. This is a wording change only.
-
-### Acceptance
-
-- The sidebar button reads "Import Prompt Component"
-- The import modal's title matches the button's wording
-- No behavioural change: importing still creates the folder of components and the linked prompt
-- Existing tests pass with no selector changes
-
----
-
-## Q3. Save a hand-written section as a prompt component
-
-**Priority:** P3  
-**Model:** Sonnet 5  
-**Size:** M
+*Depends on R2.*
 
 ### Problem
 
-`saveSectionToComponentLibrary` in `src/hooks/usePrompts.ts` returns early unless the section has a `linkedComponentId`, and the "Save to Library" button only renders for a linked, dirty section. So it only ever pushes edits back to a component the section already came from.
-
-A section written from scratch — the common case when authoring a new prompt — has no way into the component library, and reusable text has to be copied out by hand and re-entered through the sidebar. `ComponentModal` also has no folder picker: it writes to `selectedNode`, which is whatever the sidebar happens to have selected.
+`TYPE_PRESENTATION` in `src/lib/frameworks.ts` assigns a colour and an icon to each of the seventeen built-in types by hand. A user-created component has no entry, so it falls back to the default type colour and is indistinguishable from an Instruction in the section stripe.
 
 ### Action
 
-**Folder list helper** — `src/utils/treeUtils.ts`
+Assign a colour from the palette already in `TYPE_PRESENTATION`, chosen deterministically from the component id — a stable hash into the existing list, so the colour survives a reload and does not depend on insertion order. One generic icon for all custom components.
 
-- Add `listFolders(tree: FolderType[]): { id: string; name: string; depth: number }[]`, a depth-first walk returning every folder including the root, for indented rendering in a `<select>`. No such helper exists; `findNodeById` and `getAllComponentsFromFolder` are the nearest and neither fits.
-
-**Folder picker in the component editor** — `src/components/Modal/ComponentModal.tsx`
-
-- When adding a component, rather than editing one, render a `Folder:` `<select>` built from `listFolders(treeData)`, defaulting to `selectedNode` when it is a folder and to the root Components folder otherwise.
-- `saveComponent` passes the chosen folder id to the existing `handleAddComponent(parentId, data)` from `TreeContext`. Do not add a new write path: that function already inserts optimistically and lets the `treeData` effect persist.
-- Editing an existing component keeps its current behaviour and shows no picker.
-
-**Section action** — `src/components/PromptEditor/Section/SectionHeader.tsx`
-
-- Add a "Save as prompt component" icon button to `.section-actions`, beside the delete button, disabled when the section content is empty.
-- It opens `ComponentModal` prefilled with the section's `name`, `content` and `type`: `componentBeingEdited` stays `null` and the form is seeded instead. Add a `componentDraft` field to `TreeContext` — name, content, component type, and the section it came from — so `ComponentModal`'s reset effect picks it up rather than clearing to defaults. Clear the draft when the modal closes.
-
-**Linkage after saving** — `src/hooks/usePrompts.ts`, or the draft handler
-
-- Once the component is created, update the originating section through `updateSection` with `linkedComponentId`, `originalContent` set to the saved content, and `linked: false`. The section then reads "Copied from &lt;name&gt;" and carries the existing "Link to component" affordance.
-- Deliberately a copy, not a link: invariant 9 says insertion creates a copy, and invariant 10 says linking must be explicit.
+Deliberately not a colour picker: it is more UI to build and test, and it lets a user choose a colour that collides with a built-in type.
 
 ### Acceptance
 
-- A section with no `linkedComponentId` offers "Save as prompt component"
-- The modal opens prefilled with the section's name, content and type
-- The folder picker lists every library folder, indented by depth, defaulting sensibly
-- Saving creates the component in the chosen folder and it appears in the sidebar tree
-- The section afterwards reads "Copied from &lt;name&gt;" and offers "Link to component"; it is not linked automatically
-- Editing a component from the sidebar is unchanged and shows no folder picker
-- A unit test covers save-from-section creating the component in the chosen folder and setting the section's copy origin
-- `listFolders` has a unit test alongside the existing tree utility tests
+- A user-created component gets a colour from the existing palette, not the default type colour
+- Two custom components in the same framework differ in colour
+- A component keeps its colour across a reload and across a restart
+- The seventeen built-in types keep exactly the colours they have today
 
 ---
 

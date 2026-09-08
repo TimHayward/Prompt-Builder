@@ -13,6 +13,7 @@ import { SaveStateProvider } from '@/contexts/SaveStateContext';
 import { ToastProvider } from '@/contexts/ToastContext';
 import { TreeProvider } from '@/contexts/TreeContext';
 import { WorkspaceProvider, useWorkspaceContext } from '@/contexts/WorkspaceContext';
+import { FrameworkProvider } from '@/contexts/FrameworkContext';
 import Section from '@/components/PromptEditor/Section';
 import type { Prompt } from '@/types';
 import { buildPrompt } from '../support/buildPrompt';
@@ -52,6 +53,7 @@ const mockFetch = async (url: string, init?: RequestInit) => {
   }
   if (url === '/api/prompts' && method === 'GET') return jsonResponse([promptFixture()]);
   if (url === '/api/components' && method === 'GET') return jsonResponse([]);
+  if (url === '/api/frameworks' && method === 'GET') return jsonResponse([]);
   if (url === '/api/workspaces' && method === 'GET') return jsonResponse([]);
   if (url.startsWith('/api/workspaces/')) {
     workspaceWrites.push({ url, method, body: (body ?? {}) as Record<string, unknown> });
@@ -90,13 +92,15 @@ const renderSection = async (editMode: 'using' | 'source') => {
     <ToastProvider>
       <SaveStateProvider>
         <AppProvider>
-          <PromptProvider>
-            <TreeProvider>
-              <WorkspaceProvider>
-                <Host />
-              </WorkspaceProvider>
-            </TreeProvider>
-          </PromptProvider>
+          <FrameworkProvider>
+            <PromptProvider>
+              <TreeProvider>
+                <WorkspaceProvider>
+                  <Host />
+                </WorkspaceProvider>
+              </TreeProvider>
+            </PromptProvider>
+          </FrameworkProvider>
         </AppProvider>
       </SaveStateProvider>
     </ToastProvider>
